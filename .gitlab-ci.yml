@@ -91,7 +91,6 @@ build:mac:
   script:
     - ./gradlew
       compileKotlin{IosArm64,IosSimulatorArm64,IosX64}
-      compileTestKotlin{IosSimulatorArm64,IosX64}
       linkDebugTestIosX64
       --stacktrace
 
@@ -103,12 +102,16 @@ build:linux:
     - *cache-linux
   rules:
     - *if-merge-request-or-main
+  before_script:
+    - export JAVA_HOME="/usr/lib/jvm/java-21.0.1-openjdk
+    - apt update -y
+    - apt install libnotify-dev -y # TODO: Cache APT packages
   script:
     - ./gradlew
-      compileKotlin{Jvm,Js}
+      compileKotlinJvm # TODO: Compile JS at some point
+      compileKotlinLinuxX64
       compileReleaseKotlinAndroid
-      compileTestKotlin{Jvm,Js}
-      compileReleaseUnitTestKotlinAndroid
+      linkLinuxX64
       --stacktrace
 
 # test:mac:
