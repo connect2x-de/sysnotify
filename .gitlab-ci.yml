@@ -103,7 +103,7 @@ build:linux:
   rules:
     - *if-merge-request-or-main
   before_script:
-    - export JAVA_HOME="/usr/lib/jvm/java-21.0.1-openjdk"
+    - export JAVA_HOME=$(java -XshowSettings:properties -version 2>&1 > /dev/null | grep 'java.home' | awk -F'=' '{print $2}' | tr -d ' ')
     - apt update -y
     - apt install libnotify-dev -y
   script:
