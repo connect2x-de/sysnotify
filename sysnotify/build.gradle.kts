@@ -62,6 +62,7 @@ kotlin {
             macosArm64()
         ).forEach {
             it.apply {
+                sourceSets { add(appleMain) }
                 compilations["main"].cinterops {
                     val jni by creating {
                         compilerOpts("-I${jniHeaders / "darwin"}")
@@ -81,9 +82,12 @@ kotlin {
             iosArm64(),
             iosSimulatorArm64(),
         ).forEach {
-            it.binaries {
-                framework {
-                    baseName = "shared"
+            it.apply {
+                sourceSets { add(appleMain) }
+                binaries {
+                    framework {
+                        baseName = "shared"
+                    }
                 }
             }
         }
