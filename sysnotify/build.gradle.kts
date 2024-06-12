@@ -90,12 +90,10 @@ kotlin {
     // Windows - a horrible mess as always
     if (hostOs.contains("windows", true)) {
         val comPath = project(":sysnotify-com").projectDir.toPath()
-        val comHeaderPath = comPath / "include"
-        val comLibraryPath = comPath / "build" / "cmake" / "Release"
         mingwX64 {
             compilations["main"].cinterops {
                 val sysnotifycom by creating {
-                    headers("${comHeaderPath / "sysnotify-com.h"}")
+                    headers("${comPath / "include" / "sysnotify-com.h"}")
                 }
                 val jni by creating {
                     compilerOpts("-I${jniHeaders / "win32"}")
@@ -105,7 +103,7 @@ kotlin {
             binaries {
                 sharedLib {
                     linkerOpts(
-                        "-L$comLibraryPath",
+                        "-L${comPath / "build" / "cmake" / "RelWithDebInfo"}",
                         "-L$jniLibraries",
                         "-lsysnotify-com",
                         "-ljawt",

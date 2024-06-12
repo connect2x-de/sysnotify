@@ -40,25 +40,25 @@ variables:
       - $GRADLE_USER_HOME
       - $KONAN_DATA_DIR
 
-.cache-mac: &cache-mac
-  - key: global-sysnotify-cache-mac
-    policy: pull-push
-    paths:
-      - $GRADLE_USER_HOME
-      - $KONAN_DATA_DIR
-  - key: "$CI_COMMIT_REF_NAME-mac"
-    policy: push
-    paths:
-      - $GRADLE_USER_HOME
-      - $KONAN_DATA_DIR
-
-.pull-cache-mac: &pull-cache-mac
-  - key: "$CI_COMMIT_REF_NAME-mac"
-    fallback_keys: [ "global-sysnotify-cache-mac" ]
-    policy: pull
-    paths:
-      - $GRADLE_USER_HOME
-      - $KONAN_DATA_DIR
+# .cache-mac: &cache-mac
+#   - key: global-sysnotify-cache-mac
+#     policy: pull-push
+#     paths:
+#       - $GRADLE_USER_HOME
+#       - $KONAN_DATA_DIR
+#   - key: "$CI_COMMIT_REF_NAME-mac"
+#     policy: push
+#     paths:
+#       - $GRADLE_USER_HOME
+#       - $KONAN_DATA_DIR
+#
+# .pull-cache-mac: &pull-cache-mac
+#   - key: "$CI_COMMIT_REF_NAME-mac"
+#     fallback_keys: [ "global-sysnotify-cache-mac" ]
+#     policy: pull
+#     paths:
+#       - $GRADLE_USER_HOME
+#       - $KONAN_DATA_DIR
 
 .artifact-reports: &artifact-reports
   name: reports
@@ -83,42 +83,56 @@ variables:
   - if: $CI_PIPELINE_SOURCE == "schedule"
     when: never
 
-build:mac:
-  stage: build
-  interruptible: true
-  tags: [ "connect2x-mac" ]
-  cache:
-    - *cache-mac
-  rules:
-    - *if-merge-request-or-main
-  script:
-    - ./gradlew
-      compileKotlin{IosArm64,IosSimulatorArm64,IosX64}
-      linkDebugTestIosX64
-      --stacktrace
+# build:mac:
+#   stage: build
+#   interruptible: true
+#   tags: [ "connect2x-mac" ]
+#   cache:
+#     - *cache-mac
+#   rules:
+#     - *if-merge-request-or-main
+#   script:
+#     - ./gradlew
+#       compileKotlin{IosArm64,IosSimulatorArm64,IosX64}
+#       linkDebugTestIosX64
+#       --stacktrace
 
 build:linux:
   stage: build
   interruptible: true
-  image: mobiledevops/android-sdk-image:34.0.0
+  image: ubuntu:22.04
   tags: [ "saas-linux-small-amd64" ]
   cache:
     - *cache-linux
   rules:
     - *if-merge-request-or-main
   before_script:
-    - sudo add-apt-repository deb http://archive.ubuntu.com/ubuntu/ focal main restricted universe multiverse
-    - sudo add-apt-repository deb-src http://archive.ubuntu.com/ubuntu/ focal main restricted universe multiverse
-    - sudo add-apt-repository deb http://archive.ubuntu.com/ubuntu/ focal-updates main restricted universe multiverse
-    - sudo add-apt-repository deb-src http://archive.ubuntu.com/ubuntu/ focal-updates main restricted universe multiverse
-    - sudo add-apt-repository deb http://archive.ubuntu.com/ubuntu/ focal-security main restricted universe multiverse
-    - sudo add-apt-repository deb-src http://archive.ubuntu.com/ubuntu/ focal-security main restricted universe multiverse
-    - sudo add-apt-repository deb http://archive.ubuntu.com/ubuntu/ focal-backports main restricted universe multiverse
-    - sudo add-apt-repository deb-src http://archive.ubuntu.com/ubuntu/ focal-backports main restricted universe multiverse
-    - sudo add-apt-repository deb http://archive.canonical.com/ubuntu focal partner
-    - sudo add-apt-repository deb-src http://archive.canonical.com/ubuntu focal partner
     - apt -qq update
-    - apt -qqy --no-install-recommends install libnotify-dev
+    - apt -qqy --no-install-recommends install \
+      apt-utils \
+      build-essential \
+      openjdk-17-jdk \
+      openjdk-17-jre-headless \
+      software-properties-common \
+      zip \
+      unzip \
+      curl \
+      libnotify-dev
+    - export ANDROID_HOME="/opt/android-sdk-linux"
+    - export ANDROID_SDK_ROOT=$ANDROID_HOME
+    - export PATH=$PATH:$ANDROID_HOME/cmdline-tools:$ANDROID_HOME/cmdline-tools/bin:$ANDROID_HOME/platform-tools
+    - curl -s https://dl.google.com/android/repository/commandlinetools-linux-${ANDROID_SDK_TOOLS_VERSION}_latest.zip > /tools.zip \
+      && echo "$ANDROID_SDK_TOOLS_CHECKSUM ./tools.zip" | sha256sum -c \
+      && unzip -qq /tools.zip -d $ANDROID_HOME \
+      && rm -v /tools.zip
+    - mkdir -p $ANDROID_HOME/licenses/ \
+      && echo "8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb78af6dfcb131a6481e\n24333f8a63b6825ea9c5514f83c2829b004d1fee" > $ANDROID_HOME/licenses/android-sdk-license \
+      && echo "84831b9409646a918e30573bab4c9c91346d8abd\n504667f4c0de7af1a06de9f4b1727b84351f2910" > $ANDROID_HOME/licenses/android-sdk-preview-license --licenses \
+      && yes | $ANDROID_HOME/cmdline-tools/bin/sdkmanager --licenses --sdk_root=${ANDROID_SDK_ROOT}
+    - mkdir -p /home/user/.android \
+      && mkdir -p /home/user/app \
+      && touch /home/user/.android/repositories.cfg
+    - export HOME=/home/user
   script:
     - ./gradlew
       compileKotlin{Jvm,LinuxX64}
