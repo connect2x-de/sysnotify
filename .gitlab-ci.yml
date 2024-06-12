@@ -107,9 +107,18 @@ build:linux:
   rules:
     - *if-merge-request-or-main
   before_script:
-    - apt update -y --quiet
-    - export JAVA_HOME=$(java -XshowSettings:properties -version 2>&1 > /dev/null | grep 'java.home' | awk -F'=' '{print $2}' | tr -d ' ')
-    - apt install libnotify-dev -y --quiet
+    - add-apt-repository deb http://archive.ubuntu.com/ubuntu/ focal main restricted universe multiverse
+    - add-apt-repository deb-src http://archive.ubuntu.com/ubuntu/ focal main restricted universe multiverse
+    - add-apt-repository deb http://archive.ubuntu.com/ubuntu/ focal-updates main restricted universe multiverse
+    - add-apt-repository deb-src http://archive.ubuntu.com/ubuntu/ focal-updates main restricted universe multiverse
+    - add-apt-repository deb http://archive.ubuntu.com/ubuntu/ focal-security main restricted universe multiverse
+    - add-apt-repository deb-src http://archive.ubuntu.com/ubuntu/ focal-security main restricted universe multiverse
+    - add-apt-repository deb http://archive.ubuntu.com/ubuntu/ focal-backports main restricted universe multiverse
+    - add-apt-repository deb-src http://archive.ubuntu.com/ubuntu/ focal-backports main restricted universe multiverse
+    - add-apt-repository deb http://archive.canonical.com/ubuntu focal partner
+    - add-apt-repository deb-src http://archive.canonical.com/ubuntu focal partner
+    - apt -qq update
+    - apt -qqy --no-install-recommends install libnotify-dev
   script:
     - ./gradlew
       compileKotlin{Jvm,LinuxX64}
