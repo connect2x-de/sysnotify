@@ -16,9 +16,8 @@ variables:
   GRADLE_OPTS: -Dorg.gradle.daemon=false
   GRADLE_USER_HOME: $CI_PROJECT_DIR/.gradle
   KONAN_DATA_DIR: $CI_PROJECT_DIR/.konan
-  ANDROID_COMPILE_SDK: "28"
-  ANDROID_BUILD_TOOLS: "28.0.2"
-  ANDROID_SDK_TOOLS: "4333796"
+  ANDROID_SDK_TOOLS_VERSION: "11076708"
+  ANDROID_SDK_TOOLS_CHECKSUM: "2d2d50857e4eb553af5a6dc3ad507a17adf43d115264b1afc116f95c92e5e258"
 
 .cache-linux: &cache-linux
   - key: global-sysnotify-cache-linux
