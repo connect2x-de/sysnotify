@@ -40,6 +40,9 @@ kotlin {
             implementation(libs.kotlin.test)
         }
     }
+    val appleMain by sourceSets.creating {
+        dependsOn(commonMain)
+    }
 
     // Plain ol' Java
     jvm()
@@ -82,7 +85,6 @@ kotlin {
                 framework {
                     baseName = "shared"
                 }
-                sharedLib {}
             }
         }
     }
@@ -123,6 +125,15 @@ kotlin {
                 }
             }
         }
+    }
+    // Source sets
+    sourceSets {
+        jvmMain { dependsOn(commonMain) }
+        androidMain { dependsOn(commonMain) }
+        linuxMain { dependsOn(commonMain) }
+        iosMain { dependsOn(appleMain) }
+        macosMain { dependsOn(appleMain) }
+        mingwMain { dependsOn(commonMain) }
     }
 }
 
