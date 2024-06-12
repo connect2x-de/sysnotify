@@ -39,7 +39,7 @@ import kotlin.experimental.ExperimentalNativeApi
 internal lateinit var environment: JNIEnvVar
 
 @CName("JNI_OnLoad")
-external fun jniOnLoad(vm: JavaVMVar, reserved: COpaquePointer): jint {
+fun jniOnLoad(vm: JavaVMVar, reserved: COpaquePointer): jint {
     if (vm.pointed!!.GetEnv!!(
             vm.ptr,
             environment.ptr.reinterpret(),
@@ -52,19 +52,19 @@ external fun jniOnLoad(vm: JavaVMVar, reserved: COpaquePointer): jint {
 }
 
 @CName("JNI_OnUnload")
-external fun jniOnUnload(vm: JavaVM, reserved: COpaquePointer) {
+fun jniOnUnload(vm: JavaVM, reserved: COpaquePointer) {
 
 }
 
 // Exposed high-level C-API functions
 
 @CName("sn_notification_handler_create")
-external fun snNotificationHandlerCreate(name: String?, context: jobject?) {
+fun snNotificationHandlerCreate(name: String?, context: jobject?) {
 
 }
 
 @CName("sn_notification_handler_push")
-external fun snNotificationHandlerPush(
+fun snNotificationHandlerPush(
     handler: COpaquePointer?,
     name: String?,
     description: String?,
@@ -74,7 +74,7 @@ external fun snNotificationHandlerPush(
 }
 
 @CName("sn_notification_handler_update")
-external fun snNotificationHandlerUpdate(
+fun snNotificationHandlerUpdate(
     handler: COpaquePointer?,
     notification: COpaquePointer?,
     name: String?,
@@ -85,7 +85,7 @@ external fun snNotificationHandlerUpdate(
 }
 
 @CName("sn_notification_handler_pop")
-external fun snNotificationHandlerPop(
+fun snNotificationHandlerPop(
     handler: COpaquePointer?,
     notification: COpaquePointer?
 ) {
@@ -93,6 +93,6 @@ external fun snNotificationHandlerPop(
 }
 
 @CName("sn_notification_handler_destroy")
-external fun snNotificationHandlerDestroy(handler: COpaquePointer?) {
+fun snNotificationHandlerDestroy(handler: COpaquePointer?) {
 
 }

@@ -1,0 +1,216 @@
+workflow:
+  auto_cancel:
+    on_new_commit: interruptible
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+
+stages:
+  - build
+  # - test
+  - security
+  # - publish
+
+variables:
+  GRADLE_OPTS: -Dorg.gradle.daemon=false
+  GRADLE_USER_HOME: $CI_PROJECT_DIR/.gradle
+  KONAN_DATA_DIR: $CI_PROJECT_DIR/.konan
+
+.cache-linux: &cache-linux
+  - key: global-sysnotify-cache-linux
+    policy: pull-push
+    paths:
+      - $GRADLE_USER_HOME
+      - $KONAN_DATA_DIR
+  - key: "$CI_COMMIT_REF_NAME-linux"
+    policy: push
+    paths:
+      - $GRADLE_USER_HOME
+      - $KONAN_DATA_DIR
+
+.pull-cache-linux: &pull-cache-linux
+  - key: "$CI_COMMIT_REF_NAME-linux"
+    fallback_keys: [ "global-sysnotify-cache-linux" ]
+    policy: pull
+    paths:
+      - $GRADLE_USER_HOME
+      - $KONAN_DATA_DIR
+
+.cache-mac: &cache-mac
+  - key: global-sysnotify-cache-mac
+    policy: pull-push
+    paths:
+      - $GRADLE_USER_HOME
+      - $KONAN_DATA_DIR
+  - key: "$CI_COMMIT_REF_NAME-mac"
+    policy: push
+    paths:
+      - $GRADLE_USER_HOME
+      - $KONAN_DATA_DIR
+
+.pull-cache-mac: &pull-cache-mac
+  - key: "$CI_COMMIT_REF_NAME-mac"
+    fallback_keys: [ "global-sysnotify-cache-mac" ]
+    policy: pull
+    paths:
+      - $GRADLE_USER_HOME
+      - $KONAN_DATA_DIR
+
+.artifact-reports: &artifact-reports
+  name: reports
+  when: always
+  paths: [ "**/build/reports" ]
+  reports:
+    junit: "**/build/test-results/**/TEST-*.xml"
+
+.if-merge-request-or-main: &if-merge-request-or-main
+  - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  - if: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME
+  - if: $CI_PIPELINE_SOURCE == "schedule"
+    when: never
+
+.if-main: &if-main
+  - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  - if: $CI_PIPELINE_SOURCE == "schedule"
+    when: never
+
+.if-release: &if-release
+  - if: '$CI_COMMIT_TAG =~ /^v\d+.\d+.\d+.*/'
+  - if: $CI_PIPELINE_SOURCE == "schedule"
+    when: never
+
+build:mac:
+  stage: build
+  interruptible: true
+  tags: [ "connect2x-mac" ]
+  cache:
+    - *cache-mac
+  rules:
+    - *if-merge-request-or-main
+  script:
+    - ./gradlew
+      compileKotlin{IosArm64,IosSimulatorArm64,IosX64}
+      compileTestKotlin{IosSimulatorArm64,IosX64}
+      linkDebugTestIosX64
+      --stacktrace
+
+build:linux:
+  stage: build
+  interruptible: true
+  tags: [ "saas-linux-small-amd64" ]
+  cache:
+    - *cache-linux
+  rules:
+    - *if-merge-request-or-main
+  script:
+    - ./gradlew
+      compileKotlin{Jvm,Js}
+      compileReleaseKotlinAndroid
+      compileTestKotlin{Jvm,Js}
+      compileReleaseUnitTestKotlinAndroid
+      --stacktrace
+
+# test:mac:
+#   stage: test
+#   interruptible: true
+#   timeout: 1h
+#   needs: [ "build:mac" ]
+#   tags: [ "connect2x-mac" ]
+#   cache:
+#     - *pull-cache-mac
+#   artifacts: *artifact-reports
+#   rules:
+#     - *if-merge-request-or-main
+#   script:
+#     - ./gradlew
+#       {iosSimulatorArm64,iosX64}Test
+#       --stacktrace
+
+# test:linux:
+#   stage: test
+#   interruptible: true
+#   timeout: 1h
+#   needs: [ "build:linux" ]
+#   tags: [ "saas-linux-small-amd64" ]
+#   cache:
+#     - *pull-cache-linux
+#   artifacts: *artifact-reports
+#   rules:
+#     - *if-merge-request-or-main
+#   script:
+#     - ./gradlew
+#       {jvm,js,testReleaseUnit}Test -x :integrationtests:jvmTest
+#       --stacktrace
+
+# test:integration-test:
+#   stage: test
+#   interruptible: true
+#   timeout: 30m
+#   needs: [ "build:linux" ]
+#   tags: [ "saas-linux-small-amd64" ]
+#   cache:
+#     - *pull-cache-linux
+#   artifacts: *artifact-reports
+#   rules:
+#     - *if-merge-request-or-main
+#   script:
+#     - ./gradlew
+#       :integrationtests:jvmTest
+#       --stacktrace
+
+security:dependencies:
+  stage: security
+  interruptible: true
+  timeout: 30m
+  needs: [ ]
+  tags: [ "saas-linux-small-amd64" ]
+  image:
+    name: "aquasec/trivy"
+    entrypoint: [ "" ]
+  variables:
+    TRIVY_CACHE_DIR: ".trivycache/"
+  cache:
+    paths:
+      - .trivycache/
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      allow_failure: true
+    - if: '$CI_COMMIT_TAG =~ /^v\d+.\d+.\d+.*/'
+      allow_failure: false
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      allow_failure: false
+  artifacts:
+    when: always
+    reports:
+      dependency_scanning: report.json
+  script:
+    - trivy repo ./ --exit-code 0
+    - trivy repo ./ --exit-code 0 --format template --template "@/contrib/gitlab.tpl" --output report.json
+    - trivy repo ./ --exit-code 1 --severity CRITICAL
+
+# publish:mac:
+#   stage: publish
+#   tags: [ "connect2x-mac" ]
+#   cache:
+#     - *pull-cache-mac
+#   rules:
+#     - *if-main
+#     - *if-release
+#   script:
+#     - ./gradlew
+#       publish{IosArm64,IosSimulatorArm64,IosX64}PublicationToGitlabRepository
+#       --stacktrace
+
+# publish:linux:
+#   stage: publish
+#   tags: [ "saas-linux-small-amd64" ]
+#   cache:
+#     - *pull-cache-linux
+#   rules:
+#     - *if-main
+#     - *if-release
+#   script:
+#     - ./gradlew
+#       publish{KotlinMultiplatform,Jvm,Js,AndroidRelease}PublicationToGitlabRepository
+#       --stacktrace
