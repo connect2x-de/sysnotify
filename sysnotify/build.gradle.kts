@@ -35,11 +35,6 @@ kotlin {
             implementation("com.benasher44:uuid:0.8.4")
         }
     }
-    val commonTest by sourceSets.getting {
-        dependencies {
-            implementation(libs.kotlin.test)
-        }
-    }
 
     // Plain ol' Java
     jvm()
@@ -53,96 +48,95 @@ kotlin {
         }
     }
     // macOS/iOS
-    if (hostOs.contains("mac", true)) {
-        listOf(
-            macosX64(),
-            macosArm64()
-        ).forEach {
-            it.apply {
-                compilations["main"].cinterops {
-                    val jni by creating {
-                        compilerOpts("-I${jniHeaders / "darwin"}")
-                        headers("${jniHeaders / "jni.h"}")
+    val appleMain by sourceSets.creating { dependsOn(commonMain) }
+    val macosMain by sourceSets.creating { dependsOn(appleMain) }
+    listOf(
+        macosX64(),
+        macosArm64()
+    ).forEach {
+        it.apply {
+            compilations.all {
+                if(hostOs.contains("mac", true)) {
+                    cinterops {
+                        val jni by creating {
+                            compilerOpts("-I${jniHeaders / "darwin"}")
+                            headers("${jniHeaders / "jni.h"}")
+                        }
                     }
-                }
-                binaries {
-                    framework {
-                        baseName = "shared"
-                    }
-                    sharedLib {}
-                }
-            }
-        }
-        listOf(
-            iosX64(),
-            iosArm64(),
-            iosSimulatorArm64(),
-        ).forEach {
-            it.apply {
-                binaries {
-                    framework {
-                        baseName = "shared"
-                    }
-                }
-            }
-        }
-        sourceSets {
-            val iosX64Main by getting
-            val iosArm64Main by getting
-            val iosSimulatorArm64Main by getting
-            val iosMain by getting {
-                dependsOn(commonMain)
-                iosX64Main.dependsOn(this)
-                iosArm64Main.dependsOn(this)
-                iosSimulatorArm64Main.dependsOn(this)
-            }
-            val macosX64Main by getting
-            val macosArm64Main by getting
-            val macosMain by getting {
-                dependsOn(commonMain)
-                macosX64Main.dependsOn(this)
-                macosArm64Main.dependsOn(this)
-            }
-        }
-    }
-    // Linux
-    if (hostOs.contains("linux", true)) {
-        linuxX64 {
-            compilations["main"].cinterops {
-                val libnotify by creating
-                val jni by creating {
-                    compilerOpts("-I${jniHeaders / "linux"}")
-                    headers("${jniHeaders / "jni.h"}")
-                }
-            }
-        }
-    }
-    // Windows - a horrible mess as always
-    if (hostOs.contains("windows", true)) {
-        val comPath = project(":sysnotify-com").projectDir.toPath()
-        mingwX64 {
-            compilations["main"].cinterops {
-                val sysnotifycom by creating {
-                    headers("${comPath / "include" / "sysnotify-com.h"}")
-                }
-                val jni by creating {
-                    compilerOpts("-I${jniHeaders / "win32"}")
-                    headers("${jniHeaders / "jni.h"}")
                 }
             }
             binaries {
-                sharedLib {
-                    linkerOpts(
-                        "-L${comPath / "build" / "cmake" / "RelWithDebInfo"}",
-                        "-L$jniLibraries",
-                        "-lsysnotify-com",
-                        "-ljawt",
-                        "-ljvm"
-                    )
+                framework {
+                    baseName = "shared"
+                }
+                sharedLib {}
+            }
+        }
+    }
+    val macosX64Main by sourceSets.getting { dependsOn(macosMain) }
+    val macosArm64Main by sourceSets.getting { dependsOn(macosMain) }
+    listOf(
+        iosX64(),
+        iosArm64(),
+        iosSimulatorArm64(),
+    ).forEach {
+        it.apply {
+            binaries {
+                framework {
+                    baseName = "shared"
                 }
             }
         }
     }
+    val iosX64Main by sourceSets.getting { dependsOn(appleMain) }
+    val iosArm64Main by sourceSets.getting { dependsOn(appleMain) }
+    val iosSimulatorArm64Main by sourceSets.getting { dependsOn(appleMain) }
+    // Linux
+    val linuxMain by sourceSets.creating { dependsOn(commonMain) }
+    linuxX64 {
+        compilations.all {
+            if(hostOs.contains("linux", true)) {
+                cinterops {
+                    val libnotify by creating
+                    val jni by creating {
+                        compilerOpts("-I${jniHeaders / "linux"}")
+                        headers("${jniHeaders / "jni.h"}")
+                    }
+                }
+            }
+        }
+    }
+    val linuxX64Main by sourceSets.getting { dependsOn(linuxMain) }
+    // Windows - a horrible mess as always
+    val mingwMain by sourceSets.creating { dependsOn(commonMain) }
+    mingwX64 {
+        val comPath = project(":sysnotify-com").projectDir.toPath()
+        compilations.all {
+            if(hostOs.contains("windows", true)) {
+                cinterops {
+                    val sysnotifycom by creating {
+                        headers("${comPath / "include" / "sysnotify-com.h"}")
+                    }
+                    val jni by creating {
+                        compilerOpts("-I${jniHeaders / "win32"}")
+                        headers("${jniHeaders / "jni.h"}")
+                    }
+                }
+            }
+        }
+        binaries {
+            sharedLib {
+                linkerOpts(
+                    "-L${comPath / "build" / "cmake" / "RelWithDebInfo"}",
+                    "-L$jniLibraries",
+                    "-lsysnotify-com",
+                    "-ljawt",
+                    "-ljvm"
+                )
+            }
+        }
+    }
+    val mingwX64Main by sourceSets.getting { dependsOn(mingwMain) }
 }
 
 android {
