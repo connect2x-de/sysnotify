@@ -103,8 +103,10 @@ build:linux:
   rules:
     - *if-merge-request-or-main
   before_script:
-    - export JAVA_HOME=$(java -XshowSettings:properties -version 2>&1 > /dev/null | grep 'java.home' | awk -F'=' '{print $2}' | tr -d ' ')
     - apt update -y
+    - apt install openjdk-17-jdk-headless
+    - update-java-alternatives -a --jre-headless
+    - export JAVA_HOME=$(java -XshowSettings:properties -version 2>&1 > /dev/null | grep 'java.home' | awk -F'=' '{print $2}' | tr -d ' ')
     - apt install libnotify-dev -y
   script:
     - ./gradlew
