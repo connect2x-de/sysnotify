@@ -107,16 +107,16 @@ build:linux:
   rules:
     - *if-merge-request-or-main
   before_script:
-    - add-apt-repository deb http://archive.ubuntu.com/ubuntu/ focal main restricted universe multiverse
-    - add-apt-repository deb-src http://archive.ubuntu.com/ubuntu/ focal main restricted universe multiverse
-    - add-apt-repository deb http://archive.ubuntu.com/ubuntu/ focal-updates main restricted universe multiverse
-    - add-apt-repository deb-src http://archive.ubuntu.com/ubuntu/ focal-updates main restricted universe multiverse
-    - add-apt-repository deb http://archive.ubuntu.com/ubuntu/ focal-security main restricted universe multiverse
-    - add-apt-repository deb-src http://archive.ubuntu.com/ubuntu/ focal-security main restricted universe multiverse
-    - add-apt-repository deb http://archive.ubuntu.com/ubuntu/ focal-backports main restricted universe multiverse
-    - add-apt-repository deb-src http://archive.ubuntu.com/ubuntu/ focal-backports main restricted universe multiverse
-    - add-apt-repository deb http://archive.canonical.com/ubuntu focal partner
-    - add-apt-repository deb-src http://archive.canonical.com/ubuntu focal partner
+    - sudo add-apt-repository deb http://archive.ubuntu.com/ubuntu/ focal main restricted universe multiverse
+    - sudo add-apt-repository deb-src http://archive.ubuntu.com/ubuntu/ focal main restricted universe multiverse
+    - sudo add-apt-repository deb http://archive.ubuntu.com/ubuntu/ focal-updates main restricted universe multiverse
+    - sudo add-apt-repository deb-src http://archive.ubuntu.com/ubuntu/ focal-updates main restricted universe multiverse
+    - sudo add-apt-repository deb http://archive.ubuntu.com/ubuntu/ focal-security main restricted universe multiverse
+    - sudo add-apt-repository deb-src http://archive.ubuntu.com/ubuntu/ focal-security main restricted universe multiverse
+    - sudo add-apt-repository deb http://archive.ubuntu.com/ubuntu/ focal-backports main restricted universe multiverse
+    - sudo add-apt-repository deb-src http://archive.ubuntu.com/ubuntu/ focal-backports main restricted universe multiverse
+    - sudo add-apt-repository deb http://archive.canonical.com/ubuntu focal partner
+    - sudo add-apt-repository deb-src http://archive.canonical.com/ubuntu focal partner
     - apt -qq update
     - apt -qqy --no-install-recommends install libnotify-dev
   script:
