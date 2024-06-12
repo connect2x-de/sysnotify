@@ -52,7 +52,7 @@ fun jniOnLoad(vm: JavaVMVar, reserved: COpaquePointer): jint {
 }
 
 @CName("JNI_OnUnload")
-fun jniOnUnload(vm: JavaVM, reserved: COpaquePointer) {
+fun jniOnUnload(vm: JavaVMVar, reserved: COpaquePointer) {
 
 }
 

@@ -39,25 +39,25 @@ variables:
       - $GRADLE_USER_HOME
       - $KONAN_DATA_DIR
 
-# .cache-mac: &cache-mac
-#   - key: global-sysnotify-cache-mac
-#     policy: pull-push
-#     paths:
-#       - $GRADLE_USER_HOME
-#       - $KONAN_DATA_DIR
-#   - key: "$CI_COMMIT_REF_NAME-mac"
-#     policy: push
-#     paths:
-#       - $GRADLE_USER_HOME
-#       - $KONAN_DATA_DIR
-#
-# .pull-cache-mac: &pull-cache-mac
-#   - key: "$CI_COMMIT_REF_NAME-mac"
-#     fallback_keys: [ "global-sysnotify-cache-mac" ]
-#     policy: pull
-#     paths:
-#       - $GRADLE_USER_HOME
-#       - $KONAN_DATA_DIR
+.cache-mac: &cache-mac
+  - key: global-sysnotify-cache-mac
+    policy: pull-push
+    paths:
+      - $GRADLE_USER_HOME
+      - $KONAN_DATA_DIR
+  - key: "$CI_COMMIT_REF_NAME-mac"
+    policy: push
+    paths:
+      - $GRADLE_USER_HOME
+      - $KONAN_DATA_DIR
+
+.pull-cache-mac: &pull-cache-mac
+  - key: "$CI_COMMIT_REF_NAME-mac"
+    fallback_keys: [ "global-sysnotify-cache-mac" ]
+    policy: pull
+    paths:
+      - $GRADLE_USER_HOME
+      - $KONAN_DATA_DIR
 
 .artifact-reports: &artifact-reports
   name: reports
@@ -82,19 +82,19 @@ variables:
   - if: $CI_PIPELINE_SOURCE == "schedule"
     when: never
 
-# build:mac:
-#   stage: build
-#   interruptible: true
-#   tags: [ "connect2x-mac" ]
-#   cache:
-#     - *cache-mac
-#   rules:
-#     - *if-merge-request-or-main
-#   script:
-#     - ./gradlew
-#       compileKotlin{IosArm64,IosSimulatorArm64,IosX64}
-#       linkDebugTestIosX64
-#       --stacktrace
+build:mac:
+  stage: build
+  interruptible: true
+  tags: [ "connect2x-mac" ]
+  cache:
+    - *cache-mac
+  rules:
+    - *if-merge-request-or-main
+  script:
+    - ./gradlew
+      compileKotlin{IosArm64,IosSimulatorArm64,IosX64}
+      link{IosArm64,IosX64}
+      --stacktrace
 
 build:linux:
   stage: build
