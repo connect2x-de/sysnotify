@@ -23,7 +23,7 @@ plugins {
 
 val hostOs = System.getProperty("os.name")
 val isArm64 = System.getProperty("os.arch") == "aarch64"
-val javaHome = Path(System.getenv("JAVA_HOME")) // For JNI interop
+val javaHome = Path(System.getProperty("java.home")) // For JNI interop
 val jniHeaders = javaHome / "include"
 val jniLibraries = javaHome / "lib"
 
