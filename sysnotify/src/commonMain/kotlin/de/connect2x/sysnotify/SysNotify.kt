@@ -20,7 +20,8 @@ import com.benasher44.uuid.uuid4
 
 enum class NotificationPlatform {
     ANDROID,
-    APPLE,
+    IOS,
+    MACOS,
     JVM,
     LINUX,
     WINDOWS

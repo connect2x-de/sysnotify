@@ -52,12 +52,11 @@ kotlin {
             }
         }
     }
-    // iOS/macOS
+    // macOS/iOS
     if (hostOs.contains("mac", true)) {
         listOf(
-            iosX64(),
-            iosArm64(),
-            iosSimulatorArm64(),
+            macosX64(),
+            macosArm64()
         ).forEach {
             it.apply {
                 compilations["main"].cinterops {
@@ -72,6 +71,18 @@ kotlin {
                     }
                     sharedLib {}
                 }
+            }
+        }
+        listOf(
+            iosX64(),
+            iosArm64(),
+            iosSimulatorArm64(),
+        ).forEach {
+            it.binaries {
+                framework {
+                    baseName = "shared"
+                }
+                sharedLib {}
             }
         }
     }
