@@ -105,11 +105,10 @@ build:linux:
   before_script:
     - export JAVA_HOME="/usr/lib/jvm/java-21.0.1-openjdk
     - apt update -y
-    - apt install libnotify-dev -y # TODO: Cache APT packages
+    - apt install libnotify-dev -y
   script:
     - ./gradlew
-      compileKotlinJvm # TODO: Compile JS at some point
-      compileKotlinLinuxX64
+      compileKotlin{Jvm,LinuxX64}
       compileReleaseKotlinAndroid
       linkLinuxX64
       --stacktrace
