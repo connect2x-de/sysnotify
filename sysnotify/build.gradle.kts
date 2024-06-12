@@ -40,9 +40,6 @@ kotlin {
             implementation(libs.kotlin.test)
         }
     }
-    val appleMain by sourceSets.creating {
-        dependsOn(commonMain)
-    }
 
     // Plain ol' Java
     jvm()
@@ -62,7 +59,6 @@ kotlin {
             macosArm64()
         ).forEach {
             it.apply {
-                sourceSets { add(appleMain) }
                 compilations["main"].cinterops {
                     val jni by creating {
                         compilerOpts("-I${jniHeaders / "darwin"}")
@@ -83,7 +79,6 @@ kotlin {
             iosSimulatorArm64(),
         ).forEach {
             it.apply {
-                sourceSets { add(appleMain) }
                 binaries {
                     framework {
                         baseName = "shared"
@@ -129,15 +124,6 @@ kotlin {
                 }
             }
         }
-    }
-    // Source sets
-    sourceSets {
-        jvmMain { dependsOn(commonMain) }
-        androidMain { dependsOn(commonMain) }
-        linuxMain { dependsOn(commonMain) }
-        iosMain { dependsOn(appleMain) }
-        macosMain { dependsOn(appleMain) }
-        mingwMain { dependsOn(commonMain) }
     }
 }
 
