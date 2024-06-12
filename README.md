@@ -1,8 +1,10 @@
-# kmp-push
+# Sysnotify
 Cross-platform system notifications for Kotlin Multiplatform.
 
+![](doc/sysnotify-arch.png)
+
 ## Example
-Using kmp-sysnotify is as easy as creating a `NotificationHandler` and calling the `push` function!  
+Using Sysnotify is as easy as creating a `NotificationHandler` and calling the `push` function!  
 The API is also completely thread-safe and works nicely with coroutines.
 
 ```kotlin
@@ -36,8 +38,7 @@ class MyApplication : Application {
 ## Supported platforms
 
 ### JVM
-The JVM is currently not supported as it requires an additional JNI wrapper.  
-However, support is planned in the near future.
+The JVM supports all native targets mentioned below for every architecture supported by Kotlin/Native.
 
 ### Android
 Android is supported starting with **API level 28**.  
