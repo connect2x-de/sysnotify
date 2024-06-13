@@ -15,17 +15,24 @@
 
 package de.connect2x.sysnotify
 
-import com.benasher44.uuid.Uuid
-import com.benasher44.uuid.uuid4
-
+/**
+ * A complete list of all platforms supported by Sysnotify.
+ * The current platform can be queried from every [NotificationHandler] instance
+ * via the [NotificationHandler.platform] property.
+ */
 enum class NotificationPlatform {
     ANDROID,
-    APPLE,
+    APPLE, // This includes iOS and macOS
     JVM,
     LINUX,
     WINDOWS
 }
 
+/**
+ * A data class describing the capabilities of a given [NotificationHandler] instance.
+ * Each flag indicates whether a feature is supported.
+ * The [isSupported] flag indicates if notifications are supported on the current platform at all.
+ */
 data class NotificationCapabilities(
     val isTitleSupported: Boolean,
     val isDescriptionSupported: Boolean,
@@ -70,8 +77,24 @@ data class Notification(
 
 }
 
+/**
+ * This interface describes a notification that was created by an [NotificationHandler] instance
+ * on any given platform.
+ */
 interface NotificationHandle
 
+/**
+ * This interface provides platform-agnostic functions to interact with the OSs notifications.
+ * It allows pushing, updating and popping notifications based on the supported platform feature set.
+ * A single application may create multiple notification handlers to act as different notification "channels",
+ * much like on a system like Android.
+ *
+ * Since this API may invoke native/foreign APIs which may allocate unmanaged heap memory,
+ * this interface extends [AutoCloseable] to allow closing notification handlers when the lifecycle
+ * of the process using it ends.
+ * It is very important to invoke the provided [close] function in order to free up allocated resources,
+ * otherwise a memory leak might occur based on the implementation.
+ */
 @OptIn(ExperimentalStdlibApi::class)
 interface NotificationHandler : AutoCloseable {
     val name: String
@@ -83,11 +106,6 @@ interface NotificationHandler : AutoCloseable {
     fun push(notification: Notification): NotificationHandle?
     fun pop(handle: NotificationHandle)
 
-    fun popIfSupported(handle: NotificationHandle) {
-        if (!capabilities.isPopSupported) throw IllegalStateException("Pop is not supported on $platform")
-        pop(handle)
-    }
-
     fun update(handle: NotificationHandle, notification: Notification): NotificationHandle? {
         pop(handle)
         return push(notification)
@@ -96,6 +114,17 @@ interface NotificationHandler : AutoCloseable {
     override fun close() {}
 }
 
+/**
+ * This function is used to create a new notification handler instance
+ * identified by the given name and optionally associated with the given context.
+ *
+ * @param name The name identifying this notification handler. Should be globally (system-wide) unique.
+ *  On Android, this is also the name of the underlying `NotificationChannel`, so it can be used to
+ *  retrieve an instance of said channel after creating the notification handler instance if needed.
+ * @param context An optional context reference passed to the underlying implementation.
+ *  Currently, this is only used on Android for passing in the `Context` instance from the activity.
+ * @return A new notification handler instance with the given name (and context).
+ */
 expect fun createNotificationHandler(
     name: String,
     context: Any? = null
