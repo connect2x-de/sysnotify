@@ -15,6 +15,16 @@
 
 package de.connect2x.sysnotify
 
+// This is the high-level C-API implemented by desktop targets JniGlue class
+private object JniGlue {
+    external fun snNotificationHandlerCreate()
+    external fun snNotificationHandlerRequestPermissions()
+    external fun snNotificationHandlerPush()
+    external fun snNotificationHandlerUpdate()
+    external fun snNotificationHandlerPop()
+    external fun snNotificationHandlerDestroy()
+}
+
 internal class JvmNotificationHandler(
     override val name: String
 ) : NotificationHandler {

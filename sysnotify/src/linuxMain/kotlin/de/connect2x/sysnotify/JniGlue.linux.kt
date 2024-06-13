@@ -26,6 +26,7 @@ import jni.JavaVMVar
 import jni.jbyteArray
 import jni.jint
 import jni.jobject
+import jni.jstring
 import kotlinx.cinterop.COpaquePointer
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.invoke
@@ -59,14 +60,14 @@ fun jniOnUnload(vm: JavaVMVar, reserved: COpaquePointer) {
 // Exposed high-level C-API functions
 
 @CName("sn_notification_handler_create")
-fun snNotificationHandlerCreate(name: String?, context: jobject?) {
+fun snNotificationHandlerCreate(name: jstring?, context: jobject?) {
 
 }
 
 @CName("sn_notification_handler_push")
 fun snNotificationHandlerPush(
     handler: COpaquePointer?,
-    name: String?,
+    name: jstring?,
     description: String?,
     icon: jbyteArray?
 ): COpaquePointer? {
