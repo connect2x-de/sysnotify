@@ -15,7 +15,7 @@
 
 @file:OptIn(ExperimentalNativeApi::class, ExperimentalForeignApi::class)
 
-package io.karma.sysnotify
+package de.connect2x.sysnotify
 
 import jni.JNI_VERSION_1_8
 import jni.JavaVMVar

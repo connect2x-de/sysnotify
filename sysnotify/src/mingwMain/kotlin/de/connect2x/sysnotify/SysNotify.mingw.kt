@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-package io.karma.sysnotify
+package de.connect2x.sysnotify
 
 internal class WindowsNotificationHandler(
     override val name: String,
