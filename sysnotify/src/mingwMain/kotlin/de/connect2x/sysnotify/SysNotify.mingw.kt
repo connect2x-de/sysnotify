@@ -13,9 +13,18 @@
  * limitations under the License.
  */
 
+@file:OptIn(ExperimentalForeignApi::class)
+
 package de.connect2x.sysnotify
 
-internal class WindowsNotificationHandler(
+import kotlinx.cinterop.COpaquePointer
+import kotlinx.cinterop.ExperimentalForeignApi
+
+private data class WindowsNotificationHandle(
+    val address: COpaquePointer
+) : NotificationHandle
+
+private class WindowsNotificationHandler(
     override val name: String,
 ) : NotificationHandler {
     override val platform: NotificationPlatform = NotificationPlatform.WINDOWS
@@ -33,7 +42,7 @@ internal class WindowsNotificationHandler(
     }
 
     override fun pop(handle: NotificationHandle) {
-        handle.isValid = false
+
     }
 }
 

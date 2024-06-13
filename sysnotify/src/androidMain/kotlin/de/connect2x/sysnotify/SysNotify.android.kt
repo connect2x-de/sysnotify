@@ -27,9 +27,14 @@ import android.os.Build
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import com.benasher44.uuid.Uuid
 import com.benasher44.uuid.uuid4
 
-internal class AndroidNotificationHandler(
+private data class AndroidNotificationHandle(
+    val uuid: Uuid = uuid4()
+) : NotificationHandle
+
+private class AndroidNotificationHandler(
     override val name: String,
     context: Any?
 ) : NotificationHandler {
@@ -93,22 +98,22 @@ internal class AndroidNotificationHandler(
         handle: NotificationHandle,
         notification: Notification
     ): NotificationHandle {
-        if (!handle.isValid) throw IllegalArgumentException("Invalid notification handle")
+        if (handle !is AndroidNotificationHandle) throw IllegalArgumentException("Handle is not an android notification handle")
         return pushImpl(notification, handle)
     }
 
     override fun pop(handle: NotificationHandle) {
+        if (handle !is AndroidNotificationHandle) throw IllegalArgumentException("Handle is not an android notification handle")
         with(NotificationManagerCompat.from(activity)) {
             cancel(handle.uuid.hashCode())
         }
-        handle.isValid = false
     }
 
     @SuppressLint("MissingPermission") // It is the callers responsibility to make sure perms are defined
     private fun pushImpl(
         notification: Notification,
-        handle: NotificationHandle = NotificationHandle()
-    ): NotificationHandle {
+        handle: AndroidNotificationHandle = AndroidNotificationHandle()
+    ): AndroidNotificationHandle {
         with(NotificationManagerCompat.from(activity)) {
             notify(
                 handle.uuid.hashCode(), NotificationCompat.Builder(activity, channelId)

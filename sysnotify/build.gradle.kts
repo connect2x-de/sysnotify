@@ -103,11 +103,23 @@ kotlin {
             }
         }
         nativeMain { dependsOn(commonMain.get()) }
+        val desktopMain by creating {
+            dependsOn(nativeMain.get())
+        }
         appleMain { dependsOn(nativeMain.get()) }
-        macosMain { dependsOn(appleMain.get()) }
+        macosMain {
+            dependsOn(desktopMain)
+            dependsOn(appleMain.get())
+        }
         iosMain { dependsOn(appleMain.get()) }
-        linuxMain { dependsOn(nativeMain.get()) }
-        mingwMain { dependsOn(nativeMain.get()) }
+        linuxMain {
+            dependsOn(desktopMain)
+            dependsOn(nativeMain.get())
+        }
+        mingwMain {
+            dependsOn(desktopMain)
+            dependsOn(nativeMain.get())
+        }
     }
     // Disable cross-compilation - https://youtrack.jetbrains.com/issue/KT-30498/Option-to-disable-kotlin-native-cross-compilation
     when {

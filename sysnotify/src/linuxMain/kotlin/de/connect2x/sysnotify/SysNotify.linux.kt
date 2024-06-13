@@ -15,8 +15,6 @@
 
 package de.connect2x.sysnotify
 
-import com.benasher44.uuid.Uuid
-import com.benasher44.uuid.uuid4
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
@@ -52,9 +50,8 @@ fun <P : CPointer<GError>> P.freeAndThrow() {
 
 @OptIn(ExperimentalForeignApi::class)
 internal class LinuxNotificationHandle(
-    internal val address: CPointer<NotifyNotification>,
-    override val uuid: Uuid = uuid4()
-) : NotificationHandle(uuid)
+    internal val address: CPointer<NotifyNotification>
+) : NotificationHandle
 
 @OptIn(ExperimentalForeignApi::class)
 internal class LinuxNotificationHandler(
@@ -121,7 +118,6 @@ internal class LinuxNotificationHandler(
                 return
             }
         }
-        handle.isValid = false
     }
 }
 

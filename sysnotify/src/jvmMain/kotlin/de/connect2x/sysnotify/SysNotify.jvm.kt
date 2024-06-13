@@ -16,36 +16,52 @@
 package de.connect2x.sysnotify
 
 // This is the high-level C-API implemented by desktop targets JniGlue class
-private object JniGlue {
-    external fun snNotificationHandlerCreate()
-    external fun snNotificationHandlerRequestPermissions()
-    external fun snNotificationHandlerPush()
-    external fun snNotificationHandlerUpdate()
-    external fun snNotificationHandlerPop()
-    external fun snNotificationHandlerDestroy()
+private object NativeNotificationHandler {
+    external fun create(name: String): Long
+    external fun isTitleSupported(handler: Long): Boolean
+    external fun isDescriptionSupported(handler: Long): Boolean
+    external fun isIconSupported(handler: Long): Boolean
+    external fun isActionSupported(handler: Long): Boolean
+    external fun isPopSupported(handler: Long): Boolean
+    external fun requestPermissions(handler: Long)
+    external fun push(handler: Long, name: String, description: String?, icon: ByteArray?): Long
+    external fun update(handler: Long, notification: Long, name: String, description: String?, icon: ByteArray?): Long
+    external fun pop(handler: Long, notification: Long)
+    external fun destroy(handler: Long)
 }
 
-internal class JvmNotificationHandler(
+private data class JvmNotificationHandle(
+    val address: Long
+) : NotificationHandle
+
+private class JvmNotificationHandler(
     override val name: String
 ) : NotificationHandler {
+    private val address: Long = NativeNotificationHandler.create(name)
     override val platform: NotificationPlatform = NotificationPlatform.JVM
 
     override val capabilities: NotificationCapabilities = NotificationCapabilities(
-        isTitleSupported = false,
-        isDescriptionSupported = false,
-        isIconSupported = false,
-        isActionSupported = false,
-        isPopSupported = false
+        isTitleSupported = NativeNotificationHandler.isTitleSupported(address),
+        isDescriptionSupported = NativeNotificationHandler.isDescriptionSupported(address),
+        isIconSupported = NativeNotificationHandler.isIconSupported(address),
+        isActionSupported = NativeNotificationHandler.isActionSupported(address),
+        isPopSupported = NativeNotificationHandler.isPopSupported(address)
     )
 
-    override fun requestPermissions() {}
+    override fun close() {
+        NativeNotificationHandler.destroy(address)
+    }
+
+    override fun requestPermissions() {
+        NativeNotificationHandler.requestPermissions(address)
+    }
 
     override fun push(notification: Notification): NotificationHandle? {
-        return null
+        return null // TODO: ...
     }
 
     override fun pop(handle: NotificationHandle) {
-        throw UnsupportedOperationException()
+        // TODO: ...
     }
 }
 

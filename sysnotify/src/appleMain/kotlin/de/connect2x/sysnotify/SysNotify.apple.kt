@@ -22,8 +22,14 @@ import platform.UserNotifications.UNUserNotificationCenter
 import platform.UserNotifications.UNMutableNotificationContent
 import platform.UserNotifications.UNNotification
 import platform.UserNotifications.UNNotificationRequest
+import com.benasher44.uuid.Uuid
+import com.benasher44.uuid.uuid4
 
-internal class AppleNotificationHandler(override val name: String) : NotificationHandler {
+private data class AppleNotificationHandle(
+    val uuid: Uuid = uuid4()
+) : NotificationHandle
+
+private class AppleNotificationHandler(override val name: String) : NotificationHandler {
     override val platform: NotificationPlatform = NotificationPlatform.APPLE
 
     override val capabilities: NotificationCapabilities = NotificationCapabilities(
@@ -48,7 +54,7 @@ internal class AppleNotificationHandler(override val name: String) : Notificatio
     }
 
     override fun push(notification: Notification): NotificationHandle {
-        val handle = NotificationHandle()
+        val handle = AppleNotificationHandle()
         val content = UNMutableNotificationContent().apply {
             setTitle(notification.title ?: handle.uuid.toString())
             notification.description?.let(::setBody)
@@ -68,6 +74,7 @@ internal class AppleNotificationHandler(override val name: String) : Notificatio
 
     @Suppress("UNCHECKED_CAST")
     override fun pop(handle: NotificationHandle) {
+        if(handle !is AppleNotificationHandle) throw IllegalArgumentException("Handle is not an apple notification handle")
         val center = UNUserNotificationCenter.currentNotificationCenter()
         val identifier = handle.uuid.toString()
         var found = false
@@ -76,7 +83,6 @@ internal class AppleNotificationHandler(override val name: String) : Notificatio
             for (request in it as List<UNNotificationRequest>) {
                 if (request.identifier != identifier) continue
                 center.removePendingNotificationRequestsWithIdentifiers(listOf(identifier))
-                handle.isValid = false
                 found = true
                 break
             }
@@ -87,7 +93,6 @@ internal class AppleNotificationHandler(override val name: String) : Notificatio
             for (notification in it as List<UNNotification>) {
                 if (notification.request.identifier != identifier) continue
                 center.removeDeliveredNotificationsWithIdentifiers(listOf(identifier))
-                handle.isValid = false
                 break
             }
         }

@@ -70,9 +70,7 @@ data class Notification(
 
 }
 
-open class NotificationHandle(open val uuid: Uuid = uuid4()) {
-    var isValid: Boolean = true
-}
+interface NotificationHandle
 
 @OptIn(ExperimentalStdlibApi::class)
 interface NotificationHandler : AutoCloseable {
@@ -91,7 +89,6 @@ interface NotificationHandler : AutoCloseable {
     }
 
     fun update(handle: NotificationHandle, notification: Notification): NotificationHandle? {
-        if (!handle.isValid) throw IllegalArgumentException("Invalid notification handle")
         pop(handle)
         return push(notification)
     }
