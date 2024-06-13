@@ -15,15 +15,15 @@
 
 package de.connect2x.sysnotify
 
+import com.benasher44.uuid.Uuid
+import com.benasher44.uuid.uuid4
 import platform.UserNotifications.UNAuthorizationOptionAlert
 import platform.UserNotifications.UNAuthorizationOptionBadge
 import platform.UserNotifications.UNAuthorizationOptionSound
-import platform.UserNotifications.UNUserNotificationCenter
 import platform.UserNotifications.UNMutableNotificationContent
 import platform.UserNotifications.UNNotification
 import platform.UserNotifications.UNNotificationRequest
-import com.benasher44.uuid.Uuid
-import com.benasher44.uuid.uuid4
+import platform.UserNotifications.UNUserNotificationCenter
 
 private data class AppleNotificationHandle(
     val uuid: Uuid = uuid4()
@@ -74,7 +74,7 @@ private class AppleNotificationHandler(override val name: String) : Notification
 
     @Suppress("UNCHECKED_CAST")
     override suspend fun pop(handle: NotificationHandle) {
-        if(handle !is AppleNotificationHandle) throw IllegalArgumentException("Handle is not an apple notification handle")
+        if (handle !is AppleNotificationHandle) throw IllegalArgumentException("Handle is not an apple notification handle")
         val center = UNUserNotificationCenter.currentNotificationCenter()
         val identifier = handle.uuid.toString()
         var found = false
@@ -99,7 +99,6 @@ private class AppleNotificationHandler(override val name: String) : Notification
     }
 }
 
-actual fun createNotificationHandler(
-    name: String,
-    context: Any?
+fun NotificationHandler.Companion.create(
+    name: String
 ): NotificationHandler = AppleNotificationHandler(name)

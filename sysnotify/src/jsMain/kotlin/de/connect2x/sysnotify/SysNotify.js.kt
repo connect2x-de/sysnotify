@@ -65,7 +65,6 @@ private class WebNotificationHandler(
     }
 }
 
-actual fun createNotificationHandler(
-    name: String,
-    context: Any?
+fun NotificationHandler.Companion.create(
+    name: String
 ): NotificationHandler = WebNotificationHandler(name)

@@ -113,20 +113,6 @@ interface NotificationHandler : AutoCloseable {
     }
 
     override fun close() {}
-}
 
-/**
- * This function is used to create a new notification handler instance
- * identified by the given name and optionally associated with the given context.
- *
- * @param name The name identifying this notification handler. Should be globally (system-wide) unique.
- *  On Android, this is also the name of the underlying `NotificationChannel`, so it can be used to
- *  retrieve an instance of said channel after creating the notification handler instance if needed.
- * @param context An optional context reference passed to the underlying implementation.
- *  Currently, this is only used on Android for passing in the `Context` instance from the activity.
- * @return A new notification handler instance with the given name (and context).
- */
-expect fun createNotificationHandler(
-    name: String,
-    context: Any? = null
-): NotificationHandler
+    companion object // Used for create implementations
+}

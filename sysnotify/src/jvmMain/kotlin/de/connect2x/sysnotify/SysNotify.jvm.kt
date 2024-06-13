@@ -76,7 +76,6 @@ private class JvmNotificationHandler(
     }
 }
 
-actual fun createNotificationHandler(
-    name: String,
-    context: Any?
+fun NotificationHandler.Companion.create(
+    name: String
 ): NotificationHandler = JvmNotificationHandler(name)

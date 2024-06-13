@@ -121,7 +121,6 @@ internal class LinuxNotificationHandler(
     }
 }
 
-actual fun createNotificationHandler(
+fun NotificationHandler.Companion.create(
     name: String,
-    context: Any?
 ): NotificationHandler = LinuxNotificationHandler(name)

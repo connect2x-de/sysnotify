@@ -131,7 +131,7 @@ private class AndroidNotificationHandler(
     }
 }
 
-actual fun createNotificationHandler(
+fun NotificationHandler.Companion.create(
     name: String,
-    context: Any?
+    context: Context
 ): NotificationHandler = AndroidNotificationHandler(name, context)

@@ -46,7 +46,6 @@ private class WindowsNotificationHandler(
     }
 }
 
-actual fun createNotificationHandler(
-    name: String,
-    context: Any?
+fun NotificationHandler.Companion.create(
+    name: String
 ): NotificationHandler = WindowsNotificationHandler(name)
