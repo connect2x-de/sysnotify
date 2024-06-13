@@ -1,16 +1,16 @@
 [versions]
 agp = "8.2.2"
 kotlin = "1.9.23"
+kotlinxCoroutines = "1.8.1"
 ksp = "1.9.23-1.0.20"
-nexus-publish = "2.0.0-rc-1"
 android-minSdk = "28"
 android-compileSdk = "34"
 core = "1.13.1"
 uuid = "0.8.4"
 
 [libraries]
+kotlinx-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
-nexus-publish = { module = "io.github.gradle-nexus.publish-plugin:io.github.gradle-nexus.publish-plugin.gradle.plugin", version.ref = "nexus-publish" }
 androidx-core = { group = "androidx.core", name = "core", version.ref = "core" }
 uuid = { module = "com.benasher44:uuid", version.ref = "uuid" }
 

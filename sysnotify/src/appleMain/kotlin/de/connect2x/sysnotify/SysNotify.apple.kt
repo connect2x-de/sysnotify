@@ -40,7 +40,7 @@ private class AppleNotificationHandler(override val name: String) : Notification
         isPopSupported = true
     )
 
-    override fun requestPermissions() {
+    override suspend fun requestPermissions() {
         UNUserNotificationCenter.currentNotificationCenter()
             .requestAuthorizationWithOptions(
                 UNAuthorizationOptionSound
@@ -53,7 +53,7 @@ private class AppleNotificationHandler(override val name: String) : Notification
             }
     }
 
-    override fun push(notification: Notification): NotificationHandle {
+    override suspend fun push(notification: Notification): NotificationHandle {
         val handle = AppleNotificationHandle()
         val content = UNMutableNotificationContent().apply {
             setTitle(notification.title ?: handle.uuid.toString())
@@ -73,7 +73,7 @@ private class AppleNotificationHandler(override val name: String) : Notification
     }
 
     @Suppress("UNCHECKED_CAST")
-    override fun pop(handle: NotificationHandle) {
+    override suspend fun pop(handle: NotificationHandle) {
         if(handle !is AppleNotificationHandle) throw IllegalArgumentException("Handle is not an apple notification handle")
         val center = UNUserNotificationCenter.currentNotificationCenter()
         val identifier = handle.uuid.toString()

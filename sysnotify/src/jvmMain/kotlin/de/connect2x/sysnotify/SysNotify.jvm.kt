@@ -17,16 +17,27 @@ package de.connect2x.sysnotify
 
 // This is the high-level C-API implemented by desktop targets JniGlue class
 private object NativeNotificationHandler {
+    @JvmStatic
     external fun create(name: String): Long
+    @JvmStatic
     external fun isTitleSupported(handler: Long): Boolean
+    @JvmStatic
     external fun isDescriptionSupported(handler: Long): Boolean
+    @JvmStatic
     external fun isIconSupported(handler: Long): Boolean
+    @JvmStatic
     external fun isActionSupported(handler: Long): Boolean
+    @JvmStatic
     external fun isPopSupported(handler: Long): Boolean
+    @JvmStatic
     external fun requestPermissions(handler: Long)
+    @JvmStatic
     external fun push(handler: Long, name: String, description: String?, icon: ByteArray?): Long
+    @JvmStatic
     external fun update(handler: Long, notification: Long, name: String, description: String?, icon: ByteArray?): Long
+    @JvmStatic
     external fun pop(handler: Long, notification: Long)
+    @JvmStatic
     external fun destroy(handler: Long)
 }
 
@@ -52,15 +63,15 @@ private class JvmNotificationHandler(
         NativeNotificationHandler.destroy(address)
     }
 
-    override fun requestPermissions() {
+    override suspend fun requestPermissions() {
         NativeNotificationHandler.requestPermissions(address)
     }
 
-    override fun push(notification: Notification): NotificationHandle? {
+    override suspend fun push(notification: Notification): NotificationHandle? {
         return null // TODO: ...
     }
 
-    override fun pop(handle: NotificationHandle) {
+    override suspend fun pop(handle: NotificationHandle) {
         // TODO: ...
     }
 }

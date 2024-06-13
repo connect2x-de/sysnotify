@@ -37,11 +37,11 @@ private class WindowsNotificationHandler(
         isPopSupported = false
     )
 
-    override fun push(notification: Notification): NotificationHandle? {
+    override suspend fun push(notification: Notification): NotificationHandle? {
         return null
     }
 
-    override fun pop(handle: NotificationHandle) {
+    override suspend fun pop(handle: NotificationHandle) {
 
     }
 }

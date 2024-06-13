@@ -38,6 +38,15 @@ kotlin {
             }
         }
     }
+    js(IR) {
+        browser {
+            testTask {
+                enabled = false
+            }
+        }
+        binaries.library()
+        generateTypeScriptDefinitions()
+    }
     listOf(macosX64(), macosArm64()).forEach { target ->
         target.apply {
             compilations["main"].cinterops {
@@ -99,6 +108,7 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
+                api(libs.kotlinx.coroutines)
                 implementation(libs.uuid)
             }
         }

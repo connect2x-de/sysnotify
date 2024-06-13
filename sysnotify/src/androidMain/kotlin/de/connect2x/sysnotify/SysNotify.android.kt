@@ -73,7 +73,7 @@ private class AndroidNotificationHandler(
         manager.deleteNotificationChannel(channelId)
     }
 
-    override fun requestPermissions() {
+    override suspend fun requestPermissions() {
         // If we are API level T or above, request permission to push notifications
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ActivityCompat.checkSelfPermission(
@@ -90,11 +90,11 @@ private class AndroidNotificationHandler(
         }
     }
 
-    override fun push(notification: Notification): NotificationHandle {
+    override suspend fun push(notification: Notification): NotificationHandle {
         return pushImpl(notification)
     }
 
-    override fun update(
+    override suspend fun update(
         handle: NotificationHandle,
         notification: Notification
     ): NotificationHandle {
@@ -102,7 +102,7 @@ private class AndroidNotificationHandler(
         return pushImpl(notification, handle)
     }
 
-    override fun pop(handle: NotificationHandle) {
+    override suspend fun pop(handle: NotificationHandle) {
         if (handle !is AndroidNotificationHandle) throw IllegalArgumentException("Handle is not an android notification handle")
         with(NotificationManagerCompat.from(activity)) {
             cancel(handle.uuid.hashCode())

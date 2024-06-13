@@ -78,7 +78,7 @@ internal class LinuxNotificationHandler(
         notify_uninit()
     }
 
-    override fun push(notification: Notification): NotificationHandle? {
+    override suspend fun push(notification: Notification): NotificationHandle? {
         if (!isInitialized) return null
         val notificationAddress = notify_notification_new(
             summary = notification.title,
@@ -109,7 +109,7 @@ internal class LinuxNotificationHandler(
         return LinuxNotificationHandle(notificationAddress)
     }
 
-    override fun pop(handle: NotificationHandle) {
+    override suspend fun pop(handle: NotificationHandle) {
         if (!isInitialized || handle !is LinuxNotificationHandle) return
         memScoped {
             val errorAddress = allocPointerTo<GError>()

@@ -25,7 +25,8 @@ enum class NotificationPlatform {
     APPLE, // This includes iOS and macOS
     JVM,
     LINUX,
-    WINDOWS
+    WINDOWS,
+    WEB
 }
 
 /**
@@ -101,12 +102,12 @@ interface NotificationHandler : AutoCloseable {
     val platform: NotificationPlatform
     val capabilities: NotificationCapabilities
 
-    fun requestPermissions() {}
+    suspend fun requestPermissions() {}
 
-    fun push(notification: Notification): NotificationHandle?
-    fun pop(handle: NotificationHandle)
+    suspend fun push(notification: Notification): NotificationHandle?
+    suspend fun pop(handle: NotificationHandle)
 
-    fun update(handle: NotificationHandle, notification: Notification): NotificationHandle? {
+    suspend fun update(handle: NotificationHandle, notification: Notification): NotificationHandle? {
         pop(handle)
         return push(notification)
     }
