@@ -147,12 +147,14 @@ dependencies {
 
 // If we are on Windows, inject the CMake submodule as a dependency to assemble
 if (os.isWindows) {
-    tasks.findByName("assemble")!!.apply {
-        val dependencies = arrayOf(
-            ":sysnotify-com:cmakeConfigure",
-            ":sysnotify-com:cmakeBuild"
-        )
-        dependsOn(*dependencies)
-        mustRunAfter(*dependencies)
+    tasks.filter { it.name.contains("mingw") }.forEach { task ->
+        task.apply {
+            val dependencies = arrayOf(
+                ":sysnotify-com:cmakeConfigure",
+                ":sysnotify-com:cmakeBuild"
+            )
+            dependsOn(*dependencies)
+            mustRunAfter(*dependencies)
+        }
     }
 }
