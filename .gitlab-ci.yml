@@ -59,6 +59,26 @@ variables:
       - $GRADLE_USER_HOME
       - $KONAN_DATA_DIR
 
+.cache-windows: &cache-windows
+  - key: global-sysnotify-cache-windows
+    policy: pull-push
+    paths:
+      - $GRADLE_USER_HOME
+      - $KONAN_DATA_DIR
+  - key: "$CI_COMMIT_REF_NAME-windows"
+    policy: push
+    paths:
+      - $GRADLE_USER_HOME
+      - $KONAN_DATA_DIR
+
+.pull-cache-windows: &pull-cache-windows
+  - key: "$CI_COMMIT_REF_NAME-windows"
+    fallback_keys: [ "global-sysnotify-cache-windows" ]
+    policy: pull
+    paths:
+      - $GRADLE_USER_HOME
+      - $KONAN_DATA_DIR
+
 .artifact-reports: &artifact-reports
   name: reports
   when: always
@@ -82,6 +102,20 @@ variables:
   - if: $CI_PIPELINE_SOURCE == "schedule"
     when: never
 
+build:windows:
+  stage: build
+  interruptible: true
+  tags: [ "saas-windows-medium-amd64" ]
+  cache:
+    - *cache-windows
+  rules:
+    - *if-merge-request-or-main
+  script:
+    - ./gradlew
+      compileKotlinMingwX64
+      linkMingwX64
+      --stacktrace
+
 build:mac:
   stage: build
   interruptible: true
@@ -92,8 +126,8 @@ build:mac:
     - *if-merge-request-or-main
   script:
     - ./gradlew
-      compileKotlin{IosArm64,IosSimulatorArm64,IosX64}
-      link{IosArm64,IosX64}
+      compileKotlin{MacosX64,MacosArm64,IosArm64,IosSimulatorArm64,IosX64}
+      link{MacosX64,MacosArm64,IosArm64,IosX64}
       --stacktrace
 
 build:linux:
