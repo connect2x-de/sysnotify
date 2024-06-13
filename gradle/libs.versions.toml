@@ -6,13 +6,13 @@ nexus-publish = "2.0.0-rc-1"
 android-minSdk = "28"
 android-compileSdk = "34"
 core = "1.13.1"
-# uuid = "0.8.4"
+uuid = "0.8.4"
 
 [libraries]
-# uuid = { module = "com.benasher44:uuid", version.ref = "uuid" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 nexus-publish = { module = "io.github.gradle-nexus.publish-plugin:io.github.gradle-nexus.publish-plugin.gradle.plugin", version.ref = "nexus-publish" }
 androidx-core = { group = "androidx.core", name = "core", version.ref = "core" }
+uuid = { module = "com.benasher44:uuid", version.ref = "uuid" }
 
 [plugins]
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }

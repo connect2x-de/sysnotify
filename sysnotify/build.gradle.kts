@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+import org.gradle.internal.os.OperatingSystem
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import kotlin.io.path.Path
 import kotlin.io.path.div
 
@@ -21,24 +23,13 @@ plugins {
     alias(libs.plugins.androidLibrary)
 }
 
-val hostOs = System.getProperty("os.name")
-val isArm64 = System.getProperty("os.arch") == "aarch64"
+val os: OperatingSystem = OperatingSystem.current()
 val javaHome = Path(System.getProperty("java.home")) // For JNI interop
 val jniHeaders = javaHome / "include"
 val jniLibraries = javaHome / "lib"
 
 kotlin {
-    targetHierarchy.default()
-
-    val commonMain by sourceSets.getting {
-        dependencies {
-            implementation("com.benasher44:uuid:0.8.4")
-        }
-    }
-
-    // Plain ol' Java
     jvm()
-    // Android
     androidTarget {
         publishLibraryVariants("release")
         compilations.all {
@@ -47,22 +38,12 @@ kotlin {
             }
         }
     }
-    // macOS/iOS
-    val appleMain by sourceSets.creating { dependsOn(commonMain) }
-    val macosMain by sourceSets.creating { dependsOn(appleMain) }
-    listOf(
-        macosX64(),
-        macosArm64()
-    ).forEach {
-        it.apply {
-            compilations.all {
-                if(hostOs.contains("mac", true)) {
-                    cinterops {
-                        val jni by creating {
-                            compilerOpts("-I${jniHeaders / "darwin"}")
-                            headers("${jniHeaders / "jni.h"}")
-                        }
-                    }
+    listOf(macosX64(), macosArm64()).forEach { target ->
+        target.apply {
+            compilations["main"].cinterops {
+                val jni by creating {
+                    compilerOpts("-I${jniHeaders / "darwin"}")
+                    headers("${jniHeaders / "jni.h"}")
                 }
             }
             binaries {
@@ -73,14 +54,8 @@ kotlin {
             }
         }
     }
-    val macosX64Main by sourceSets.getting { dependsOn(macosMain) }
-    val macosArm64Main by sourceSets.getting { dependsOn(macosMain) }
-    listOf(
-        iosX64(),
-        iosArm64(),
-        iosSimulatorArm64(),
-    ).forEach {
-        it.apply {
+    listOf(iosX64(), iosArm64(), iosSimulatorArm64()).forEach { target ->
+        target.apply {
             binaries {
                 framework {
                     baseName = "shared"
@@ -88,40 +63,24 @@ kotlin {
             }
         }
     }
-    val iosX64Main by sourceSets.getting { dependsOn(appleMain) }
-    val iosArm64Main by sourceSets.getting { dependsOn(appleMain) }
-    val iosSimulatorArm64Main by sourceSets.getting { dependsOn(appleMain) }
-    // Linux
-    val linuxMain by sourceSets.creating { dependsOn(commonMain) }
     linuxX64 {
-        compilations.all {
-            if(hostOs.contains("linux", true)) {
-                cinterops {
-                    val libnotify by creating
-                    val jni by creating {
-                        compilerOpts("-I${jniHeaders / "linux"}")
-                        headers("${jniHeaders / "jni.h"}")
-                    }
-                }
+        compilations["main"].cinterops {
+            val libnotify by creating
+            val jni by creating {
+                compilerOpts("-I${jniHeaders / "linux"}")
+                headers("${jniHeaders / "jni.h"}")
             }
         }
     }
-    val linuxX64Main by sourceSets.getting { dependsOn(linuxMain) }
-    // Windows - a horrible mess as always
-    val mingwMain by sourceSets.creating { dependsOn(commonMain) }
     mingwX64 {
         val comPath = project(":sysnotify-com").projectDir.toPath()
-        compilations.all {
-            if(hostOs.contains("windows", true)) {
-                cinterops {
-                    val sysnotifycom by creating {
-                        headers("${comPath / "include" / "sysnotify-com.h"}")
-                    }
-                    val jni by creating {
-                        compilerOpts("-I${jniHeaders / "win32"}")
-                        headers("${jniHeaders / "jni.h"}")
-                    }
-                }
+        compilations["main"].cinterops {
+            val sysnotifycom by creating {
+                headers("${comPath / "include" / "sysnotify-com.h"}")
+            }
+            val jni by creating {
+                compilerOpts("-I${jniHeaders / "win32"}")
+                headers("${jniHeaders / "jni.h"}")
             }
         }
         binaries {
@@ -136,7 +95,43 @@ kotlin {
             }
         }
     }
-    val mingwX64Main by sourceSets.getting { dependsOn(mingwMain) }
+    applyDefaultHierarchyTemplate()
+    sourceSets {
+        commonMain {
+            dependencies {
+                implementation(libs.uuid)
+            }
+        }
+        nativeMain { dependsOn(commonMain.get()) }
+        appleMain { dependsOn(nativeMain.get()) }
+        macosMain { dependsOn(appleMain.get()) }
+        iosMain { dependsOn(appleMain.get()) }
+        linuxMain { dependsOn(nativeMain.get()) }
+        mingwMain { dependsOn(nativeMain.get()) }
+    }
+    // Disable cross-compilation - https://youtrack.jetbrains.com/issue/KT-30498/Option-to-disable-kotlin-native-cross-compilation
+    when {
+        os.isLinux -> kotlin.targets.filter { "linux" !in it.name }
+        os.isWindows -> kotlin.targets.filter { "mingw" !in it.name }
+        os.isMacOsX -> kotlin.targets.filter { "linux" in it.name || "mingw" in it.name }
+        else -> emptyList()
+    }.mapNotNull { it as? KotlinNativeTarget }.forEach { target ->
+        target.apply {
+            compilations.all {
+                cinterops.all { tasks[interopProcessingTaskName].enabled = false }
+                compileKotlinTask.enabled = false
+                tasks[processResourcesTaskName].enabled = false
+            }
+            binaries.all { linkTask.enabled = false }
+            mavenPublication {
+                val publicationToDisable = this
+                tasks.withType<AbstractPublishToMaven>()
+                    .all { onlyIf { publication != publicationToDisable } }
+                tasks.withType<GenerateModuleMetadata>()
+                    .all { onlyIf { publication.get() != publicationToDisable } }
+            }
+        }
+    }
 }
 
 android {
@@ -151,7 +146,7 @@ dependencies {
 }
 
 // If we are on Windows, inject the CMake submodule as a dependency to assemble
-if (hostOs.contains("windows", true)) {
+if (os.isWindows) {
     tasks.findByName("assemble")!!.apply {
         val dependencies = arrayOf(
             ":sysnotify-com:cmakeConfigure",
