@@ -26,9 +26,10 @@ import kotlinx.cinterop.ptr
 import kotlinx.cinterop.toKStringFromUtf8
 
 internal fun jstring.toKString(env: JNIEnvVar): String {
-    if (env.rawPtr.toLong() == 0L) throw IllegalStateException("Environment cannot be null")
-    val data = env.pointed!!.GetStringUTFChars!!(env.ptr, this, null)
-    val result = data?.toKStringFromUtf8() ?: return ""
-    env.pointed!!.ReleaseStringUTFChars!!(env.ptr, this, data)
-    return result
+    return checkNotNull(checkNotNull(env.pointed).let {
+        val data = checkNotNull(it.GetStringUTFChars)(env.ptr, this@toKString, null)
+        val result = data?.toKStringFromUtf8() ?: return ""
+        checkNotNull(it.ReleaseStringUTFChars)(env.ptr, this@toKString, data)
+        return@let result
+    })
 }

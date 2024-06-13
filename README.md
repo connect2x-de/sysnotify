@@ -10,7 +10,7 @@ The API is also completely thread-safe and works nicely with coroutines.
 ```kotlin
 import de.connect2x.sysnotify.Notification
 import de.connect2x.sysnotify.NotificationHandler
-import de.connect2x.sysnotify.createNotificationHandler
+import kotlinx.coroutines.GlobalScope
 
 // Android usage example
 class MyApplication : Application {
@@ -20,17 +20,19 @@ class MyApplication : Application {
 
     override fun onCreate() {
         super.onCreate()
-        notificationHandler = createNotificationHandler("MyApp", this)
+        notificationHandler = NotificationHandler.create("MyApp", this)
     }
 
     internal fun onMessageReceived(message: Message) {
         // Process the message..
-        notificationHandler.push(
-            Notification(
-                title = message.sender.name,
-                description = message.content
+        GlobalScope.async {
+            notificationHandler.push(
+                Notification(
+                    title = message.sender.name,
+                    description = message.content
+                )
             )
-        )
+        }
     }
 }
 ```

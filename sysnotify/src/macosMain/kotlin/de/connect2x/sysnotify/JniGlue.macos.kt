@@ -19,7 +19,6 @@ package de.connect2x.sysnotify
 
 import jni.JNIEnvVar
 import jni.JNI_ERR
-import jni.JNI_OK
 import jni.JNI_VERSION_1_8
 import jni.JavaVMVar
 import jni.jboolean
@@ -42,15 +41,14 @@ internal lateinit var environment: JNIEnvVar
 @Suppress("UNUSED_PARAMETER")
 @CName("JNI_OnLoad")
 fun jniOnLoad(vm: JavaVMVar, reserved: COpaquePointer): jint {
-    if (vm.pointed!!.GetEnv!!(
+    return vm.pointed?.let {
+        checkNotNull(it.GetEnv)(
             vm.ptr,
             environment.ptr.reinterpret(),
             JNI_VERSION_1_8
-        ) != JNI_OK
-    ) {
-        return JNI_ERR
-    }
-    return JNI_VERSION_1_8
+        )
+        return@let JNI_VERSION_1_8
+    } ?: JNI_ERR
 }
 
 @Suppress("UNUSED_PARAMETER")
