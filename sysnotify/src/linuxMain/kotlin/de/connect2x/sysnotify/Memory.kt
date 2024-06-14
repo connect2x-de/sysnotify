@@ -13,23 +13,12 @@
  * limitations under the License.
  */
 
-@file:OptIn(ExperimentalForeignApi::class)
-
 package de.connect2x.sysnotify
 
-import jni.JNIEnvVar
-import jni.jstring
+import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.invoke
-import kotlinx.cinterop.pointed
-import kotlinx.cinterop.ptr
-import kotlinx.cinterop.toKStringFromUtf8
 
-internal fun jstring.toKString(env: JNIEnvVar): String {
-    return checkNotNull(checkNotNull(env.pointed).let {
-        val data = checkNotNull(it.GetStringUTFChars)(env.ptr, this@toKString, null)
-        val result = data?.toKStringFromUtf8() ?: return ""
-        checkNotNull(it.ReleaseStringUTFChars)(env.ptr, this@toKString, data)
-        return@let result
-    })
+@OptIn(ExperimentalForeignApi::class)
+actual fun memcpy(dst: CPointer<*>, src: CPointer<*>, size: ULong) {
+    platform.posix.memcpy(dst, src, size)
 }

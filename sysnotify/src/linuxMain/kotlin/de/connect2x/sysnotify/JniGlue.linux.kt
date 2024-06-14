@@ -17,116 +17,126 @@
 
 package de.connect2x.sysnotify
 
-import jni.JNIEnvVar
-import jni.JNI_ERR
-import jni.JNI_VERSION_1_8
-import jni.JavaVMVar
 import jni.jboolean
 import jni.jbyteArray
-import jni.jint
 import jni.jlong
 import jni.jstring
 import kotlinx.cinterop.COpaquePointer
+import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.invoke
-import kotlinx.cinterop.pointed
-import kotlinx.cinterop.ptr
-import kotlinx.cinterop.reinterpret
+import kotlinx.cinterop.StableRef
+import kotlinx.cinterop.asStableRef
+import kotlinx.cinterop.convert
+import kotlinx.coroutines.runBlocking
+import libnotify.NotifyNotification
 import kotlin.experimental.ExperimentalNativeApi
 
-// JNI load hooks and utils
-
-internal lateinit var environment: JNIEnvVar
-
-@Suppress("UNUSED_PARAMETER")
-@CName("JNI_OnLoad")
-fun jniOnLoad(vm: JavaVMVar, reserved: COpaquePointer): jint {
-    return vm.pointed?.let {
-        checkNotNull(it.GetEnv)(
-            vm.ptr,
-            environment.ptr.reinterpret(),
-            JNI_VERSION_1_8
-        )
-        return@let JNI_VERSION_1_8
-    } ?: JNI_ERR
-}
-
-@Suppress("UNUSED_PARAMETER")
-@CName("JNI_OnUnload")
-fun jniOnUnload(vm: JavaVMVar, reserved: COpaquePointer) {
-
-}
-
-// Exposed high-level C-API functions
-
 @CName("sn_notification_handler_create")
-fun snCreate(name: jstring?): jlong {
-    return 0
+fun snNotificationHandlerCreate(name: jstring): jlong {
+    return StableRef.create(LinuxNotificationHandler(name.toKString())).asCPointer().rawValue.toLong()
 }
 
 @CName("sn_notification_handler_is_title_supported")
-fun snIsTitleSupported(handler: jlong): jboolean {
-    return 0U
+fun snNotificationHandlerIsTitleSupported(handler: jlong): jboolean {
+    return handler.convert<COpaquePointer>()
+        .asStableRef<LinuxNotificationHandler>()
+        .get().capabilities.isTitleSupported.toJBoolean()
 }
 
 @CName("sn_notification_handler_is_description_supported")
-fun snIsDescriptionSupported(handler: jlong): jboolean {
-    return 0U
+fun snNotificationHandlerIsDescriptionSupported(handler: jlong): jboolean {
+    return handler.convert<COpaquePointer>()
+        .asStableRef<LinuxNotificationHandler>()
+        .get().capabilities.isDescriptionSupported.toJBoolean()
 }
 
 @CName("sn_notification_handler_is_icon_supported")
-fun snIsIconSupported(handler: jlong): jboolean {
-    return 0U
+fun snNotificationHandlerIsIconSupported(handler: jlong): jboolean {
+    return handler.convert<COpaquePointer>()
+        .asStableRef<LinuxNotificationHandler>()
+        .get().capabilities.isIconSupported.toJBoolean()
 }
 
 @CName("sn_notification_handler_is_action_supported")
-fun snIsActionSupported(handler: jlong): jboolean {
-    return 0U
+fun snNotificationHandlerIsActionSupported(handler: jlong): jboolean {
+    return handler.convert<COpaquePointer>()
+        .asStableRef<LinuxNotificationHandler>()
+        .get().capabilities.isActionSupported.toJBoolean()
 }
 
 @CName("sn_notification_handler_is_pop_supported")
-fun snIsPopSupported(handler: jlong): jboolean {
-    return 0U
+fun snNotificationHandlerIsPopSupported(handler: jlong): jboolean {
+    return handler.convert<COpaquePointer>()
+        .asStableRef<LinuxNotificationHandler>()
+        .get().capabilities.isPopSupported.toJBoolean()
 }
 
 @CName("sn_notification_handler_request_permissions")
-fun snRequestPermissions(handler: jlong) {
-
+fun snNotificationHandlerRequestPermissions(handler: jlong) {
+    runBlocking {
+        handler.convert<COpaquePointer>()
+            .asStableRef<LinuxNotificationHandler>()
+            .get().requestPermissions()
+    }
 }
 
 @CName("sn_notification_handler_push")
-fun snPush(
+fun snNotificationHandlerPush(
     handler: jlong,
-    name: jstring,
+    title: jstring?,
     description: jstring?,
     icon: jbyteArray?
 ): jlong {
-    val actualName = name.toKString(environment)
-    val actualDescription = description?.toKString(environment) ?: ""
-    return 0
+    return runBlocking {
+        handler.convert<COpaquePointer>()
+            .asStableRef<LinuxNotificationHandler>()
+            .get().push(
+                Notification(
+                    title = title?.toKString() ?: "Unknown",
+                    description = description?.toKString(),
+                    icon = icon?.toByteArray()
+                )
+            )
+    }?.let { it as? LinuxNotificationHandle }?.address?.rawValue?.toLong() ?: 0
 }
 
 @CName("sn_notification_handler_update")
-fun snUpdate(
+fun snNotificationHandlerUpdate(
     handler: jlong,
     notification: jlong,
-    name: jstring,
+    title: jstring?,
     description: jstring?,
     icon: jbyteArray?
-) {
-    val actualName = name.toKString(environment)
-    val actualDescription = description?.toKString(environment) ?: ""
+): jlong {
+    return runBlocking {
+        handler.convert<COpaquePointer>()
+            .asStableRef<LinuxNotificationHandler>()
+            .get().update(
+                LinuxNotificationHandle(notification.convert<CPointer<NotifyNotification>>()),
+                Notification(
+                    title = title?.toKString() ?: "Unknown",
+                    description = description?.toKString(),
+                    icon = icon?.toByteArray()
+                )
+            )
+    }?.let { it as? LinuxNotificationHandle }?.address?.rawValue?.toLong() ?: 0
 }
 
 @CName("sn_notification_handler_pop")
-fun snPop(
+fun snNotificationHandlerPop(
     handler: jlong,
     notification: jlong
 ) {
-
+    runBlocking {
+        handler.convert<COpaquePointer>()
+            .asStableRef<LinuxNotificationHandler>()
+            .get().pop(LinuxNotificationHandle(notification.convert<CPointer<NotifyNotification>>()))
+    }
 }
 
 @CName("sn_notification_handler_destroy")
-fun snDestroy(handler: jlong) {
-
+fun snNotificationHandlerDestroy(handler: jlong) {
+    handler.convert<COpaquePointer>()
+        .asStableRef<LinuxNotificationHandler>()
+        .dispose()
 }

@@ -15,6 +15,7 @@
 
 package de.connect2x.sysnotify
 
+import kotlinx.cinterop.CPointed
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
