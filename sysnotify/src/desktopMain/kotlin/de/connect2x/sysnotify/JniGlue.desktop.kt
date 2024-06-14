@@ -122,62 +122,46 @@ internal fun registerNatives() {
     }
 }
 
-@Suppress("UNUSED")
-@CName("sn_notification_handler_create")
 private fun snNotificationHandlerCreate(name: jstring): jlong {
     return StableRef.create(createNotificationHandler(name.toKString())).asCPointer().rawValue.toLong()
 }
 
-@Suppress("UNUSED")
-@CName("sn_notification_handler_destroy")
 private fun snNotificationHandlerDestroy(handler: jlong) {
     checkNotNull(handler.toCPointer<CPointed>())
         .asStableRef<NotificationHandler>()
         .dispose()
 }
 
-@Suppress("UNUSED")
-@CName("sn_notification_handler_is_title_supported")
 private fun snNotificationHandlerIsTitleSupported(handler: jlong): jboolean {
     return checkNotNull(handler.toCPointer<CPointed>())
         .asStableRef<NotificationHandler>()
         .get().capabilities.isTitleSupported.toJBoolean()
 }
 
-@Suppress("UNUSED")
-@CName("sn_notification_handler_is_description_supported")
 private fun snNotificationHandlerIsDescriptionSupported(handler: jlong): jboolean {
     return checkNotNull(handler.toCPointer<CPointed>())
         .asStableRef<NotificationHandler>()
         .get().capabilities.isDescriptionSupported.toJBoolean()
 }
 
-@Suppress("UNUSED")
-@CName("sn_notification_handler_is_icon_supported")
 private fun snNotificationHandlerIsIconSupported(handler: jlong): jboolean {
     return checkNotNull(handler.toCPointer<CPointed>())
         .asStableRef<NotificationHandler>()
         .get().capabilities.isIconSupported.toJBoolean()
 }
 
-@Suppress("UNUSED")
-@CName("sn_notification_handler_is_action_supported")
 private fun snNotificationHandlerIsActionSupported(handler: jlong): jboolean {
     return checkNotNull(handler.toCPointer<CPointed>())
         .asStableRef<NotificationHandler>()
         .get().capabilities.isActionSupported.toJBoolean()
 }
 
-@Suppress("UNUSED")
-@CName("sn_notification_handler_is_pop_supported")
 private fun snNotificationHandlerIsPopSupported(handler: jlong): jboolean {
     return checkNotNull(handler.toCPointer<CPointed>())
         .asStableRef<NotificationHandler>()
         .get().capabilities.isPopSupported.toJBoolean()
 }
 
-@Suppress("UNUSED")
-@CName("sn_notification_handler_request_permissions")
 private fun snNotificationHandlerRequestPermissions(handler: jlong) {
     runBlocking {
         checkNotNull(handler.toCPointer<CPointed>())
@@ -186,8 +170,6 @@ private fun snNotificationHandlerRequestPermissions(handler: jlong) {
     }
 }
 
-@Suppress("UNUSED")
-@CName("sn_notification_handler_push")
 private fun snNotificationHandlerPush(
     handler: jlong,
     title: jstring?,
@@ -207,8 +189,6 @@ private fun snNotificationHandlerPush(
     }?.let { StableRef.create(it).asCPointer().rawValue.toLong() } ?: 0
 }
 
-@Suppress("UNUSED")
-@CName("sn_notification_handler_update")
 private fun snNotificationHandlerUpdate(
     handler: jlong,
     notification: jlong,
@@ -233,8 +213,6 @@ private fun snNotificationHandlerUpdate(
     return result
 }
 
-@Suppress("UNUSED")
-@CName("sn_notification_handler_pop")
 private fun snNotificationHandlerPop(
     handler: jlong,
     notification: jlong
