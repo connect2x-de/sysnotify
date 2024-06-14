@@ -48,73 +48,71 @@ internal fun registerNatives() {
             allocArrayOf("de/connect2x/sysnotify/NativeNotificationHandler".encodeToByteArray())
         )
         val methods = allocArray<JNINativeMethod>(11) { index: Int ->
-            memScoped {
-                when (index) {
-                    0 -> {
-                        name = allocArrayOf("create".encodeToByteArray())
-                        signature = allocArrayOf("(Ljava/lang/String;)J".encodeToByteArray())
-                        fnPtr = staticCFunction(::snNotificationHandlerCreate)
-                    }
+            when (index) {
+                0 -> {
+                    name = allocArrayOf("create".encodeToByteArray())
+                    signature = allocArrayOf("(Ljava/lang/String;)J".encodeToByteArray())
+                    fnPtr = staticCFunction(::snNotificationHandlerCreate)
+                }
 
-                    1 -> {
-                        name = allocArrayOf("destroy".encodeToByteArray())
-                        signature = allocArrayOf("(J)V".encodeToByteArray())
-                        fnPtr = staticCFunction(::snNotificationHandlerDestroy)
-                    }
+                1 -> {
+                    name = allocArrayOf("destroy".encodeToByteArray())
+                    signature = allocArrayOf("(J)V".encodeToByteArray())
+                    fnPtr = staticCFunction(::snNotificationHandlerDestroy)
+                }
 
-                    2 -> {
-                        name = allocArrayOf("isTitleSupported".encodeToByteArray())
-                        signature = allocArrayOf("(J)Z".encodeToByteArray())
-                        fnPtr = staticCFunction(::snNotificationHandlerIsTitleSupported)
-                    }
+                2 -> {
+                    name = allocArrayOf("isTitleSupported".encodeToByteArray())
+                    signature = allocArrayOf("(J)Z".encodeToByteArray())
+                    fnPtr = staticCFunction(::snNotificationHandlerIsTitleSupported)
+                }
 
-                    3 -> {
-                        name = allocArrayOf("isDescriptionSupported".encodeToByteArray())
-                        signature = allocArrayOf("(J)Z".encodeToByteArray())
-                        fnPtr = staticCFunction(::snNotificationHandlerIsDescriptionSupported)
-                    }
+                3 -> {
+                    name = allocArrayOf("isDescriptionSupported".encodeToByteArray())
+                    signature = allocArrayOf("(J)Z".encodeToByteArray())
+                    fnPtr = staticCFunction(::snNotificationHandlerIsDescriptionSupported)
+                }
 
-                    4 -> {
-                        name = allocArrayOf("isIconSupported".encodeToByteArray())
-                        signature = allocArrayOf("(J)Z".encodeToByteArray())
-                        fnPtr = staticCFunction(::snNotificationHandlerIsIconSupported)
-                    }
+                4 -> {
+                    name = allocArrayOf("isIconSupported".encodeToByteArray())
+                    signature = allocArrayOf("(J)Z".encodeToByteArray())
+                    fnPtr = staticCFunction(::snNotificationHandlerIsIconSupported)
+                }
 
-                    5 -> {
-                        name = allocArrayOf("isActionSupported".encodeToByteArray())
-                        signature = allocArrayOf("(J)Z".encodeToByteArray())
-                        fnPtr = staticCFunction(::snNotificationHandlerIsActionSupported)
-                    }
+                5 -> {
+                    name = allocArrayOf("isActionSupported".encodeToByteArray())
+                    signature = allocArrayOf("(J)Z".encodeToByteArray())
+                    fnPtr = staticCFunction(::snNotificationHandlerIsActionSupported)
+                }
 
-                    6 -> {
-                        name = allocArrayOf("isPopSupported".encodeToByteArray())
-                        signature = allocArrayOf("(J)Z".encodeToByteArray())
-                        fnPtr = staticCFunction(::snNotificationHandlerIsPopSupported)
-                    }
+                6 -> {
+                    name = allocArrayOf("isPopSupported".encodeToByteArray())
+                    signature = allocArrayOf("(J)Z".encodeToByteArray())
+                    fnPtr = staticCFunction(::snNotificationHandlerIsPopSupported)
+                }
 
-                    7 -> {
-                        name = allocArrayOf("requestPermissions".encodeToByteArray())
-                        signature = allocArrayOf("(J)V".encodeToByteArray())
-                        fnPtr = staticCFunction(::snNotificationHandlerRequestPermissions)
-                    }
+                7 -> {
+                    name = allocArrayOf("requestPermissions".encodeToByteArray())
+                    signature = allocArrayOf("(J)V".encodeToByteArray())
+                    fnPtr = staticCFunction(::snNotificationHandlerRequestPermissions)
+                }
 
-                    8 -> {
-                        name = allocArrayOf("push".encodeToByteArray())
-                        signature = allocArrayOf("(JLjava/lang/String;Ljava/lang/String;[B)J".encodeToByteArray())
-                        fnPtr = staticCFunction(::snNotificationHandlerPush)
-                    }
+                8 -> {
+                    name = allocArrayOf("push".encodeToByteArray())
+                    signature = allocArrayOf("(JLjava/lang/String;Ljava/lang/String;[B)J".encodeToByteArray())
+                    fnPtr = staticCFunction(::snNotificationHandlerPush)
+                }
 
-                    9 -> {
-                        name = allocArrayOf("update".encodeToByteArray())
-                        signature = allocArrayOf("(JJLjava/lang/String;Ljava/lang/String;[B)".encodeToByteArray())
-                        fnPtr = staticCFunction(::snNotificationHandlerUpdate)
-                    }
+                9 -> {
+                    name = allocArrayOf("update".encodeToByteArray())
+                    signature = allocArrayOf("(JJLjava/lang/String;Ljava/lang/String;[B)".encodeToByteArray())
+                    fnPtr = staticCFunction(::snNotificationHandlerUpdate)
+                }
 
-                    10 -> {
-                        name = allocArrayOf("pop".encodeToByteArray())
-                        signature = allocArrayOf("(JJ)V".encodeToByteArray())
-                        fnPtr = staticCFunction(::snNotificationHandlerPop)
-                    }
+                10 -> {
+                    name = allocArrayOf("pop".encodeToByteArray())
+                    signature = allocArrayOf("(JJ)V".encodeToByteArray())
+                    fnPtr = staticCFunction(::snNotificationHandlerPop)
                 }
             }
         }
