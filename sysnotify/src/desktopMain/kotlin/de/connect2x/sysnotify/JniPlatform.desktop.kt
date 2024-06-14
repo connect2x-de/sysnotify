@@ -23,7 +23,6 @@ import jni.JNI_VERSION_1_8
 import jni.JavaVMVar
 import jni.jboolean
 import jni.jbyteArray
-import jni.jbyteVar
 import jni.jint
 import jni.jstring
 import kotlinx.cinterop.COpaquePointer
@@ -75,7 +74,8 @@ internal inline fun jbyteArray.toByteArray(): ByteArray {
             usePinned { pinnedArray ->
                 val data = checkNotNull(it.GetPrimitiveArrayCritical)(environment.ptr, reinterpret(), null)
                     ?: throw IllegalStateException("Could not retrieve array base address")
-                memcpy(pinnedArray.addressOf(0), data.reinterpret<jbyteVar>(), size.convert())
+                memcpy(pinnedArray.addressOf(0), data, size.convert())
+                checkNotNull(it.ReleasePrimitiveArrayCritical)(environment.ptr, reinterpret(), data, 0)
             }
         }
     })
