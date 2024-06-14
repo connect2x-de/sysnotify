@@ -25,11 +25,11 @@ import platform.UserNotifications.UNNotification
 import platform.UserNotifications.UNNotificationRequest
 import platform.UserNotifications.UNUserNotificationCenter
 
-private data class AppleNotificationHandle(
+internal data class AppleNotificationHandle(
     val uuid: Uuid = uuid4()
 ) : NotificationHandle
 
-private class AppleNotificationHandler(override val name: String) : NotificationHandler {
+internal class AppleNotificationHandler(override val name: String) : NotificationHandler {
     override val platform: NotificationPlatform = NotificationPlatform.APPLE
 
     override val capabilities: NotificationCapabilities = NotificationCapabilities(

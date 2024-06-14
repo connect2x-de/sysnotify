@@ -74,7 +74,7 @@ kotlin {
     }
     linuxX64 {
         compilations["main"].cinterops {
-            val libnotify by creating
+            val libnotify by creating {}
             val jni by creating {
                 compilerOpts("-I${jniHeaders / "linux"}")
                 headers("${jniHeaders / "jni.h"}")
@@ -167,7 +167,7 @@ dependencies {
     implementation(libs.androidx.core)
 }
 
-// If we are on Windows, inject the CMake submodule as a dependency to assemble
+// If we are on Windows, inject the CMake submodule as a dependency to all 'mingw' tasks
 if (os.isWindows) {
     tasks.filter { it.name.contains("mingw", true) }.forEach { task ->
         task.apply {
