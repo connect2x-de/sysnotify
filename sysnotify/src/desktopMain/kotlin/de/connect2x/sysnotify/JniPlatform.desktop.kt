@@ -36,6 +36,7 @@ import kotlinx.cinterop.reinterpret
 import kotlinx.cinterop.toKStringFromUtf8
 import kotlinx.cinterop.usePinned
 import kotlin.experimental.ExperimentalNativeApi
+import platform.posix.memcpy
 
 internal lateinit var environment: JNIEnvVar
 

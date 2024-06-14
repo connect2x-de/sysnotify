@@ -23,7 +23,3 @@ import kotlinx.cinterop.ExperimentalForeignApi
 internal actual fun createNotificationHandler(name: String): NotificationHandler {
     return AppleNotificationHandler(name)
 }
-
-internal actual fun createNotificationHandle(pointer: COpaquePointer): NotificationHandle {
-    throw UnsupportedOperationException() // TODO: implement this
-}

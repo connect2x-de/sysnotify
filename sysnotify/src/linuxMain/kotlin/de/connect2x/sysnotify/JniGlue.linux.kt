@@ -17,14 +17,8 @@
 
 package de.connect2x.sysnotify
 
-import kotlinx.cinterop.COpaquePointer
 import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.reinterpret
 
 internal actual fun createNotificationHandler(name: String): NotificationHandler {
     return LinuxNotificationHandler(name)
-}
-
-internal actual fun createNotificationHandle(pointer: COpaquePointer): NotificationHandle {
-    return LinuxNotificationHandle(pointer.reinterpret())
 }

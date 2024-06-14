@@ -21,7 +21,6 @@ import jni.jboolean
 import jni.jbyteArray
 import jni.jlong
 import jni.jstring
-import kotlinx.cinterop.COpaquePointer
 import kotlinx.cinterop.CPointed
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.StableRef
@@ -31,7 +30,6 @@ import kotlinx.coroutines.runBlocking
 import kotlin.experimental.ExperimentalNativeApi
 
 internal expect fun createNotificationHandler(name: String): NotificationHandler
-internal expect fun createNotificationHandle(pointer: COpaquePointer): NotificationHandle
 
 @Suppress("UNUSED")
 @CName("sn_notification_handler_create")
@@ -127,11 +125,12 @@ fun snNotificationHandlerUpdate(
     description: jstring?,
     icon: jbyteArray?
 ): jlong {
-    return runBlocking {
+    val handle = checkNotNull(notification.toCPointer<CPointed>()).asStableRef<NotificationHandle>()
+    val result = runBlocking {
         checkNotNull(handler.toCPointer<CPointed>())
             .asStableRef<NotificationHandler>()
             .get().update(
-                createNotificationHandle(checkNotNull(notification.toCPointer())),
+                handle.get(),
                 Notification(
                     title = title?.toKString() ?: "Unknown",
                     description = description?.toKString(),
@@ -139,6 +138,8 @@ fun snNotificationHandlerUpdate(
                 )
             )
     }?.let { StableRef.create(it).asCPointer().rawValue.toLong() } ?: 0
+    handle.dispose()
+    return result
 }
 
 @Suppress("UNUSED")
@@ -147,9 +148,11 @@ fun snNotificationHandlerPop(
     handler: jlong,
     notification: jlong
 ) {
+    val handle = checkNotNull(notification.toCPointer<CPointed>()).asStableRef<NotificationHandle>()
     runBlocking {
         checkNotNull(handler.toCPointer<CPointed>())
             .asStableRef<NotificationHandler>()
-            .get().pop(createNotificationHandle(checkNotNull(notification.toCPointer())))
+            .get().pop(handle.get())
+        handle.dispose() // Make sure to dispose old handle
     }
 }
