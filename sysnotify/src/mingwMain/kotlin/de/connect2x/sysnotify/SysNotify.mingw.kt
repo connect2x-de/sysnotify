@@ -20,11 +20,11 @@ package de.connect2x.sysnotify
 import kotlinx.cinterop.COpaquePointer
 import kotlinx.cinterop.ExperimentalForeignApi
 
-private data class WindowsNotificationHandle(
+internal data class WindowsNotificationHandle(
     val address: COpaquePointer
 ) : NotificationHandle
 
-private class WindowsNotificationHandler(
+internal class WindowsNotificationHandler(
     override val name: String,
 ) : NotificationHandler {
     override val platform: NotificationPlatform = NotificationPlatform.WINDOWS
