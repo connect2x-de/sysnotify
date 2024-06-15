@@ -1,7 +1,8 @@
 *.iml
-.gradle
+.gradle/
+.kotlin/
 .DS_Store
-build
+build/
 captures
 .externalNativeBuild
 local.properties

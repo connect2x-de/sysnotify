@@ -17,28 +17,17 @@ package de.connect2x.sysnotify
 
 // This is the high-level C-API implemented by desktop targets JniGlue class
 private object NativeNotificationHandler { // @formatter:off
-    @JvmStatic
-    external fun create(name: String): Long
-    @JvmStatic
-    external fun isTitleSupported(handler: Long): Boolean
-    @JvmStatic
-    external fun isDescriptionSupported(handler: Long): Boolean
-    @JvmStatic
-    external fun isIconSupported(handler: Long): Boolean
-    @JvmStatic
-    external fun isActionSupported(handler: Long): Boolean
-    @JvmStatic
-    external fun isPopSupported(handler: Long): Boolean
-    @JvmStatic
-    external fun requestPermissions(handler: Long)
-    @JvmStatic
-    external fun push(handler: Long, title: String, description: String?, icon: ByteArray?): Long
-    @JvmStatic
-    external fun update(handler: Long, notification: Long, title: String, description: String?, icon: ByteArray?): Long
-    @JvmStatic
-    external fun pop(handler: Long, notification: Long)
-    @JvmStatic
-    external fun destroy(handler: Long)
+    @JvmStatic external fun create(name: String): Long
+    @JvmStatic external fun isTitleSupported(handler: Long): Boolean
+    @JvmStatic external fun isDescriptionSupported(handler: Long): Boolean
+    @JvmStatic external fun isIconSupported(handler: Long): Boolean
+    @JvmStatic external fun isActionSupported(handler: Long): Boolean
+    @JvmStatic external fun isPopSupported(handler: Long): Boolean
+    @JvmStatic external fun requestPermissions(handler: Long)
+    @JvmStatic external fun push(handler: Long, title: String, description: String?, icon: ByteArray?): Long
+    @JvmStatic external fun update(handler: Long, notification: Long, title: String, description: String?, icon: ByteArray?): Long
+    @JvmStatic external fun pop(handler: Long, notification: Long)
+    @JvmStatic external fun destroy(handler: Long)
 } // @formatter:on
 
 private data class JvmNotificationHandle(
