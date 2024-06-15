@@ -42,6 +42,7 @@ kotlin {
             implementation(compose.ui)
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
+            implementation(project(":sysnotify"))
         }
     }
 }
@@ -56,7 +57,7 @@ android {
 
     defaultConfig {
         applicationId = "de.connect2x.sysnotify.sample"
-        minSdk = 24
+        minSdk = 28
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
