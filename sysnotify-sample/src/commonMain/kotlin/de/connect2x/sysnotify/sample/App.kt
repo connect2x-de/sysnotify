@@ -31,10 +31,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import de.connect2x.sysnotify.Notification
 import de.connect2x.sysnotify.NotificationHandler
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+
+internal val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.Default)
 
 @Composable
 fun App(notificationHandler: NotificationHandler) {
+    coroutineScope.launch {
+        notificationHandler.requestPermissions() // Request permissions in-place because we are lazy here
+    }
+
     var title by remember { mutableStateOf("Hello") }
     var description by remember { mutableStateOf("World!") }
 
@@ -78,7 +88,14 @@ fun App(notificationHandler: NotificationHandler) {
             // TODO: implement icon (and somehow action?)
             Row {
                 Button(
-                    onClick = {},
+                    onClick = {
+                        coroutineScope.launch {
+                            notificationHandler.push(Notification(
+                                title = title,
+                                description = description
+                            ))
+                        }
+                    },
                     modifier = Modifier.weight(1F)
                 ) { Text("Test") }
             }

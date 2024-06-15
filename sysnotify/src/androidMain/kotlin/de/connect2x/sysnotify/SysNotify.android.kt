@@ -27,6 +27,7 @@ import android.os.Build
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.graphics.drawable.IconCompat
 import com.benasher44.uuid.Uuid
 import com.benasher44.uuid.uuid4
 
@@ -113,17 +114,20 @@ private class AndroidNotificationHandler(
         handle: AndroidNotificationHandle = AndroidNotificationHandle()
     ): AndroidNotificationHandle {
         with(NotificationManagerCompat.from(activityGetter())) {
-            notify(
-                handle.uuid.hashCode(), NotificationCompat.Builder(activityGetter(), channelId)
-                    .setContentTitle(notification.title ?: name)
-                    .setContentText(notification.description)
-                    .setLargeIcon(notification.icon?.let {
-                        BitmapFactory.decodeByteArray(it, 0, it.size)
-                    })
-                    .setPriority(NotificationCompat.PRIORITY_HIGH)
-                    .setAutoCancel(true) // Remove notification when user taps it
-                    .build()
-            )
+            val builder = NotificationCompat.Builder(activityGetter(), channelId)
+                .setContentTitle(notification.title ?: name)
+                .setContentText(notification.description)
+                .setLargeIcon(notification.icon?.let {
+                    BitmapFactory.decodeByteArray(it, 0, it.size)
+                })
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setAutoCancel(true) // Remove notification when user taps it
+            val icon = notification.icon
+            if (icon != null) {
+                builder.setSmallIcon(IconCompat.createWithData(icon, 0, icon.size))
+                    .setLargeIcon(BitmapFactory.decodeByteArray(icon, 0, 0))
+            } else builder.setSmallIcon(R.drawable.ic_notification)
+            notify(handle.uuid.hashCode(), builder.build())
         }
         return handle
     }
