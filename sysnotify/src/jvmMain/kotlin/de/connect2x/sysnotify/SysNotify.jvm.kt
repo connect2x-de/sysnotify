@@ -67,17 +67,17 @@ private class JvmNotificationHandler(
         )
     }
 
-    override suspend fun update(handle: NotificationHandle, notification: Notification): NotificationHandle {
+    override suspend fun update(handle: NotificationHandle, notification: Notification): NotificationHandle? {
         if (handle !is JvmNotificationHandle) throw IllegalArgumentException("Handle is not a JVM notification handle")
-        return JvmNotificationHandle(
-            NativeNotificationHandler.update(
-                handler = address,
-                notification = handle.address,
-                title = notification.title ?: "Unknown",
-                description = notification.description,
-                icon = notification.icon
-            )
+        val newHandle = NativeNotificationHandler.update(
+            handler = address,
+            notification = handle.address,
+            title = notification.title ?: "Unknown",
+            description = notification.description,
+            icon = notification.icon
         )
+        return if (newHandle != 0L) JvmNotificationHandle(newHandle)
+        else null
     }
 
     override suspend fun pop(handle: NotificationHandle) {
