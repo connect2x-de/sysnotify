@@ -1,4 +1,4 @@
-package com.jetbrains.kmpapp
+package de.connect2x.sysnotify
 
 import androidx.compose.ui.window.ComposeUIViewController
 
