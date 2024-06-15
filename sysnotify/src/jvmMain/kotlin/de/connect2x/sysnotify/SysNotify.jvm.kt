@@ -16,7 +16,7 @@
 package de.connect2x.sysnotify
 
 // This is the high-level C-API implemented by desktop targets JniGlue class
-private object NativeNotificationHandler {
+private object NativeNotificationHandler { // @formatter:off
     @JvmStatic
     external fun create(name: String): Long
     @JvmStatic
@@ -32,14 +32,14 @@ private object NativeNotificationHandler {
     @JvmStatic
     external fun requestPermissions(handler: Long)
     @JvmStatic
-    external fun push(handler: Long, name: String, description: String?, icon: ByteArray?): Long
+    external fun push(handler: Long, title: String, description: String?, icon: ByteArray?): Long
     @JvmStatic
-    external fun update(handler: Long, notification: Long, name: String, description: String?, icon: ByteArray?): Long
+    external fun update(handler: Long, notification: Long, title: String, description: String?, icon: ByteArray?): Long
     @JvmStatic
     external fun pop(handler: Long, notification: Long)
     @JvmStatic
     external fun destroy(handler: Long)
-}
+} // @formatter:on
 
 private data class JvmNotificationHandle(
     val address: Long
@@ -67,12 +67,33 @@ private class JvmNotificationHandler(
         NativeNotificationHandler.requestPermissions(address)
     }
 
-    override suspend fun push(notification: Notification): NotificationHandle? {
-        return null // TODO: ...
+    override suspend fun push(notification: Notification): NotificationHandle {
+        return JvmNotificationHandle(
+            NativeNotificationHandler.push(
+                handler = address,
+                title = notification.title ?: "Unknown",
+                description = notification.description,
+                icon = notification.icon
+            )
+        )
+    }
+
+    override suspend fun update(handle: NotificationHandle, notification: Notification): NotificationHandle {
+        if (handle !is JvmNotificationHandle) throw IllegalArgumentException("Handle is not a JVM notification handle")
+        return JvmNotificationHandle(
+            NativeNotificationHandler.update(
+                handler = address,
+                notification = handle.address,
+                title = notification.title ?: "Unknown",
+                description = notification.description,
+                icon = notification.icon
+            )
+        )
     }
 
     override suspend fun pop(handle: NotificationHandle) {
-        // TODO: ...
+        if (handle !is JvmNotificationHandle) throw IllegalArgumentException("Handle is not a JVM notification handle")
+        NativeNotificationHandler.pop(address, handle.address)
     }
 }
 
