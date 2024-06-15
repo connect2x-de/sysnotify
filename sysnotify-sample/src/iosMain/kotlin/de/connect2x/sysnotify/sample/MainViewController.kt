@@ -17,6 +17,4 @@ package de.connect2x.sysnotify.sample
 
 import androidx.compose.ui.window.ComposeUIViewController
 
-fun MainViewController() = ComposeUIViewController {
-
-}
+fun MainViewController() = ComposeUIViewController { App() }
