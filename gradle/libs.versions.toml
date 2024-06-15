@@ -9,7 +9,7 @@ core = "1.13.1"
 uuid = "0.8.4"
 # For sample
 androidx-activityCompose = "1.9.0"
-androidx-ui-tooling = "1.6.7"
+androidx-ui-tooling = "1.6.8"
 compose-plugin = "1.6.11"
 
 [libraries]
