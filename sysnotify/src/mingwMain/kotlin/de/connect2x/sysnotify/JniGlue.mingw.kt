@@ -17,7 +17,6 @@
 
 package de.connect2x.sysnotify
 
-import kotlinx.cinterop.COpaquePointer
 import kotlinx.cinterop.ExperimentalForeignApi
 
 internal actual fun createNotificationHandler(name: String): NotificationHandler {

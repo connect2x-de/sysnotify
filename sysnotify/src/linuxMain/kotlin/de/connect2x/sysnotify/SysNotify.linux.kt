@@ -72,8 +72,6 @@ internal class LinuxNotificationHandler(
         isPopSupported = true
     )
 
-    private var isInitialized: Boolean = false
-
     init {
         if (notify_init(name) == 0) {
             throw IllegalStateException("Could not initialize libnotify")
