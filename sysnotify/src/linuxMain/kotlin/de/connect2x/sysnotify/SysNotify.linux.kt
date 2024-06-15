@@ -15,7 +15,6 @@
 
 package de.connect2x.sysnotify
 
-import kotlinx.cinterop.CPointed
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
@@ -39,6 +38,7 @@ import libnotify.notify_notification_new
 import libnotify.notify_notification_set_image_from_pixbuf
 import libnotify.notify_notification_set_timeout
 import libnotify.notify_notification_show
+import libnotify.notify_notification_update
 import libnotify.notify_uninit
 import kotlin.math.sqrt
 
@@ -58,6 +58,10 @@ internal class LinuxNotificationHandle(
 internal class LinuxNotificationHandler(
     override val name: String,
 ) : NotificationHandler {
+    companion object {
+        private const val DEFAULT_ICON: String = "dialog-information"
+    }
+
     override val platform: NotificationPlatform = NotificationPlatform.LINUX
 
     override val capabilities: NotificationCapabilities = NotificationCapabilities(
@@ -71,47 +75,68 @@ internal class LinuxNotificationHandler(
     private var isInitialized: Boolean = false
 
     init {
-        isInitialized = notify_init(name) == 1
+        if (notify_init(name) == 0) {
+            throw IllegalStateException("Could not initialize libnotify")
+        }
     }
 
     override fun close() {
-        if (!isInitialized) return
         notify_uninit()
     }
 
+    private inline fun setIcon(notification: CPointer<NotifyNotification>, icon: ByteArray?) {
+        icon?.let { array ->
+            array.usePinned {
+                val size =
+                    sqrt(array.size.toFloat()).toInt() // Assume the icon is always square
+                val rowStride = size shl 2 // We have 4 bytes per pixel
+                val buffer = gdk_pixbuf_new_from_bytes(
+                    it.addressOf(0).reinterpret(),
+                    GdkColorspace.GDK_COLORSPACE_RGB, 1, 8, size, size, rowStride
+                )
+                notify_notification_set_image_from_pixbuf(notification, buffer)
+                gdk_pixbuf_unref(buffer)
+            }
+        }
+    }
+
+    private inline fun show(notification: CPointer<NotifyNotification>): Boolean {
+        memScoped {
+            val errorAddress = allocPointerTo<GError>()
+            if (notify_notification_show(notification, errorAddress.ptr) == 0) {
+                errorAddress.value?.freeAndThrow()
+                return false // Return if we fall through, which doesn't happen, but no _Noreturn..
+            }
+        }
+        return true
+    }
+
     override suspend fun push(notification: Notification): NotificationHandle? {
-        if (!isInitialized) return null
         val notificationAddress = notify_notification_new(
             summary = notification.title,
             body = notification.description,
-            icon = "dialog-information" // Default fallback icon
+            icon = DEFAULT_ICON
         ) ?: return null
         notify_notification_set_timeout(notificationAddress, 5000) // 5 seconds by default
-        memScoped {
-            notification.icon?.let { array ->
-                array.usePinned {
-                    val size =
-                        sqrt(array.size.toFloat()).toInt() // Assume the icon is always square
-                    val rowStride = size shl 2 // We have 4 bytes per pixel
-                    val buffer = gdk_pixbuf_new_from_bytes(
-                        it.addressOf(0).reinterpret(),
-                        GdkColorspace.GDK_COLORSPACE_RGB, 1, 8, size, size, rowStride
-                    )
-                    notify_notification_set_image_from_pixbuf(notificationAddress, buffer)
-                    gdk_pixbuf_unref(buffer)
-                }
-            }
-            val errorAddress = allocPointerTo<GError>()
-            if (notify_notification_show(notificationAddress, errorAddress.ptr) == 0) {
-                errorAddress.value?.freeAndThrow()
-                return null // Return if we fall through, which doesn't happen, but no _Noreturn..
-            }
-        }
-        return LinuxNotificationHandle(notificationAddress)
+        setIcon(notificationAddress, notification.icon)
+        return if (show(notificationAddress)) LinuxNotificationHandle(notificationAddress) else null
+    }
+
+    override suspend fun update(handle: NotificationHandle, notification: Notification): NotificationHandle? {
+        if (handle !is LinuxNotificationHandle) throw IllegalArgumentException("Handle is not a Linux notification handle")
+        val notificationAddress = handle.address
+        notify_notification_update(
+            notification = notificationAddress,
+            summary = notification.title,
+            body = notification.description,
+            icon = DEFAULT_ICON
+        )
+        setIcon(notificationAddress, notification.icon)
+        return if (show(notificationAddress)) handle else null
     }
 
     override suspend fun pop(handle: NotificationHandle) {
-        if (!isInitialized || handle !is LinuxNotificationHandle) return
+        if (handle !is LinuxNotificationHandle) throw IllegalArgumentException("Handle is not a Linux notification handle")
         memScoped {
             val errorAddress = allocPointerTo<GError>()
             if (notify_notification_close(handle.address, errorAddress.ptr) == 0) {
