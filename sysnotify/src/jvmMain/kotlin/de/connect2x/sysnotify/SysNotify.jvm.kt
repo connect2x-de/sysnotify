@@ -56,15 +56,15 @@ private class JvmNotificationHandler(
         NativeNotificationHandler.requestPermissions(address)
     }
 
-    override suspend fun push(notification: Notification): NotificationHandle {
-        return JvmNotificationHandle(
-            NativeNotificationHandler.push(
-                handler = address,
-                title = notification.title ?: "Unknown",
-                description = notification.description,
-                icon = notification.icon
-            )
+    override suspend fun push(notification: Notification): NotificationHandle? {
+        val handle = NativeNotificationHandler.push(
+            handler = address,
+            title = notification.title ?: "Unknown",
+            description = notification.description,
+            icon = notification.icon
         )
+        return if (handle != 0L) JvmNotificationHandle(handle)
+        else null
     }
 
     override suspend fun update(handle: NotificationHandle, notification: Notification): NotificationHandle? {
