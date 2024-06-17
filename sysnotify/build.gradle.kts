@@ -14,6 +14,7 @@
  */
 
 import org.gradle.internal.os.OperatingSystem
+import org.gradle.jvm.tasks.Jar
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import kotlin.io.path.Path
@@ -24,8 +25,27 @@ plugins {
     alias(libs.plugins.androidLibrary)
 }
 
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
+
+// Remap host architecture to some consistent aliases (mostly used for native packaging)
+val architecture: String = System.getProperty("os.arch").let {
+    when (it) {
+        "i386", "i486", "i586", "i686", "x86", "x32" -> "i386"
+        "x64", "amd64", "x86_64", "x86-64" -> "amd64"
+        "aarch64", "arm64" -> "arm64"
+        "arm", "armv7", "aarch32" -> "arm32"
+        else -> throw IllegalStateException("Could not resolve host architecture")
+    }
+}
+println("Detected host architecture $architecture")
+
 val os: OperatingSystem = OperatingSystem.current()
+println("Detected host OS ${os.familyName}")
 val javaHome = Path(System.getProperty("java.home")) // For JNI interop
+println("Found java home at $javaHome")
 val jniHeaders = javaHome / "include"
 val jniLibraries = javaHome / "lib"
 
@@ -173,5 +193,12 @@ if (os.isWindows) {
             dependsOn(*dependencies)
             mustRunAfter(*dependencies)
         }
+    }
+}
+
+// Create custom JAR task(s) for packaging shared libraries produced by Kotlin/Native targets
+tasks {
+    val nativesJar = task("nativesJar", Jar::class) {
+        //archiveBaseName = "sysnotify-natives-${os.familyName}-${}"
     }
 }
