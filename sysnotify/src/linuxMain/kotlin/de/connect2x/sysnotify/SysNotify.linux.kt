@@ -89,7 +89,7 @@ internal class LinuxNotificationHandler(
                 val size = sqrt((array.size shr 2).toFloat()).apply {
                     // Check if the root was pulled with any odd decimal points, if it was, icon is not square
                     require((this - floor(abs(this))) == 0F) { "Icon image is not square" }
-                }.toInt() // Assume the icon is always square
+                }.toInt()
                 // Determine row stride; we have 4 bytes per pixel
                 val rowStride = size shl 2
                 val buffer = gdk_pixbuf_new_from_bytes(
