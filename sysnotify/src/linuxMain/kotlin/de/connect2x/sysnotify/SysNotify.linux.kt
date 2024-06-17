@@ -75,9 +75,7 @@ internal class LinuxNotificationHandler(
     )
 
     init {
-        if (notify_init(name) == 0) {
-            throw IllegalStateException("Could not initialize libnotify")
-        }
+        require(notify_init(name) == 0) { "Could not initialize libnotify" }
     }
 
     override fun close() {
@@ -87,11 +85,13 @@ internal class LinuxNotificationHandler(
     private inline fun setIcon(notification: CPointer<NotifyNotification>, icon: ByteArray?) {
         icon?.let { array ->
             array.usePinned {
+                // Determine the side-length of the icon by sqrt(data.size / 4)
                 val size = sqrt((array.size shr 2).toFloat()).apply {
                     // Check if the root was pulled with any odd decimal points, if it was, icon is not square
-                    if ((this - floor(abs(this))) != 0F) throw IllegalStateException("Icon must have square dimensions")
+                    require((this - floor(abs(this))) == 0F) { "Icon image is not square" }
                 }.toInt() // Assume the icon is always square
-                val rowStride = size shl 2 // We have 4 bytes per pixel
+                // Determine row stride; we have 4 bytes per pixel
+                val rowStride = size shl 2
                 val buffer = gdk_pixbuf_new_from_bytes(
                     it.addressOf(0).reinterpret(),
                     GdkColorspace.GDK_COLORSPACE_RGB, 1, 8, size, size, rowStride
@@ -125,6 +125,7 @@ internal class LinuxNotificationHandler(
     }
 
     override suspend fun update(handle: NotificationHandle, notification: Notification): NotificationHandle? {
+        // We don't use require() here because type casting inference doesn't work otherwise
         if (handle !is LinuxNotificationHandle) throw IllegalArgumentException("Handle is not a Linux notification handle")
         val notificationAddress = handle.address
         notify_notification_update(
@@ -138,6 +139,7 @@ internal class LinuxNotificationHandler(
     }
 
     override suspend fun pop(handle: NotificationHandle) {
+        // We don't use require() here because type casting inference doesn't work otherwise
         if (handle !is LinuxNotificationHandle) throw IllegalArgumentException("Handle is not a Linux notification handle")
         memScoped {
             val errorAddress = allocPointerTo<GError>()

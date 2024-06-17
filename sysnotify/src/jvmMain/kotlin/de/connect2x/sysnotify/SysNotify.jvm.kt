@@ -68,6 +68,7 @@ private class JvmNotificationHandler(
     }
 
     override suspend fun update(handle: NotificationHandle, notification: Notification): NotificationHandle? {
+        // We don't use require() here because type casting inference doesn't work otherwise
         if (handle !is JvmNotificationHandle) throw IllegalArgumentException("Handle is not a JVM notification handle")
         val newHandle = NativeNotificationHandler.update(
             handler = address,
@@ -81,6 +82,7 @@ private class JvmNotificationHandler(
     }
 
     override suspend fun pop(handle: NotificationHandle) {
+        // We don't use require() here because type casting inference doesn't work otherwise
         if (handle !is JvmNotificationHandle) throw IllegalArgumentException("Handle is not a JVM notification handle")
         NativeNotificationHandler.pop(address, handle.address)
     }
