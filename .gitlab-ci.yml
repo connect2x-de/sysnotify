@@ -114,6 +114,7 @@ build:windows:
     - ./gradlew
       compileKotlinMingwX64
       linkMingwX64
+      nativesJar
       --stacktrace
 
 build:mac:
@@ -128,6 +129,7 @@ build:mac:
     - ./gradlew
       compileKotlin{MacosX64,MacosArm64,IosArm64,IosSimulatorArm64,IosX64}
       link{MacosX64,MacosArm64,IosArm64,IosX64}
+      nativesJar
       --stacktrace
 
 build:linux:
@@ -181,6 +183,7 @@ build:linux:
       compileKotlin{Jvm,LinuxX64}
       compileReleaseKotlinAndroid
       linkLinuxX64
+      nativesJar
       --stacktrace
 
 # test:mac:
