@@ -35,8 +35,8 @@ import kotlinx.cinterop.ptr
 import kotlinx.cinterop.reinterpret
 import kotlinx.cinterop.toKStringFromUtf8
 import kotlinx.cinterop.usePinned
-import kotlin.experimental.ExperimentalNativeApi
 import platform.posix.memcpy
+import kotlin.experimental.ExperimentalNativeApi
 
 internal lateinit var environment: JNIEnvVar
 
@@ -49,6 +49,7 @@ fun jniOnLoad(vm: JavaVMVar, reserved: COpaquePointer): jint {
             environment.ptr.reinterpret(),
             JNI_VERSION_1_8
         )
+        registerNatives()
         return@let JNI_VERSION_1_8
     } ?: JNI_ERR
 }

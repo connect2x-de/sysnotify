@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+rootProject.name = "sysnotify"
+
 pluginManagement {
     repositories {
         google()
@@ -28,6 +30,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "sysnotify"
 include(":sysnotify")
 include(":sysnotify-com")
+include(":sysnotify-sample")

@@ -27,6 +27,7 @@ import android.os.Build
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.graphics.drawable.IconCompat
 import com.benasher44.uuid.Uuid
 import com.benasher44.uuid.uuid4
 
@@ -36,16 +37,14 @@ private data class AndroidNotificationHandle(
 
 private class AndroidNotificationHandler(
     override val name: String,
-    context: Any?
+    private val activityGetter: () -> Activity
 ) : NotificationHandler {
     companion object {
         private const val PERMISSION_REQUEST_CODE: Int = 1337
     }
 
-    private val activity = context as? Activity
-        ?: throw IllegalStateException("Android notifications require current Activity")
     private val manager =
-        activity.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+        activityGetter().getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
             ?: throw IllegalStateException("Could not retrieve notification manager instance")
     private val channelId: String = uuid4().toString()
 
@@ -77,12 +76,12 @@ private class AndroidNotificationHandler(
         // If we are API level T or above, request permission to push notifications
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ActivityCompat.checkSelfPermission(
-                    activity,
+                    activityGetter(),
                     Manifest.permission.POST_NOTIFICATIONS
                 ) != PackageManager.PERMISSION_GRANTED
             ) {
                 ActivityCompat.requestPermissions(
-                    activity,
+                    activityGetter(),
                     arrayOf(Manifest.permission.POST_NOTIFICATIONS),
                     PERMISSION_REQUEST_CODE
                 )
@@ -104,7 +103,7 @@ private class AndroidNotificationHandler(
 
     override suspend fun pop(handle: NotificationHandle) {
         if (handle !is AndroidNotificationHandle) throw IllegalArgumentException("Handle is not an android notification handle")
-        with(NotificationManagerCompat.from(activity)) {
+        with(NotificationManagerCompat.from(activityGetter())) {
             cancel(handle.uuid.hashCode())
         }
     }
@@ -114,18 +113,21 @@ private class AndroidNotificationHandler(
         notification: Notification,
         handle: AndroidNotificationHandle = AndroidNotificationHandle()
     ): AndroidNotificationHandle {
-        with(NotificationManagerCompat.from(activity)) {
-            notify(
-                handle.uuid.hashCode(), NotificationCompat.Builder(activity, channelId)
-                    .setContentTitle(notification.title ?: name)
-                    .setContentText(notification.description)
-                    .setLargeIcon(notification.icon?.let {
-                        BitmapFactory.decodeByteArray(it, 0, it.size)
-                    })
-                    .setPriority(NotificationCompat.PRIORITY_HIGH)
-                    .setAutoCancel(true) // Remove notification when user taps it
-                    .build()
-            )
+        with(NotificationManagerCompat.from(activityGetter())) {
+            val builder = NotificationCompat.Builder(activityGetter(), channelId)
+                .setContentTitle(notification.title ?: name)
+                .setContentText(notification.description)
+                .setLargeIcon(notification.icon?.let {
+                    BitmapFactory.decodeByteArray(it, 0, it.size)
+                })
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setAutoCancel(true) // Remove notification when user taps it
+            val icon = notification.icon
+            if (icon != null) {
+                builder.setSmallIcon(IconCompat.createWithData(icon, 0, icon.size))
+                    .setLargeIcon(BitmapFactory.decodeByteArray(icon, 0, 0))
+            } else builder.setSmallIcon(R.drawable.ic_notification)
+            notify(handle.uuid.hashCode(), builder.build())
         }
         return handle
     }
@@ -133,5 +135,5 @@ private class AndroidNotificationHandler(
 
 fun NotificationHandler.Companion.create(
     name: String,
-    context: Context
-): NotificationHandler = AndroidNotificationHandler(name, context)
+    activityGetter: () -> Activity
+): NotificationHandler = AndroidNotificationHandler(name, activityGetter)
