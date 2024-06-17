@@ -40,6 +40,8 @@ import libnotify.notify_notification_set_timeout
 import libnotify.notify_notification_show
 import libnotify.notify_notification_update
 import libnotify.notify_uninit
+import kotlin.math.abs
+import kotlin.math.floor
 import kotlin.math.sqrt
 
 @OptIn(ExperimentalForeignApi::class)
@@ -85,8 +87,10 @@ internal class LinuxNotificationHandler(
     private inline fun setIcon(notification: CPointer<NotifyNotification>, icon: ByteArray?) {
         icon?.let { array ->
             array.usePinned {
-                val size =
-                    sqrt(array.size.toFloat()).toInt() // Assume the icon is always square
+                val size = sqrt((array.size shr 2).toFloat()).apply {
+                    // Check if the root was pulled with any odd decimal points, if it was, icon is not square
+                    if ((this - floor(abs(this))) != 0F) throw IllegalStateException("Icon must have square dimensions")
+                }.toInt() // Assume the icon is always square
                 val rowStride = size shl 2 // We have 4 bytes per pixel
                 val buffer = gdk_pixbuf_new_from_bytes(
                     it.addressOf(0).reinterpret(),

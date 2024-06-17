@@ -96,7 +96,6 @@ interface NotificationHandle
  * It is very important to invoke the provided [close] function in order to free up allocated resources,
  * otherwise a memory leak might occur based on the implementation.
  */
-@OptIn(ExperimentalStdlibApi::class)
 interface NotificationHandler : AutoCloseable {
     val name: String
     val platform: NotificationPlatform
