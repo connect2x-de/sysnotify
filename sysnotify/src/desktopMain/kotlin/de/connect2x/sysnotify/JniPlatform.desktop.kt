@@ -59,8 +59,10 @@ fun jniOnLoad(vm: JavaVMVar, reserved: COpaquePointer): jint {
 fun jniOnUnload(vm: JavaVMVar, reserved: COpaquePointer) {
 }
 
+@Suppress("NOTHING_TO_INLINE") // Because of Kotlin/JVM
 internal inline fun Boolean.toJBoolean(): jboolean = if (this) 1U else 0U
 
+@Suppress("NOTHING_TO_INLINE") // Because of Kotlin/JVM
 internal inline fun jstring.toKString(): String {
     return checkNotNull(environment.pointed?.let {
         val data = checkNotNull(it.GetStringUTFChars)(environment.ptr, this, null)
@@ -70,6 +72,7 @@ internal inline fun jstring.toKString(): String {
     })
 }
 
+@Suppress("NOTHING_TO_INLINE") // Because of Kotlin/JVM
 internal inline fun jbyteArray.toByteArray(): ByteArray {
     return checkNotNull(environment.pointed?.let {
         ByteArray(checkNotNull(it.GetArrayLength)(environment.ptr, this)).apply {

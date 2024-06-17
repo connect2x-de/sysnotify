@@ -1,3 +1,18 @@
+/*
+ * Copyright 2024 connect2x GmbH
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
@@ -10,13 +25,28 @@ plugins {
     alias(libs.plugins.kotlinxSerialization)
 }
 
-kotlin {
-    jvm("desktop")
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
 
+kotlin {
+    val kotlinJvmVersion = libs.versions.jvmTarget.get()
+    val kotlinJvmTarget = JvmTarget.fromTarget(kotlinJvmVersion)
+    jvmToolchain(JavaLanguageVersion.of(kotlinJvmVersion).asInt())
+    jvm("desktop") {
+        compilations.all {
+            compileTaskProvider {
+                compilerOptions {
+                    jvmTarget = kotlinJvmTarget
+                }
+            }
+        }
+    }
     androidTarget {
         @OptIn(ExperimentalKotlinGradlePluginApi::class)
         compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_11)
+            jvmTarget.set(kotlinJvmTarget)
         }
     }
 
@@ -90,10 +120,6 @@ android {
             isMinifyEnabled = false
         }
     }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-    }
     buildFeatures {
         compose = true
     }
@@ -106,7 +132,6 @@ compose {
     desktop {
         application {
             mainClass = "de.connect2x.sysnotify.sample.MainKt"
-            //jvmArgs("-Xmx1G")
             buildTypes.release.proguard {
                 isEnabled = false
             }
@@ -128,5 +153,4 @@ compose {
             }
         }
     }
-
 }

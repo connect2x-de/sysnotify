@@ -1,4 +1,5 @@
 [versions]
+jvmTarget = "11"
 agp = "8.2.2"
 kotlin = "2.0.0"
 kotlinxCoroutines = "1.8.1"

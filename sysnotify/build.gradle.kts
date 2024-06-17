@@ -15,6 +15,7 @@
 
 import org.gradle.internal.os.OperatingSystem
 import org.gradle.jvm.tasks.Jar
+import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import kotlin.io.path.Path
@@ -23,11 +24,6 @@ import kotlin.io.path.div
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidLibrary)
-}
-
-java {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
 }
 
 // Remap host architecture to some consistent aliases (mostly used for native packaging)
@@ -50,15 +46,23 @@ val jniHeaders = javaHome / "include"
 val jniLibraries = javaHome / "lib"
 
 kotlin {
-    jvm()
-    androidTarget {
-        publishLibraryVariants("release")
+    val kotlinJvmVersion = libs.versions.jvmTarget.get()
+    val kotlinJvmTarget = JvmTarget.fromTarget(kotlinJvmVersion)
+    jvmToolchain(JavaLanguageVersion.of(kotlinJvmVersion).asInt())
+    jvm {
         compilations.all {
-            compileTaskProvider.configure {
+            compileTaskProvider {
                 compilerOptions {
-                    jvmTarget.set(JvmTarget.JVM_11)
+                    jvmTarget = kotlinJvmTarget
                 }
             }
+        }
+    }
+    androidTarget {
+        publishLibraryVariants("release")
+        @OptIn(ExperimentalKotlinGradlePluginApi::class)
+        compilerOptions {
+            jvmTarget = kotlinJvmTarget
         }
     }
     js(IR) {
@@ -199,6 +203,6 @@ if (os.isWindows) {
 // Create custom JAR task(s) for packaging shared libraries produced by Kotlin/Native targets
 tasks {
     val nativesJar = task("nativesJar", Jar::class) {
-        //archiveBaseName = "sysnotify-natives-${os.familyName}-${}"
+        archiveBaseName = "sysnotify-natives-${os.familyName}-${architecture}"
     }
 }
