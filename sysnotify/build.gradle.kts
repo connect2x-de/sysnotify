@@ -13,6 +13,7 @@
  * limitations under the License.
  */
 
+import org.gradle.configurationcache.extensions.capitalized
 import org.gradle.internal.os.OperatingSystem
 import org.gradle.jvm.tasks.Jar
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
@@ -29,8 +30,8 @@ plugins {
 // Remap host architecture to some consistent aliases (mostly used for native packaging)
 val architecture: String = System.getProperty("os.arch").let {
     when (it) {
-        "i386", "i486", "i586", "i686", "x86", "x32" -> "i386"
-        "x64", "amd64", "x86_64", "x86-64" -> "amd64"
+        "i386", "i486", "i586", "i686", "x86", "x32" -> "x86"
+        "x64", "amd64", "x86_64", "x86-64" -> "x64"
         "aarch64", "arm64" -> "arm64"
         "arm", "armv7", "aarch32" -> "arm32"
         else -> throw IllegalStateException("Could not resolve host architecture")
@@ -202,7 +203,17 @@ if (os.isWindows) {
 
 // Create custom JAR task(s) for packaging shared libraries produced by Kotlin/Native targets
 tasks {
+    val linkTask = when {
+        os.isLinux -> find { it.name == "linkLinux${architecture.capitalized()}" }
+        os.isWindows -> find { it.name == "linkMingw${architecture.capitalized()}" }
+        // TODO: Implement support for macOS
+        else -> throw IllegalStateException("JVM bindings are not supported on the current platform")
+    } ?: throw IllegalStateException("Could not find matching Kotlin/Native link task for building JVM bindings")
+    println("Using '${linkTask.name}' as JVM bindings link task")
+
     val nativesJar = task("nativesJar", Jar::class) {
+        dependsOn(linkTask)
         archiveBaseName = "sysnotify-natives-${os.familyName}-${architecture}"
+        println("Configured JNI bindings JAR '${archiveBaseName.get()}'")
     }
 }
