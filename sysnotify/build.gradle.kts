@@ -211,7 +211,7 @@ tasks {
         else -> throw IllegalStateException("JVM bindings are not supported on the current platform")
     } ?: throw IllegalStateException("Could not find matching Kotlin/Native link task for building JVM bindings")
     println("Using '${linkTask.name}' as JVM bindings link task")
-    val nativesJar = task("nativesJar", Jar::class) {
+    task("nativesJar", Jar::class) {
         dependsOn(linkTask)
         archiveBaseName = "sysnotify-natives-${os.familyName}-${architecture}"
         from(linkTask.outputs)
