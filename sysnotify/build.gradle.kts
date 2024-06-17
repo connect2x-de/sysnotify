@@ -183,7 +183,12 @@ android {
     defaultConfig {
         minSdk = libs.versions.android.minSdk.get().toInt()
     }
+    buildTypes {
+        release { isMinifyEnabled = false }
+        debug { isMinifyEnabled = false }
+    }
 }
+
 dependencies {
     implementation(libs.androidx.core)
 }

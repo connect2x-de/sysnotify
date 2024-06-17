@@ -25,11 +25,6 @@ plugins {
     alias(libs.plugins.kotlinxSerialization)
 }
 
-java {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
-}
-
 kotlin {
     val kotlinJvmVersion = libs.versions.jvmTarget.get()
     val kotlinJvmTarget = JvmTarget.fromTarget(kotlinJvmVersion)
@@ -116,9 +111,8 @@ android {
         }
     }
     buildTypes {
-        getByName("release") {
-            isMinifyEnabled = false
-        }
+        release { isMinifyEnabled = false }
+        debug { isMinifyEnabled = false }
     }
     buildFeatures {
         compose = true
@@ -132,9 +126,7 @@ compose {
     desktop {
         application {
             mainClass = "de.connect2x.sysnotify.sample.MainKt"
-            buildTypes.release.proguard {
-                isEnabled = false
-            }
+            buildTypes.release.proguard { isEnabled = false }
             nativeDistributions {
                 modules("java.net.http", "java.sql", "java.naming")
                 targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
