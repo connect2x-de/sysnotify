@@ -108,6 +108,7 @@ kotlin {
                 headers("${jniHeaders / "jni.h"}")
             }
         }
+        binaries.sharedLib {}
     }
     mingwX64 {
         val comPath = project(":sysnotify-com").projectDir.toPath()
@@ -204,16 +205,16 @@ if (os.isWindows) {
 // Create custom JAR task(s) for packaging shared libraries produced by Kotlin/Native targets
 tasks {
     val linkTask = when {
-        os.isLinux -> find { it.name == "linkLinux${architecture.capitalized()}" }
-        os.isWindows -> find { it.name == "linkMingw${architecture.capitalized()}" }
-        // TODO: Implement support for macOS
+        os.isLinux -> find { it.name == "linkReleaseSharedLinux${architecture.capitalized()}" }
+        os.isWindows -> find { it.name == "linkReleaseSharedMingw${architecture.capitalized()}" }
+        os.isMacOsX -> find { it.name == "linkReleaseSharedMacos${architecture.capitalized()}" }
         else -> throw IllegalStateException("JVM bindings are not supported on the current platform")
     } ?: throw IllegalStateException("Could not find matching Kotlin/Native link task for building JVM bindings")
     println("Using '${linkTask.name}' as JVM bindings link task")
-
     val nativesJar = task("nativesJar", Jar::class) {
         dependsOn(linkTask)
         archiveBaseName = "sysnotify-natives-${os.familyName}-${architecture}"
+        from(linkTask.outputs)
         println("Configured JNI bindings JAR '${archiveBaseName.get()}'")
     }
 }
