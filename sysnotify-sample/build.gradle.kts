@@ -1,3 +1,4 @@
+import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
@@ -10,6 +11,8 @@ plugins {
 }
 
 kotlin {
+    jvm("desktop")
+
     androidTarget {
         @OptIn(ExperimentalKotlinGradlePluginApi::class)
         compilerOptions {
@@ -44,6 +47,21 @@ kotlin {
             implementation(compose.components.uiToolingPreview)
             implementation(project(":sysnotify"))
         }
+        val desktopMain by getting {
+            dependencies {
+                // this is needed to create lock files working on all machines
+                if (System.getProperty("bundleAll") == "true") {
+                    implementation(compose.desktop.linux_x64)
+                    implementation(compose.desktop.linux_arm64)
+                    implementation(compose.desktop.windows_x64)
+                    implementation(compose.desktop.macos_x64)
+                    implementation(compose.desktop.macos_arm64)
+                } else {
+                    implementation(compose.desktop.currentOs)
+                }
+            }
+        }
+
     }
 }
 
@@ -82,4 +100,33 @@ android {
     dependencies {
         debugImplementation(libs.androidx.compose.ui.tooling)
     }
+}
+
+compose {
+    desktop {
+        application {
+            mainClass = "de.connect2x.sysnotify.sample.MainKt"
+            //jvmArgs("-Xmx1G")
+            buildTypes.release.proguard {
+                isEnabled = false
+            }
+            nativeDistributions {
+                modules("java.net.http", "java.sql", "java.naming")
+                targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+                appResourcesRootDir.set(layout.buildDirectory) // @see https://github.com/JetBrains/compose-jb/tree/master/tutorials/Native_distributions_and_local_execution#jvm-resource-loading
+                packageName = "Sysnotify Sample"
+                packageVersion = "1.0.0"
+
+                windows {
+                    menu = true
+                    // see https://wixtoolset.org/documentation/manual/v3/howtos/general/generate_guids.html
+                    upgradeUuid = "3e1d7fa0-4c3f-4c3d-805f-d28bd21d6019"
+                }
+                macOS {
+                    dockName = "Sysnotify Sample"
+                }
+            }
+        }
+    }
+
 }

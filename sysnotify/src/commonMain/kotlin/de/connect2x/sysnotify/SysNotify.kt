@@ -115,3 +115,28 @@ interface NotificationHandler : AutoCloseable {
 
     companion object // Used for create implementations
 }
+
+object NoopNotificationHandler : NotificationHandler {
+    override val name: String = "NOOP"
+    override val platform: NotificationPlatform
+        get() = throw UnsupportedOperationException()
+    override val capabilities: NotificationCapabilities = NotificationCapabilities(
+        isTitleSupported = false,
+        isDescriptionSupported = false,
+        isIconSupported = false,
+        isActionSupported = false,
+        isPopSupported = false
+    )
+
+    override suspend fun push(notification: Notification): NotificationHandle? {
+        throw UnsupportedOperationException()
+    }
+
+    override suspend fun update(handle: NotificationHandle, notification: Notification): NotificationHandle? {
+        throw UnsupportedOperationException()
+    }
+
+    override suspend fun pop(handle: NotificationHandle) {
+        throw UnsupportedOperationException()
+    }
+}

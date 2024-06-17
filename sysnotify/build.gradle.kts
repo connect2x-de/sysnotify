@@ -112,25 +112,17 @@ kotlin {
                 implementation(libs.uuid)
             }
         }
-        nativeMain { dependsOn(commonMain.get()) }
         val desktopMain by creating {
             dependsOn(nativeMain.get())
         }
-        appleMain { dependsOn(nativeMain.get()) }
-        macosMain {
-            dependsOn(desktopMain)
-            dependsOn(appleMain.get())
-        }
-        iosMain { dependsOn(appleMain.get()) }
-        linuxMain {
-            dependsOn(desktopMain)
-            dependsOn(nativeMain.get())
-        }
-        mingwMain {
-            dependsOn(desktopMain)
-            dependsOn(nativeMain.get())
-        }
+        macosMain { dependsOn(desktopMain) }
+        linuxMain { dependsOn(desktopMain) }
+        mingwMain { dependsOn(desktopMain) }
     }
+    applyCrossCompilationHack()
+}
+
+fun applyCrossCompilationHack() {
     // Disable cross-compilation - https://youtrack.jetbrains.com/issue/KT-30498/Option-to-disable-kotlin-native-cross-compilation
     when {
         os.isLinux -> kotlin.targets.filter { "linux" !in it.name }
