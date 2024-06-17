@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-@file:OptIn(ExperimentalNativeApi::class, ExperimentalForeignApi::class)
+@file:OptIn(ExperimentalForeignApi::class)
 
 package de.connect2x.sysnotify
 
@@ -36,7 +36,6 @@ import kotlinx.cinterop.ptr
 import kotlinx.cinterop.staticCFunction
 import kotlinx.cinterop.toCPointer
 import kotlinx.coroutines.runBlocking
-import kotlin.experimental.ExperimentalNativeApi
 
 internal expect fun createNotificationHandler(name: String): NotificationHandler
 
