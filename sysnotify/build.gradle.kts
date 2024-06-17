@@ -14,6 +14,7 @@
  */
 
 import org.gradle.internal.os.OperatingSystem
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import kotlin.io.path.Path
 import kotlin.io.path.div
@@ -33,8 +34,10 @@ kotlin {
     androidTarget {
         publishLibraryVariants("release")
         compilations.all {
-            kotlinOptions {
-                jvmTarget = "1.8"
+            compileTaskProvider.configure {
+                compilerOptions {
+                    jvmTarget.set(JvmTarget.JVM_11)
+                }
             }
         }
     }
@@ -133,7 +136,7 @@ fun applyCrossCompilationHack() {
         target.apply {
             compilations.all {
                 cinterops.all { tasks[interopProcessingTaskName].enabled = false }
-                compileKotlinTask.enabled = false
+                compileTaskProvider { enabled = false }
                 tasks[processResourcesTaskName].enabled = false
             }
             binaries.all { linkTask.enabled = false }
