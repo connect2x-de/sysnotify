@@ -82,6 +82,7 @@ internal class LinuxNotificationHandler(
         notify_uninit()
     }
 
+    @Suppress("NOTHING_TO_INLINE")
     private inline fun setIcon(notification: CPointer<NotifyNotification>, icon: ByteArray?) {
         icon?.let { array ->
             array.usePinned {
@@ -102,6 +103,7 @@ internal class LinuxNotificationHandler(
         }
     }
 
+    @Suppress("NOTHING_TO_INLINE")
     private inline fun show(notification: CPointer<NotifyNotification>): Boolean {
         memScoped {
             val errorAddress = allocPointerTo<GError>()
@@ -125,8 +127,7 @@ internal class LinuxNotificationHandler(
     }
 
     override suspend fun update(handle: NotificationHandle, notification: Notification): NotificationHandle? {
-        // We don't use require() here because type casting inference doesn't work otherwise
-        if (handle !is LinuxNotificationHandle) throw IllegalArgumentException("Handle is not a Linux notification handle")
+        require(handle is LinuxNotificationHandle)
         val notificationAddress = handle.address
         notify_notification_update(
             notification = notificationAddress,
@@ -139,8 +140,7 @@ internal class LinuxNotificationHandler(
     }
 
     override suspend fun pop(handle: NotificationHandle) {
-        // We don't use require() here because type casting inference doesn't work otherwise
-        if (handle !is LinuxNotificationHandle) throw IllegalArgumentException("Handle is not a Linux notification handle")
+        require(handle is LinuxNotificationHandle)
         memScoped {
             val errorAddress = allocPointerTo<GError>()
             if (notify_notification_close(handle.address, errorAddress.ptr) == 0) {

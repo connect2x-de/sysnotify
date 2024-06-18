@@ -74,7 +74,7 @@ internal class AppleNotificationHandler(override val name: String) : Notificatio
 
     @Suppress("UNCHECKED_CAST")
     override suspend fun pop(handle: NotificationHandle) {
-        if (handle !is AppleNotificationHandle) throw IllegalArgumentException("Handle is not an apple notification handle")
+        require(handle is AppleNotificationHandle)
         val center = UNUserNotificationCenter.currentNotificationCenter()
         val identifier = handle.uuid.toString()
         var found = false
