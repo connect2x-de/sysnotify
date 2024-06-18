@@ -143,13 +143,13 @@ build:linux:
     - *if-merge-request-or-main
   before_script:
     - apt -qq update
-    - apt -qqy
+    - apt -qqy --no-install-recommends install
       apt-utils
       build-essential
       openjdk-17-jdk
-      openjdk-17-jre-headless
       software-properties-common
       libssl-dev
+      libffi-dev
       pkg-config
       libstdc++6
       libglu1-mesa
@@ -157,7 +157,7 @@ build:linux:
       unzip
       curl
       gcc-multilib
-      libnotify 
+      libnotify
       libnotify-dev
     - export ANDROID_HOME="/opt/android-sdk-linux"
     - export ANDROID_SDK_ROOT=$ANDROID_HOME
