@@ -13,11 +13,7 @@
  * limitations under the License.
  */
 
-@file:OptIn(ExperimentalForeignApi::class)
-
 package de.connect2x.sysnotify
-
-import kotlinx.cinterop.ExperimentalForeignApi
 
 internal actual fun createNotificationHandler(name: String): NotificationHandler {
     return WindowsNotificationHandler(name)

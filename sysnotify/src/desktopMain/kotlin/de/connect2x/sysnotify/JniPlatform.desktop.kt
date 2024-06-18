@@ -14,25 +14,37 @@
  */
 
 @file:OptIn(ExperimentalForeignApi::class, ExperimentalNativeApi::class)
+@file:Suppress("NOTHING_TO_INLINE")
 
 package de.connect2x.sysnotify
 
 import jni.JNIEnvVar
+import jni.JNINativeMethod
 import jni.JNI_ERR
 import jni.JNI_VERSION_1_8
 import jni.JavaVMVar
 import jni.jboolean
 import jni.jbyteArray
+import jni.jclass
 import jni.jint
 import jni.jstring
+import kotlinx.cinterop.ByteVar
 import kotlinx.cinterop.COpaquePointer
+import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.MemScope
 import kotlinx.cinterop.addressOf
+import kotlinx.cinterop.alloc
+import kotlinx.cinterop.allocArray
+import kotlinx.cinterop.allocPointerTo
 import kotlinx.cinterop.convert
 import kotlinx.cinterop.invoke
+import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.pointed
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.reinterpret
+import kotlinx.cinterop.set
+import kotlinx.cinterop.toKString
 import kotlinx.cinterop.toKStringFromUtf8
 import kotlinx.cinterop.usePinned
 import platform.posix.memcpy
@@ -44,41 +56,88 @@ internal lateinit var environment: JNIEnvVar
 @CName("JNI_OnLoad")
 fun jniOnLoad(vm: JavaVMVar, reserved: COpaquePointer): jint {
     return vm.pointed?.let {
-        checkNotNull(it.GetEnv)(
-            vm.ptr,
-            environment.ptr.reinterpret(),
-            JNI_VERSION_1_8
-        )
+        memScoped {
+            val address = allocPointerTo<JNIEnvVar>()
+            checkNotNull(it.GetEnv)(
+                vm.ptr,
+                address.ptr.reinterpret(),
+                JNI_VERSION_1_8
+            )
+            environment = checkNotNull(address.pointed)
+        }
         registerNatives()
         return@let JNI_VERSION_1_8
     } ?: JNI_ERR
 }
 
-@Suppress("UNUSED_PARAMETER", "UNUSED")
-@CName("JNI_OnUnload")
-fun jniOnUnload(vm: JavaVMVar, reserved: COpaquePointer) {
-}
-
 internal inline fun Boolean.toJBoolean(): jboolean = if (this) 1U else 0U
 
 internal inline fun jstring.toKString(): String {
-    return checkNotNull(environment.pointed?.let {
-        val data = checkNotNull(it.GetStringUTFChars)(environment.ptr, this, null)
-        val result = data?.toKStringFromUtf8() ?: return ""
-        checkNotNull(it.ReleaseStringUTFChars)(environment.ptr, this, data)
-        result
-    })
+    val data = checkNotNull(
+        checkNotNull(environment.pointed?.GetStringUTFChars) { "Could not access JNI:GetStringUTFChars function" }(
+            environment.ptr,
+            this,
+            null
+        )
+    ) { "Could not retrieve string base address" }
+    val result = data.toKString()
+    checkNotNull(environment.pointed?.ReleaseStringUTFChars) { "Could not access JNI:ReleaseStringUTFChars function" }(
+        environment.ptr,
+        this,
+        data
+    )
+    return result
 }
 
 internal inline fun jbyteArray.toByteArray(): ByteArray {
     return checkNotNull(environment.pointed?.let {
         ByteArray(checkNotNull(it.GetArrayLength)(environment.ptr, this)).apply {
             usePinned { pinnedArray ->
-                val data = checkNotNull(it.GetPrimitiveArrayCritical)(environment.ptr, reinterpret(), null)
-                    ?: throw IllegalStateException("Could not retrieve array base address")
+                val data =
+                    checkNotNull(
+                        checkNotNull(it.GetPrimitiveArrayCritical) { "Could not access JNI:GetPrimitiveArrayCritical function" }(
+                            environment.ptr,
+                            reinterpret(),
+                            null
+                        )
+                    ) { "Could not retrieve array base address" }
                 memcpy(pinnedArray.addressOf(0), data, size.convert())
-                checkNotNull(it.ReleasePrimitiveArrayCritical)(environment.ptr, reinterpret(), data, 0)
+                checkNotNull(it.ReleasePrimitiveArrayCritical) { "Could not access JNI:ReleasePrimitiveArrayCritical function" }(
+                    environment.ptr,
+                    reinterpret(),
+                    data,
+                    0
+                )
             }
         }
     })
+}
+
+internal inline fun MemScope.allocateCString(value: String): CPointer<ByteVar> {
+    val length = value.length
+    val data = allocArray<ByteVar>(length + 1)
+    data[length] = 0 // Make sure we have a null-terminator at the end
+    value.encodeToByteArray().usePinned { array ->
+        memcpy(data, array.addressOf(0), length.convert())
+    }
+    return data
+}
+
+internal inline fun jclass.registerNativeFunction(
+    name: String,
+    signature: String,
+    address: COpaquePointer
+) {
+    memScoped {
+        val method = alloc<JNINativeMethod>()
+        method.name = allocateCString(name)
+        method.signature = allocateCString(signature)
+        method.fnPtr = address
+        checkNotNull(environment.pointed?.RegisterNatives) { "Could not access JNI:RegisterNatives function" }(
+            environment.ptr,
+            this@registerNativeFunction,
+            method.ptr,
+            1
+        )
+    }
 }

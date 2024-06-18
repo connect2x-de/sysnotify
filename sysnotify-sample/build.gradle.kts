@@ -1,3 +1,19 @@
+/*
+ * Copyright 2024 connect2x GmbH
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
@@ -10,10 +26,22 @@ plugins {
 }
 
 kotlin {
+    val kotlinJvmVersion = libs.versions.jvmTarget.get()
+    val kotlinJvmTarget = JvmTarget.fromTarget(kotlinJvmVersion)
+    jvmToolchain(JavaLanguageVersion.of(kotlinJvmVersion).asInt())
+    jvm("desktop") {
+        compilations.all {
+            compileTaskProvider {
+                compilerOptions {
+                    jvmTarget = kotlinJvmTarget
+                }
+            }
+        }
+    }
     androidTarget {
         @OptIn(ExperimentalKotlinGradlePluginApi::class)
         compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_11)
+            jvmTarget.set(kotlinJvmTarget)
         }
     }
 
@@ -44,6 +72,22 @@ kotlin {
             implementation(compose.components.uiToolingPreview)
             implementation(project(":sysnotify"))
         }
+        val desktopMain by getting {
+            dependencies {
+                implementation(project(path = ":sysnotify", configuration = "nativesJar")) // We need the natives jar to be in the classpath
+                // this is needed to create lock files working on all machines
+                if (System.getProperty("bundleAll") == "true") {
+                    implementation(compose.desktop.linux_x64)
+                    implementation(compose.desktop.linux_arm64)
+                    implementation(compose.desktop.windows_x64)
+                    implementation(compose.desktop.macos_x64)
+                    implementation(compose.desktop.macos_arm64)
+                } else {
+                    implementation(compose.desktop.currentOs)
+                }
+            }
+        }
+
     }
 }
 
@@ -68,18 +112,38 @@ android {
         }
     }
     buildTypes {
-        getByName("release") {
-            isMinifyEnabled = false
-        }
-    }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        release { isMinifyEnabled = false }
+        debug { isMinifyEnabled = false }
     }
     buildFeatures {
         compose = true
     }
     dependencies {
         debugImplementation(libs.androidx.compose.ui.tooling)
+    }
+}
+
+compose {
+    desktop {
+        application {
+            mainClass = "de.connect2x.sysnotify.sample.MainKt"
+            buildTypes.release.proguard { isEnabled = false }
+            nativeDistributions {
+                modules("java.net.http", "java.sql", "java.naming")
+                targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+                appResourcesRootDir.set(layout.buildDirectory) // @see https://github.com/JetBrains/compose-jb/tree/master/tutorials/Native_distributions_and_local_execution#jvm-resource-loading
+                packageName = "Sysnotify Sample"
+                packageVersion = "1.0.0"
+
+                windows {
+                    menu = true
+                    // see https://wixtoolset.org/documentation/manual/v3/howtos/general/generate_guids.html
+                    upgradeUuid = "3e1d7fa0-4c3f-4c3d-805f-d28bd21d6019"
+                }
+                macOS {
+                    dockName = "Sysnotify Sample"
+                }
+            }
+        }
     }
 }

@@ -23,7 +23,6 @@ package de.connect2x.sysnotify
 enum class NotificationPlatform {
     ANDROID,
     APPLE, // This includes iOS and macOS
-    JVM,
     LINUX,
     WINDOWS,
     WEB
@@ -96,7 +95,6 @@ interface NotificationHandle
  * It is very important to invoke the provided [close] function in order to free up allocated resources,
  * otherwise a memory leak might occur based on the implementation.
  */
-@OptIn(ExperimentalStdlibApi::class)
 interface NotificationHandler : AutoCloseable {
     val name: String
     val platform: NotificationPlatform
@@ -115,4 +113,29 @@ interface NotificationHandler : AutoCloseable {
     override fun close() {}
 
     companion object // Used for create implementations
+}
+
+object NoopNotificationHandler : NotificationHandler {
+    override val name: String = "NOOP"
+    override val platform: NotificationPlatform
+        get() = throw UnsupportedOperationException()
+    override val capabilities: NotificationCapabilities = NotificationCapabilities(
+        isTitleSupported = false,
+        isDescriptionSupported = false,
+        isIconSupported = false,
+        isActionSupported = false,
+        isPopSupported = false
+    )
+
+    override suspend fun push(notification: Notification): NotificationHandle? {
+        throw UnsupportedOperationException()
+    }
+
+    override suspend fun update(handle: NotificationHandle, notification: Notification): NotificationHandle? {
+        throw UnsupportedOperationException()
+    }
+
+    override suspend fun pop(handle: NotificationHandle) {
+        throw UnsupportedOperationException()
+    }
 }

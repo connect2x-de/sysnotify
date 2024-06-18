@@ -40,6 +40,8 @@ import libnotify.notify_notification_set_timeout
 import libnotify.notify_notification_show
 import libnotify.notify_notification_update
 import libnotify.notify_uninit
+import kotlin.math.abs
+import kotlin.math.floor
 import kotlin.math.sqrt
 
 @OptIn(ExperimentalForeignApi::class)
@@ -73,21 +75,24 @@ internal class LinuxNotificationHandler(
     )
 
     init {
-        if (notify_init(name) == 0) {
-            throw IllegalStateException("Could not initialize libnotify")
-        }
+        require(notify_init(name) != 0) { "Could not initialize libnotify" }
     }
 
     override fun close() {
         notify_uninit()
     }
 
+    @Suppress("NOTHING_TO_INLINE")
     private inline fun setIcon(notification: CPointer<NotifyNotification>, icon: ByteArray?) {
         icon?.let { array ->
             array.usePinned {
-                val size =
-                    sqrt(array.size.toFloat()).toInt() // Assume the icon is always square
-                val rowStride = size shl 2 // We have 4 bytes per pixel
+                // Determine the side-length of the icon by sqrt(data.size / 4)
+                val size = sqrt((array.size shr 2).toFloat()).apply {
+                    // Check if the root was pulled with any odd decimal points, if it was, icon is not square
+                    require((this - floor(abs(this))) == 0F) { "Icon image is not square" }
+                }.toInt()
+                // Determine row stride; we have 4 bytes per pixel
+                val rowStride = size shl 2
                 val buffer = gdk_pixbuf_new_from_bytes(
                     it.addressOf(0).reinterpret(),
                     GdkColorspace.GDK_COLORSPACE_RGB, 1, 8, size, size, rowStride
@@ -98,6 +103,7 @@ internal class LinuxNotificationHandler(
         }
     }
 
+    @Suppress("NOTHING_TO_INLINE")
     private inline fun show(notification: CPointer<NotifyNotification>): Boolean {
         memScoped {
             val errorAddress = allocPointerTo<GError>()
@@ -121,7 +127,7 @@ internal class LinuxNotificationHandler(
     }
 
     override suspend fun update(handle: NotificationHandle, notification: Notification): NotificationHandle? {
-        if (handle !is LinuxNotificationHandle) throw IllegalArgumentException("Handle is not a Linux notification handle")
+        require(handle is LinuxNotificationHandle) { "Handle is not a Linux notification handle" }
         val notificationAddress = handle.address
         notify_notification_update(
             notification = notificationAddress,
@@ -134,7 +140,7 @@ internal class LinuxNotificationHandler(
     }
 
     override suspend fun pop(handle: NotificationHandle) {
-        if (handle !is LinuxNotificationHandle) throw IllegalArgumentException("Handle is not a Linux notification handle")
+        require(handle is LinuxNotificationHandle) { "Handle is not a Linux notification handle" }
         memScoped {
             val errorAddress = allocPointerTo<GError>()
             if (notify_notification_close(handle.address, errorAddress.ptr) == 0) {

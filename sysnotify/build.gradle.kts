@@ -13,7 +13,11 @@
  * limitations under the License.
  */
 
+import org.gradle.configurationcache.extensions.capitalized
 import org.gradle.internal.os.OperatingSystem
+import org.gradle.jvm.tasks.Jar
+import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import kotlin.io.path.Path
 import kotlin.io.path.div
@@ -23,19 +27,41 @@ plugins {
     alias(libs.plugins.androidLibrary)
 }
 
+// Remap host architecture to some consistent aliases (mostly used for native packaging)
+val architecture: String = when (System.getProperty("os.arch")) {
+    "i386", "i486", "i586", "i686", "x86", "x32" -> "x86"
+    "x64", "amd64", "x86_64", "x86-64" -> "x64"
+    "aarch64", "arm64" -> "arm64"
+    "arm", "armv7", "aarch32" -> "arm32"
+    else -> throw IllegalStateException("Could not determine host architecture")
+}
+println("Detected host architecture $architecture")
+
 val os: OperatingSystem = OperatingSystem.current()
+println("Detected host OS ${os.familyName}")
 val javaHome = Path(System.getProperty("java.home")) // For JNI interop
+println("Found java home at $javaHome")
 val jniHeaders = javaHome / "include"
 val jniLibraries = javaHome / "lib"
 
 kotlin {
-    jvm()
+    val kotlinJvmVersion = libs.versions.jvmTarget.get()
+    val kotlinJvmTarget = JvmTarget.fromTarget(kotlinJvmVersion)
+    jvmToolchain(JavaLanguageVersion.of(kotlinJvmVersion).asInt())
+    jvm {
+        compilations.all {
+            compileTaskProvider {
+                compilerOptions {
+                    jvmTarget = kotlinJvmTarget
+                }
+            }
+        }
+    }
     androidTarget {
         publishLibraryVariants("release")
-        compilations.all {
-            kotlinOptions {
-                jvmTarget = "1.8"
-            }
+        @OptIn(ExperimentalKotlinGradlePluginApi::class)
+        compilerOptions {
+            jvmTarget = kotlinJvmTarget
         }
     }
     js(IR) {
@@ -57,7 +83,7 @@ kotlin {
             }
             binaries {
                 framework {
-                    baseName = "shared"
+                    baseName = "sysnotify"
                 }
                 sharedLib {}
             }
@@ -67,7 +93,7 @@ kotlin {
         target.apply {
             binaries {
                 framework {
-                    baseName = "shared"
+                    baseName = "sysnotify"
                 }
             }
         }
@@ -80,6 +106,7 @@ kotlin {
                 headers("${jniHeaders / "jni.h"}")
             }
         }
+        binaries.sharedLib {}
     }
     mingwX64 {
         val comPath = project(":sysnotify-com").projectDir.toPath()
@@ -112,25 +139,17 @@ kotlin {
                 implementation(libs.uuid)
             }
         }
-        nativeMain { dependsOn(commonMain.get()) }
         val desktopMain by creating {
             dependsOn(nativeMain.get())
         }
-        appleMain { dependsOn(nativeMain.get()) }
-        macosMain {
-            dependsOn(desktopMain)
-            dependsOn(appleMain.get())
-        }
-        iosMain { dependsOn(appleMain.get()) }
-        linuxMain {
-            dependsOn(desktopMain)
-            dependsOn(nativeMain.get())
-        }
-        mingwMain {
-            dependsOn(desktopMain)
-            dependsOn(nativeMain.get())
-        }
+        macosMain { dependsOn(desktopMain) }
+        linuxMain { dependsOn(desktopMain) }
+        mingwMain { dependsOn(desktopMain) }
     }
+    applyCrossCompilationHack()
+}
+
+fun applyCrossCompilationHack() {
     // Disable cross-compilation - https://youtrack.jetbrains.com/issue/KT-30498/Option-to-disable-kotlin-native-cross-compilation
     when {
         os.isLinux -> kotlin.targets.filter { "linux" !in it.name }
@@ -141,7 +160,7 @@ kotlin {
         target.apply {
             compilations.all {
                 cinterops.all { tasks[interopProcessingTaskName].enabled = false }
-                compileKotlinTask.enabled = false
+                compileTaskProvider { enabled = false }
                 tasks[processResourcesTaskName].enabled = false
             }
             binaries.all { linkTask.enabled = false }
@@ -162,21 +181,62 @@ android {
     defaultConfig {
         minSdk = libs.versions.android.minSdk.get().toInt()
     }
+    buildTypes {
+        release { isMinifyEnabled = false }
+        debug { isMinifyEnabled = false }
+    }
 }
+
 dependencies {
     implementation(libs.androidx.core)
 }
 
 // If we are on Windows, inject the CMake submodule as a dependency to all 'mingw' tasks
 if (os.isWindows) {
-    tasks.filter { it.name.contains("mingw", true) }.forEach { task ->
-        task.apply {
-            val dependencies = arrayOf(
-                ":sysnotify-com:cmakeConfigure",
-                ":sysnotify-com:cmakeBuild"
-            )
-            dependsOn(*dependencies)
-            mustRunAfter(*dependencies)
+    tasks {
+        filter { it.name.contains("mingw", true) }.forEach { task ->
+            task.apply {
+                val dependencies = arrayOf(
+                    ":sysnotify-com:cmakeConfigure",
+                    ":sysnotify-com:cmakeBuild"
+                )
+                dependsOn(*dependencies)
+                mustRunAfter(*dependencies)
+            }
         }
     }
+}
+
+// Create custom JAR task(s) for packaging shared libraries produced by Kotlin/Native targets
+tasks {
+    val linkTask = when {
+        os.isLinux -> find { it.name == "linkReleaseSharedLinux${architecture.capitalized()}" }
+        os.isWindows -> find { it.name == "linkReleaseSharedMingw${architecture.capitalized()}" }
+        os.isMacOsX -> find { it.name == "linkReleaseSharedMacos${architecture.capitalized()}" }
+        else -> throw IllegalStateException("JVM bindings are not supported on the current platform")
+    } ?: throw IllegalStateException("Could not find matching Kotlin/Native link task for building JVM bindings")
+    println("Using '${linkTask.name}' as JVM bindings link task")
+    val nativesJar = task("nativesJar", Jar::class) {
+        dependsOn(linkTask)
+        val platformPair = "${os.familyName}-${architecture}"
+        archiveBaseName = "sysnotify-jvm-natives-$platformPair"
+        from(linkTask.outputs) {
+            exclude("*.h")
+        }
+        into("natives/$platformPair")
+        println("Configured JNI bindings JAR '${archiveBaseName.get()}'")
+    }
+    assemble {
+        dependsOn(nativesJar)
+        mustRunAfter(nativesJar)
+    }
+}
+
+configurations {
+    val nativesJar by creating
+}
+
+artifacts {
+    add("nativesJar", tasks.find { it.name == "nativesJar" }
+        ?: throw IllegalStateException("Could not find native JAR task")) // Make sure our natives JAR is added as an artifact
 }

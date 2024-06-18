@@ -114,6 +114,7 @@ build:windows:
     - ./gradlew
       compileKotlinMingwX64
       linkMingwX64
+      nativesJar
       --stacktrace
 
 build:mac:
@@ -128,6 +129,7 @@ build:mac:
     - ./gradlew
       compileKotlin{MacosX64,MacosArm64,IosArm64,IosSimulatorArm64,IosX64}
       link{MacosX64,MacosArm64,IosArm64,IosX64}
+      nativesJar
       --stacktrace
 
 build:linux:
@@ -145,19 +147,17 @@ build:linux:
       apt-utils
       build-essential
       openjdk-17-jdk
-      openjdk-17-jre-headless
       software-properties-common
       libssl-dev
       libffi-dev
-      python3-dev
       pkg-config
       libstdc++6
-      libpulse0
       libglu1-mesa
       zip
       unzip
       curl
       gcc-multilib
+      libnotify-bin
       libnotify-dev
     - export ANDROID_HOME="/opt/android-sdk-linux"
     - export ANDROID_SDK_ROOT=$ANDROID_HOME
@@ -181,6 +181,7 @@ build:linux:
       compileKotlin{Jvm,LinuxX64}
       compileReleaseKotlinAndroid
       linkLinuxX64
+      nativesJar
       --stacktrace
 
 # test:mac:
