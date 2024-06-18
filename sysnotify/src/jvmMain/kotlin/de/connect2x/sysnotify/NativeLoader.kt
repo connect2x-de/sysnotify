@@ -64,7 +64,7 @@ internal object NativeLoader {
             val targetDirectory = Path(System.getProperty("user.home")) / ".sysnotify"
             val targetPath = targetDirectory / filePath
             Files.createDirectories(targetPath.parent)
-            this::class.java.getResourceAsStream("/$filePath").use {
+            this::class.java.getResourceAsStream("/${filePath.joinToString("/")}").use {
                 Files.copy(
                     requireNotNull(it) { "Could not read JAR resource" },
                     targetPath,
@@ -73,10 +73,6 @@ internal object NativeLoader {
             }
             if (os == PLATFORM_LINUX) System.loadLibrary("notify")
             System.load(targetPath.pathString)
-            // Make sure we delete the file when the process terminates
-            Runtime.getRuntime().addShutdownHook(Thread {
-                Files.deleteIfExists(targetPath)
-            })
         } catch (error: Throwable) { // Catch any type of error we might encounter and rethrow
             throw NativeLoaderException(error)
         }
