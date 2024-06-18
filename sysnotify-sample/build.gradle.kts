@@ -74,6 +74,7 @@ kotlin {
         }
         val desktopMain by getting {
             dependencies {
+                implementation(project(path = ":sysnotify", configuration = "nativesJar")) // We need the natives jar to be in the classpath
                 // this is needed to create lock files working on all machines
                 if (System.getProperty("bundleAll") == "true") {
                     implementation(compose.desktop.linux_x64)

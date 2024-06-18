@@ -28,14 +28,12 @@ plugins {
 }
 
 // Remap host architecture to some consistent aliases (mostly used for native packaging)
-val architecture: String = System.getProperty("os.arch").let {
-    when (it) {
-        "i386", "i486", "i586", "i686", "x86", "x32" -> "x86"
-        "x64", "amd64", "x86_64", "x86-64" -> "x64"
-        "aarch64", "arm64" -> "arm64"
-        "arm", "armv7", "aarch32" -> "arm32"
-        else -> throw IllegalStateException("Could not resolve host architecture")
-    }
+val architecture: String = when (System.getProperty("os.arch")) {
+    "i386", "i486", "i586", "i686", "x86", "x32" -> "x86"
+    "x64", "amd64", "x86_64", "x86-64" -> "x64"
+    "aarch64", "arm64" -> "arm64"
+    "arm", "armv7", "aarch32" -> "arm32"
+    else -> throw IllegalStateException("Could not determine host architecture")
 }
 println("Detected host architecture $architecture")
 
@@ -85,7 +83,7 @@ kotlin {
             }
             binaries {
                 framework {
-                    baseName = "shared"
+                    baseName = "sysnotify"
                 }
                 sharedLib {}
             }
@@ -95,7 +93,7 @@ kotlin {
         target.apply {
             binaries {
                 framework {
-                    baseName = "shared"
+                    baseName = "sysnotify"
                 }
             }
         }
@@ -195,14 +193,16 @@ dependencies {
 
 // If we are on Windows, inject the CMake submodule as a dependency to all 'mingw' tasks
 if (os.isWindows) {
-    tasks.filter { it.name.contains("mingw", true) }.forEach { task ->
-        task.apply {
-            val dependencies = arrayOf(
-                ":sysnotify-com:cmakeConfigure",
-                ":sysnotify-com:cmakeBuild"
-            )
-            dependsOn(*dependencies)
-            mustRunAfter(*dependencies)
+    tasks {
+        filter { it.name.contains("mingw", true) }.forEach { task ->
+            task.apply {
+                val dependencies = arrayOf(
+                    ":sysnotify-com:cmakeConfigure",
+                    ":sysnotify-com:cmakeBuild"
+                )
+                dependsOn(*dependencies)
+                mustRunAfter(*dependencies)
+            }
         }
     }
 }
@@ -216,10 +216,27 @@ tasks {
         else -> throw IllegalStateException("JVM bindings are not supported on the current platform")
     } ?: throw IllegalStateException("Could not find matching Kotlin/Native link task for building JVM bindings")
     println("Using '${linkTask.name}' as JVM bindings link task")
-    task("nativesJar", Jar::class) {
+    val nativesJar = task("nativesJar", Jar::class) {
         dependsOn(linkTask)
-        archiveBaseName = "sysnotify-natives-${os.familyName}-${architecture}"
-        from(linkTask.outputs)
+        val platformPair = "${os.familyName}-${architecture}"
+        archiveBaseName = "sysnotify-jvm-natives-$platformPair"
+        from(linkTask.outputs) {
+            exclude("*.h")
+        }
+        into("natives/$platformPair")
         println("Configured JNI bindings JAR '${archiveBaseName.get()}'")
     }
+    assemble {
+        dependsOn(nativesJar)
+        mustRunAfter(nativesJar)
+    }
+}
+
+configurations {
+    val nativesJar by creating
+}
+
+artifacts {
+    add("nativesJar", tasks.find { it.name == "nativesJar" }
+        ?: throw IllegalStateException("Could not find native JAR task")) // Make sure our natives JAR is added as an artifact
 }
