@@ -17,6 +17,7 @@ package de.connect2x.sysnotify
 
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.io.path.Path
 import kotlin.io.path.div
 import kotlin.io.path.pathString
@@ -31,9 +32,11 @@ internal object NativeLoader {
     private const val PLATFORM_WINDOWS: String = "windows"
     private const val PLATFORM_LINUX: String = "linux"
     private const val PLATFORM_MACOS: String = "macos" // "Stop calling it OSX!"
+    private val isLoaded: AtomicBoolean = AtomicBoolean(false)
 
     @Suppress("UnsafeDynamicallyLoadedCode")
-    fun load() {
+    fun ensureLoaded() {
+        if (!isLoaded.compareAndSet(false, true)) return
         try {
             // If you change this, make sure to update the same code in build.gradle.kts too
             val architecture = when (System.getProperty("os.arch")) {
@@ -61,7 +64,6 @@ internal object NativeLoader {
             val targetDirectory = Path(System.getProperty("user.home")) / ".sysnotify"
             val targetPath = targetDirectory / filePath
             Files.createDirectories(targetPath.parent)
-            println("Copying natives from $filePath to $targetPath") // TODO: debug
             this::class.java.getResourceAsStream("/$filePath").use {
                 Files.copy(
                     requireNotNull(it) { "Could not read JAR resource" },

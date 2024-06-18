@@ -75,7 +75,7 @@ internal class LinuxNotificationHandler(
     )
 
     init {
-        require(notify_init(name) == 0) { "Could not initialize libnotify" }
+        require(notify_init(name) != 0) { "Could not initialize libnotify" }
     }
 
     override fun close() {
@@ -127,7 +127,7 @@ internal class LinuxNotificationHandler(
     }
 
     override suspend fun update(handle: NotificationHandle, notification: Notification): NotificationHandle? {
-        require(handle is LinuxNotificationHandle)
+        require(handle is LinuxNotificationHandle) { "Handle is not a Linux notification handle" }
         val notificationAddress = handle.address
         notify_notification_update(
             notification = notificationAddress,
@@ -140,7 +140,7 @@ internal class LinuxNotificationHandler(
     }
 
     override suspend fun pop(handle: NotificationHandle) {
-        require(handle is LinuxNotificationHandle)
+        require(handle is LinuxNotificationHandle) { "Handle is not a Linux notification handle" }
         memScoped {
             val errorAddress = allocPointerTo<GError>()
             if (notify_notification_close(handle.address, errorAddress.ptr) == 0) {

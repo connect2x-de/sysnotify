@@ -13,21 +13,20 @@
  * limitations under the License.
  */
 
-@file:OptIn(ExperimentalForeignApi::class)
+@file:OptIn(ExperimentalForeignApi::class, ExperimentalNativeApi::class)
+@file:Suppress("UNUSED_PARAMETER")
 
 package de.connect2x.sysnotify
 
-import jni.JNINativeMethod
-import jni.JNI_OK
+import jni.JNIEnvVar
 import jni.jboolean
 import jni.jbyteArray
+import jni.jclass
 import jni.jlong
 import jni.jstring
 import kotlinx.cinterop.CPointed
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.StableRef
-import kotlinx.cinterop.allocArray
-import kotlinx.cinterop.allocArrayOf
 import kotlinx.cinterop.asStableRef
 import kotlinx.cinterop.invoke
 import kotlinx.cinterop.memScoped
@@ -36,132 +35,75 @@ import kotlinx.cinterop.ptr
 import kotlinx.cinterop.staticCFunction
 import kotlinx.cinterop.toCPointer
 import kotlinx.coroutines.runBlocking
+import kotlin.experimental.ExperimentalNativeApi
 
 internal expect fun createNotificationHandler(name: String): NotificationHandler
 
 internal fun registerNatives() {
-    val envInstance = checkNotNull(environment.pointed)
     memScoped {
-        val clazz = checkNotNull(envInstance.FindClass)(
-            environment.ptr,
-            allocArrayOf("de/connect2x/sysnotify/NativeNotificationHandler".encodeToByteArray())
-        )
-        val methods = allocArray<JNINativeMethod>(11) { index: Int ->
-            when (index) {
-                0 -> {
-                    name = allocArrayOf("create".encodeToByteArray())
-                    signature = allocArrayOf("(Ljava/lang/String;)J".encodeToByteArray())
-                    fnPtr = staticCFunction(::snNotificationHandlerCreate)
-                }
-
-                1 -> {
-                    name = allocArrayOf("destroy".encodeToByteArray())
-                    signature = allocArrayOf("(J)V".encodeToByteArray())
-                    fnPtr = staticCFunction(::snNotificationHandlerDestroy)
-                }
-
-                2 -> {
-                    name = allocArrayOf("isTitleSupported".encodeToByteArray())
-                    signature = allocArrayOf("(J)Z".encodeToByteArray())
-                    fnPtr = staticCFunction(::snNotificationHandlerIsTitleSupported)
-                }
-
-                3 -> {
-                    name = allocArrayOf("isDescriptionSupported".encodeToByteArray())
-                    signature = allocArrayOf("(J)Z".encodeToByteArray())
-                    fnPtr = staticCFunction(::snNotificationHandlerIsDescriptionSupported)
-                }
-
-                4 -> {
-                    name = allocArrayOf("isIconSupported".encodeToByteArray())
-                    signature = allocArrayOf("(J)Z".encodeToByteArray())
-                    fnPtr = staticCFunction(::snNotificationHandlerIsIconSupported)
-                }
-
-                5 -> {
-                    name = allocArrayOf("isActionSupported".encodeToByteArray())
-                    signature = allocArrayOf("(J)Z".encodeToByteArray())
-                    fnPtr = staticCFunction(::snNotificationHandlerIsActionSupported)
-                }
-
-                6 -> {
-                    name = allocArrayOf("isPopSupported".encodeToByteArray())
-                    signature = allocArrayOf("(J)Z".encodeToByteArray())
-                    fnPtr = staticCFunction(::snNotificationHandlerIsPopSupported)
-                }
-
-                7 -> {
-                    name = allocArrayOf("requestPermissions".encodeToByteArray())
-                    signature = allocArrayOf("(J)V".encodeToByteArray())
-                    fnPtr = staticCFunction(::snNotificationHandlerRequestPermissions)
-                }
-
-                8 -> {
-                    name = allocArrayOf("push".encodeToByteArray())
-                    signature = allocArrayOf("(JLjava/lang/String;Ljava/lang/String;[B)J".encodeToByteArray())
-                    fnPtr = staticCFunction(::snNotificationHandlerPush)
-                }
-
-                9 -> {
-                    name = allocArrayOf("update".encodeToByteArray())
-                    signature = allocArrayOf("(JJLjava/lang/String;Ljava/lang/String;[B)".encodeToByteArray())
-                    fnPtr = staticCFunction(::snNotificationHandlerUpdate)
-                }
-
-                10 -> {
-                    name = allocArrayOf("pop".encodeToByteArray())
-                    signature = allocArrayOf("(JJ)V".encodeToByteArray())
-                    fnPtr = staticCFunction(::snNotificationHandlerPop)
-                }
-            }
-        }
-        if (checkNotNull(envInstance.RegisterNatives)(environment.ptr, clazz, methods, 0) != JNI_OK) {
-            throw IllegalStateException("Could not register native functions")
-        }
+        val env = checkNotNull(environment.pointed) { "Could not access JNI environment" }
+        checkNotNull(
+            checkNotNull(env.FindClass) { "Could not access JNI:FindClass function" }(
+                environment.ptr,
+                allocateCString("de/connect2x/sysnotify/NativeNotificationHandler")
+            )
+        ) { "Could not find class de.connect2x.sysnotify.NativeNotificationHandler" }
+    }.apply {
+        registerNativeFunction("create", "(Ljava/lang/String;)J", staticCFunction(::create))
+        registerNativeFunction("destroy", "(J)V", staticCFunction(::destroy))
+        registerNativeFunction("isTitleSupported", "(J)Z", staticCFunction(::isTitleSupported))
+        registerNativeFunction("isDescriptionSupported", "(J)Z", staticCFunction(::isDescriptionSupported))
+        registerNativeFunction("isIconSupported", "(J)Z", staticCFunction(::isIconSupported))
+        registerNativeFunction("isActionSupported", "(J)Z", staticCFunction(::isActionSupported))
+        registerNativeFunction("isPopSupported", "(J)Z", staticCFunction(::isPopSupported))
+        registerNativeFunction("requestPermissions", "(J)V", staticCFunction(::requestPermissions))
+        registerNativeFunction("push", "(JLjava/lang/String;Ljava/lang/String;[B)J", staticCFunction(::push))
+        registerNativeFunction("update", "(JJLjava/lang/String;Ljava/lang/String;[B)J", staticCFunction(::update))
+        registerNativeFunction("pop", "(JJ)V", staticCFunction(::pop))
     }
 }
 
-private fun snNotificationHandlerCreate(name: jstring): jlong {
+private fun create(env: JNIEnvVar, clazz: jclass, name: jstring): jlong {
     return StableRef.create(createNotificationHandler(name.toKString())).asCPointer().rawValue.toLong()
 }
 
-private fun snNotificationHandlerDestroy(handler: jlong) {
+private fun destroy(env: JNIEnvVar, clazz: jclass, handler: jlong) {
     checkNotNull(handler.toCPointer<CPointed>())
         .asStableRef<NotificationHandler>()
         .dispose()
 }
 
-private fun snNotificationHandlerIsTitleSupported(handler: jlong): jboolean {
+private fun isTitleSupported(env: JNIEnvVar, clazz: jclass, handler: jlong): jboolean {
     return checkNotNull(handler.toCPointer<CPointed>())
         .asStableRef<NotificationHandler>()
         .get().capabilities.isTitleSupported.toJBoolean()
 }
 
-private fun snNotificationHandlerIsDescriptionSupported(handler: jlong): jboolean {
+private fun isDescriptionSupported(env: JNIEnvVar, clazz: jclass, handler: jlong): jboolean {
     return checkNotNull(handler.toCPointer<CPointed>())
         .asStableRef<NotificationHandler>()
         .get().capabilities.isDescriptionSupported.toJBoolean()
 }
 
-private fun snNotificationHandlerIsIconSupported(handler: jlong): jboolean {
+private fun isIconSupported(env: JNIEnvVar, clazz: jclass, handler: jlong): jboolean {
     return checkNotNull(handler.toCPointer<CPointed>())
         .asStableRef<NotificationHandler>()
         .get().capabilities.isIconSupported.toJBoolean()
 }
 
-private fun snNotificationHandlerIsActionSupported(handler: jlong): jboolean {
+private fun isActionSupported(env: JNIEnvVar, clazz: jclass, handler: jlong): jboolean {
     return checkNotNull(handler.toCPointer<CPointed>())
         .asStableRef<NotificationHandler>()
         .get().capabilities.isActionSupported.toJBoolean()
 }
 
-private fun snNotificationHandlerIsPopSupported(handler: jlong): jboolean {
+private fun isPopSupported(env: JNIEnvVar, clazz: jclass, handler: jlong): jboolean {
     return checkNotNull(handler.toCPointer<CPointed>())
         .asStableRef<NotificationHandler>()
         .get().capabilities.isPopSupported.toJBoolean()
 }
 
-private fun snNotificationHandlerRequestPermissions(handler: jlong) {
+private fun requestPermissions(env: JNIEnvVar, clazz: jclass, handler: jlong) {
     runBlocking {
         checkNotNull(handler.toCPointer<CPointed>())
             .asStableRef<NotificationHandler>()
@@ -169,7 +111,9 @@ private fun snNotificationHandlerRequestPermissions(handler: jlong) {
     }
 }
 
-private fun snNotificationHandlerPush(
+private fun push(
+    env: JNIEnvVar,
+    clazz: jclass,
     handler: jlong,
     title: jstring?,
     description: jstring?,
@@ -188,7 +132,9 @@ private fun snNotificationHandlerPush(
     }?.let { StableRef.create(it).asCPointer().rawValue.toLong() } ?: 0
 }
 
-private fun snNotificationHandlerUpdate(
+private fun update(
+    env: JNIEnvVar,
+    clazz: jclass,
     handler: jlong,
     notification: jlong,
     title: jstring?,
@@ -212,7 +158,9 @@ private fun snNotificationHandlerUpdate(
     return result
 }
 
-private fun snNotificationHandlerPop(
+private fun pop(
+    env: JNIEnvVar,
+    clazz: jclass,
     handler: jlong,
     notification: jlong
 ) {
