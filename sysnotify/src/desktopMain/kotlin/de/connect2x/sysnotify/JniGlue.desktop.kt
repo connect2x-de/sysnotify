@@ -22,6 +22,7 @@ import jni.JNIEnvVar
 import jni.jboolean
 import jni.jbyteArray
 import jni.jclass
+import jni.jint
 import jni.jlong
 import jni.jstring
 import kotlinx.cinterop.CPointed
@@ -51,6 +52,7 @@ internal fun registerNatives() {
     }.apply {
         registerNativeFunction("create", "(Ljava/lang/String;)J", staticCFunction(::create))
         registerNativeFunction("destroy", "(J)V", staticCFunction(::destroy))
+        registerNativeFunction("getPlatform", "(J)I", staticCFunction(::getPlatform))
         registerNativeFunction("isTitleSupported", "(J)Z", staticCFunction(::isTitleSupported))
         registerNativeFunction("isDescriptionSupported", "(J)Z", staticCFunction(::isDescriptionSupported))
         registerNativeFunction("isIconSupported", "(J)Z", staticCFunction(::isIconSupported))
@@ -71,6 +73,12 @@ private fun destroy(env: JNIEnvVar, clazz: jclass, handler: jlong) {
     checkNotNull(handler.toCPointer<CPointed>())
         .asStableRef<NotificationHandler>()
         .dispose()
+}
+
+private fun getPlatform(env: JNIEnvVar, clazz: jclass, handler: jlong): jint {
+    return checkNotNull(handler.toCPointer<CPointed>())
+        .asStableRef<NotificationHandler>()
+        .get().platform.ordinal
 }
 
 private fun isTitleSupported(env: JNIEnvVar, clazz: jclass, handler: jlong): jboolean {

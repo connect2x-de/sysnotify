@@ -23,7 +23,6 @@ package de.connect2x.sysnotify
 enum class NotificationPlatform {
     ANDROID,
     APPLE, // This includes iOS and macOS
-    JVM,
     LINUX,
     WINDOWS,
     WEB

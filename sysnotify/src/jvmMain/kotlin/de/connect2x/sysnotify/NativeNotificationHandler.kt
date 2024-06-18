@@ -22,6 +22,7 @@ object NativeNotificationHandler {
 
     // @formatter:off
     @JvmStatic external fun create(name: String): Long
+    @JvmStatic external fun getPlatform(handler: Long): Int
     @JvmStatic external fun isTitleSupported(handler: Long): Boolean
     @JvmStatic external fun isDescriptionSupported(handler: Long): Boolean
     @JvmStatic external fun isIconSupported(handler: Long): Boolean

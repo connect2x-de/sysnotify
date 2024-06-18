@@ -23,7 +23,7 @@ private class JvmNotificationHandler(
     override val name: String
 ) : NotificationHandler {
     private val address: Long = NativeNotificationHandler.create(name)
-    override val platform: NotificationPlatform = NotificationPlatform.JVM
+    override val platform: NotificationPlatform = NotificationPlatform.entries[NativeNotificationHandler.getPlatform(address)]
 
     override val capabilities: NotificationCapabilities = NotificationCapabilities(
         isTitleSupported = NativeNotificationHandler.isTitleSupported(address),

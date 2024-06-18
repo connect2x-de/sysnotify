@@ -44,6 +44,7 @@ import kotlinx.cinterop.pointed
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.reinterpret
 import kotlinx.cinterop.set
+import kotlinx.cinterop.toKString
 import kotlinx.cinterop.toKStringFromUtf8
 import kotlinx.cinterop.usePinned
 import platform.posix.memcpy
@@ -79,7 +80,7 @@ internal inline fun jstring.toKString(): String {
             null
         )
     ) { "Could not retrieve string base address" }
-    val result = data.toKStringFromUtf8()
+    val result = data.toKString()
     checkNotNull(environment.pointed?.ReleaseStringUTFChars) { "Could not access JNI:ReleaseStringUTFChars function" }(
         environment.ptr,
         this,
