@@ -24,8 +24,17 @@ plugins {
 }
 
 allprojects {
+    group = "de.connect2x"
+    version = "1.0.0"
+
     dependencyLocking {
         lockMode = LockMode.LENIENT
         lockAllConfigurations()
+    }
+
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        google()
     }
 }
