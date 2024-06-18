@@ -157,7 +157,7 @@ build:linux:
       unzip
       curl
       gcc-multilib
-      libnotify
+      libnotify-bin
       libnotify-dev
     - export ANDROID_HOME="/opt/android-sdk-linux"
     - export ANDROID_SDK_ROOT=$ANDROID_HOME
