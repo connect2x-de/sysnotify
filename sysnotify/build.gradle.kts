@@ -25,6 +25,7 @@ import kotlin.io.path.div
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidLibrary)
+    id("maven-publish")
 }
 
 // Remap host architecture to some consistent aliases (mostly used for native packaging)
@@ -38,6 +39,7 @@ val architecture: String = when (System.getProperty("os.arch")) {
 println("Detected host architecture $architecture")
 
 val os: OperatingSystem = OperatingSystem.current()
+val platformPair = "${os.familyName}-${architecture}"
 println("Detected host OS ${os.familyName}")
 val javaHome = Path(System.getProperty("java.home")) // For JNI interop
 println("Found java home at $javaHome")
@@ -208,24 +210,27 @@ if (os.isWindows) {
 }
 
 // Create custom JAR task(s) for packaging shared libraries produced by Kotlin/Native targets
-tasks {
-    val linkTask = when {
-        os.isLinux -> find { it.name == "linkReleaseSharedLinux${architecture.capitalized()}" }
-        os.isWindows -> find { it.name == "linkReleaseSharedMingw${architecture.capitalized()}" }
-        os.isMacOsX -> find { it.name == "linkReleaseSharedMacos${architecture.capitalized()}" }
+val linkTask = tasks.let { taskList ->
+    when {
+        os.isLinux -> taskList.find { it.name == "linkReleaseSharedLinux${architecture.capitalized()}" }
+        os.isWindows -> taskList.find { it.name == "linkReleaseSharedMingw${architecture.capitalized()}" }
+        os.isMacOsX -> taskList.find { it.name == "linkReleaseSharedMacos${architecture.capitalized()}" }
         else -> throw IllegalStateException("JVM bindings are not supported on the current platform")
     } ?: throw IllegalStateException("Could not find matching Kotlin/Native link task for building JVM bindings")
-    println("Using '${linkTask.name}' as JVM bindings link task")
-    val nativesJar = task("nativesJar", Jar::class) {
-        dependsOn(linkTask)
-        val platformPair = "${os.familyName}-${architecture}"
-        archiveBaseName = "sysnotify-jvm-natives-$platformPair"
-        from(linkTask.outputs) {
-            exclude("*.h")
-        }
-        into("natives/$platformPair")
-        println("Configured JNI bindings JAR '${archiveBaseName.get()}'")
+}
+println("Using '${linkTask.name}' as JVM bindings link task")
+
+val nativesJar = task("nativesJar", Jar::class) {
+    dependsOn(linkTask)
+    archiveClassifier = "jvm-natives-$platformPair"
+    from(linkTask.outputs) {
+        exclude("*.h")
     }
+    into("natives/$platformPair")
+    println("Configured JNI bindings JAR '${archiveBaseName.get()}'")
+}
+
+tasks {
     assemble {
         dependsOn(nativesJar)
         mustRunAfter(nativesJar)
@@ -237,6 +242,36 @@ configurations {
 }
 
 artifacts {
-    add("nativesJar", tasks.find { it.name == "nativesJar" }
-        ?: throw IllegalStateException("Could not find native JAR task")) // Make sure our natives JAR is added as an artifact
+    add("nativesJar", nativesJar) // Make sure our natives JAR is added as an artifact
+}
+
+publishing {
+    publications.configureEach {
+        if (this is MavenPublication) {
+            artifact(nativesJar) {
+                classifier = "jvm-natives-$platformPair"
+            }
+            pom {
+                name.set(project.name)
+                description.set("Cross-platform system notifications for Kotlin Multiplatform")
+                url.set("https://gitlab.com/connect2x/sysnotify")
+                licenses {
+                    license {
+                        name.set("Apache License 2.0")
+                        url.set("https://www.apache.org/licenses/LICENSE-2.0")
+                    }
+                }
+                developers {
+                    developer {
+                        id.set("michael.thiele")
+                        id.set("benkuly")
+                        id.set("KitsuneAlex")
+                    }
+                }
+                scm {
+                    url.set("https://gitlab.com/connect2x/sysnotify")
+                }
+            }
+        }
+    }
 }
