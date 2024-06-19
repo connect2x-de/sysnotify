@@ -45,7 +45,7 @@ public:
 
 CoCreatableClass(NotificationActivator)// There is no compile error here, just your IDE being a little confused by this macro
 
-namespace sysnotify {
+    namespace sysnotify {
     [[nodiscard]] auto guid_to_string(const GUID& guid) noexcept -> std::string {
         LPOLESTR result = nullptr;
         StringFromCLSID(guid, &result);
@@ -53,18 +53,6 @@ namespace sysnotify {
         CoTaskMemFree(result);
         return wide_result;
     }
-
-    struct NotificationHandle final {
-        ComPtr<IToastNotification> notification;
-
-        [[nodiscard]] auto operator==(std::nullptr_t) const noexcept -> bool {
-            return notification == nullptr;
-        }
-
-        [[nodiscard]] auto operator!=(std::nullptr_t) const noexcept -> bool {
-            return notification != nullptr;
-        }
-    };
 
     class NotificationHandler final {
         ComPtr<IToastNotifier> _notifier;
@@ -118,31 +106,31 @@ namespace sysnotify {
             return {document};
         }
 
-        [[nodiscard]] inline auto create_notification(const sn_notification_content_t& content) noexcept -> ComPtr<IToastNotification> {
+        [[nodiscard]] inline auto create_notification(const sn_notification_content_t& content) noexcept -> ComPtr<IToastNotification>* {
             auto document = format_content(content);
             IToastNotification* notification = nullptr;
             if(DesktopNotificationManagerCompat::CreateToastNotification(document.Get(), &notification) != S_OK ||
                notification == nullptr) {
                 return nullptr;
             }
-            return {notification};
+            return new ComPtr<IToastNotification>(notification);
         }
 
-        [[nodiscard]] inline auto push(const sn_notification_content_t& content) noexcept -> NotificationHandle* {
+        [[nodiscard]] inline auto push(const sn_notification_content_t& content) noexcept -> ComPtr<IToastNotification>* {
             auto notification = create_notification(content);
-            _notifier->Show(notification.Get());
-            return new NotificationHandle(std::move(notification));
+            _notifier->Show(notification->Get());
+            return notification;
         }
 
-        inline auto update(NotificationHandle* handle, const sn_notification_content_t& content) noexcept -> void {
-            _notifier->Hide(handle->notification.Get());
+        inline auto update(ComPtr<IToastNotification>* handle, const sn_notification_content_t& content) noexcept -> void {
+            _notifier->Hide(handle->Get());
             auto new_notification = create_notification(content);
-            _notifier->Show(new_notification.Get());
-            handle->notification = std::move(new_notification);
+            _notifier->Show(new_notification->Get());
+            *handle = std::move(*new_notification);
         }
 
-        inline auto pop(NotificationHandle* handle) noexcept -> void {
-            _notifier->Hide(handle->notification.Get());
+        inline auto pop(ComPtr<IToastNotification>* handle) noexcept -> void {
+            _notifier->Hide(handle->Get());
             delete handle;// We only free the handle, COM objects don't get freed explicitly
         }
 
@@ -204,8 +192,9 @@ SYSNOTIFY_API sn_error sysnotify_com_update(sn_notification_handler handler,
     if(handler == nullptr || notification == nullptr || content == nullptr) {
         return SYSNOTIFY_ERR_INVALID_ARG;
     }
-    TRY_OR_RETURN(
-        { reinterpret_cast<NotificationHandler*>(handler)->update(reinterpret_cast<NotificationHandle*>(notification), *content); });
+    TRY_OR_RETURN({
+        reinterpret_cast<NotificationHandler*>(handler)->update(reinterpret_cast<ComPtr<IToastNotification>*>(notification), *content);
+    });
     return SYSNOTIFY_OK;
 }
 
@@ -214,7 +203,7 @@ SYSNOTIFY_API sn_error sysnotify_com_pop(sn_notification_handler handler, sn_not
     if(handler == nullptr || notification == nullptr) {
         return SYSNOTIFY_ERR_INVALID_ARG;
     }
-    TRY_OR_RETURN({ reinterpret_cast<NotificationHandler*>(handler)->pop(reinterpret_cast<NotificationHandle*>(notification)); });
+    TRY_OR_RETURN({ reinterpret_cast<NotificationHandler*>(handler)->pop(reinterpret_cast<ComPtr<IToastNotification>*>(notification)); });
     return SYSNOTIFY_OK;
 }
 
