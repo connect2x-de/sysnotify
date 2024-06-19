@@ -18,14 +18,14 @@
 
 #include "sysnotify-com.h"
 
+#include <stdexcept>
+#include <utility>
+
 #include "DesktopNotificationManagerCompat.h"
 #include "unicode.h"
 
 #include <NotificationActivationCallback.h>
 #include <fmt/format.h>
-#include <iostream>
-#include <stdexcept>
-#include <utility>
 #include <windows.ui.notifications.h>
 
 using namespace ABI::Windows::Data::Xml::Dom;
