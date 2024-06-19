@@ -19,13 +19,19 @@ package de.connect2x.sysnotify
 
 import de.connect2x.sysnotify.com.SYSNOTIFY_OK
 import de.connect2x.sysnotify.com.sn_error
+import de.connect2x.sysnotify.com.sn_notification
+import de.connect2x.sysnotify.com.sn_notificationVar
+import de.connect2x.sysnotify.com.sn_notification_content_t
 import de.connect2x.sysnotify.com.sn_notification_handler
 import de.connect2x.sysnotify.com.sn_notification_handlerVar
 import de.connect2x.sysnotify.com.sysnotify_com_create
 import de.connect2x.sysnotify.com.sysnotify_com_destroy
 import de.connect2x.sysnotify.com.sysnotify_com_get_last_error
-import kotlinx.cinterop.COpaquePointer
+import de.connect2x.sysnotify.com.sysnotify_com_pop
+import de.connect2x.sysnotify.com.sysnotify_com_push
+import de.connect2x.sysnotify.com.sysnotify_com_update
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.MemScope
 import kotlinx.cinterop.alloc
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
@@ -46,7 +52,7 @@ private inline fun throwLastError() {
 }
 
 internal data class WindowsNotificationHandle(
-    val address: COpaquePointer
+    val address: sn_notification
 ) : NotificationHandle
 
 internal class WindowsNotificationHandler(
@@ -71,12 +77,38 @@ internal class WindowsNotificationHandler(
         sysnotify_com_destroy(address).check()
     }
 
-    override suspend fun push(notification: Notification): NotificationHandle? {
-        return null // TODO: ...
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun MemScope.allocNotification(notification: Notification): sn_notification_content_t {
+        val content = alloc<sn_notification_content_t>()
+        content.title = allocCString(notification.title)
+        content.description = allocCString(notification.description)
+        return content
+    }
+
+    override suspend fun push(notification: Notification): NotificationHandle {
+        return memScoped {
+            val content = allocNotification(notification)
+            val handle = alloc<sn_notificationVar>()
+            sysnotify_com_push(address, content.ptr, handle.ptr).check()
+            WindowsNotificationHandle(requireNotNull(handle.value))
+        }
+    }
+
+    override suspend fun update(
+        handle: NotificationHandle,
+        notification: Notification
+    ): NotificationHandle {
+        require(handle is WindowsNotificationHandle) { "Handle is not a Windows notification handle" }
+        memScoped {
+            val content = allocNotification(notification)
+            sysnotify_com_update(address, handle.address, content.ptr).check()
+        }
+        return handle
     }
 
     override suspend fun pop(handle: NotificationHandle) {
-        // TODO: ...
+        require(handle is WindowsNotificationHandle) { "Handle is not a Windows notification handle" }
+        sysnotify_com_pop(address, handle.address).check()
     }
 }
 

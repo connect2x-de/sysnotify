@@ -45,7 +45,6 @@ import kotlinx.cinterop.ptr
 import kotlinx.cinterop.reinterpret
 import kotlinx.cinterop.set
 import kotlinx.cinterop.toKString
-import kotlinx.cinterop.toKStringFromUtf8
 import kotlinx.cinterop.usePinned
 import platform.posix.memcpy
 import kotlin.experimental.ExperimentalNativeApi
@@ -113,7 +112,8 @@ internal inline fun jbyteArray.toByteArray(): ByteArray {
     })
 }
 
-internal inline fun MemScope.allocateCString(value: String): CPointer<ByteVar> {
+internal inline fun MemScope.allocCString(value: String?): CPointer<ByteVar>? {
+    if(value == null) return null
     val length = value.length
     val data = allocArray<ByteVar>(length + 1)
     data[length] = 0 // Make sure we have a null-terminator at the end
@@ -130,8 +130,8 @@ internal inline fun jclass.registerNativeFunction(
 ) {
     memScoped {
         val method = alloc<JNINativeMethod>()
-        method.name = allocateCString(name)
-        method.signature = allocateCString(signature)
+        method.name = allocCString(name)
+        method.signature = allocCString(signature)
         method.fnPtr = address
         checkNotNull(environment.pointed?.RegisterNatives) { "Could not access JNI:RegisterNatives function" }(
             environment.ptr,

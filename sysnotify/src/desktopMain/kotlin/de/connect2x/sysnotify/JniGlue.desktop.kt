@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-@file:OptIn(ExperimentalForeignApi::class, ExperimentalNativeApi::class)
+@file:OptIn(ExperimentalForeignApi::class)
 @file:Suppress("UNUSED_PARAMETER")
 
 package de.connect2x.sysnotify
@@ -36,7 +36,6 @@ import kotlinx.cinterop.ptr
 import kotlinx.cinterop.staticCFunction
 import kotlinx.cinterop.toCPointer
 import kotlinx.coroutines.runBlocking
-import kotlin.experimental.ExperimentalNativeApi
 
 internal expect fun createNotificationHandler(name: String): NotificationHandler
 
@@ -46,7 +45,7 @@ internal fun registerNatives() {
         checkNotNull(
             checkNotNull(env.FindClass) { "Could not access JNI:FindClass function" }(
                 environment.ptr,
-                allocateCString("de/connect2x/sysnotify/NativeNotificationHandler")
+                allocCString("de/connect2x/sysnotify/NativeNotificationHandler")
             )
         ) { "Could not find class de.connect2x.sysnotify.NativeNotificationHandler" }
     }.apply {
@@ -54,19 +53,32 @@ internal fun registerNatives() {
         registerNativeFunction("destroy", "(J)V", staticCFunction(::destroy))
         registerNativeFunction("getPlatform", "(J)I", staticCFunction(::getPlatform))
         registerNativeFunction("isTitleSupported", "(J)Z", staticCFunction(::isTitleSupported))
-        registerNativeFunction("isDescriptionSupported", "(J)Z", staticCFunction(::isDescriptionSupported))
+        registerNativeFunction(
+            "isDescriptionSupported",
+            "(J)Z",
+            staticCFunction(::isDescriptionSupported)
+        )
         registerNativeFunction("isIconSupported", "(J)Z", staticCFunction(::isIconSupported))
         registerNativeFunction("isActionSupported", "(J)Z", staticCFunction(::isActionSupported))
         registerNativeFunction("isPopSupported", "(J)Z", staticCFunction(::isPopSupported))
         registerNativeFunction("requestPermissions", "(J)V", staticCFunction(::requestPermissions))
-        registerNativeFunction("push", "(JLjava/lang/String;Ljava/lang/String;[B)J", staticCFunction(::push))
-        registerNativeFunction("update", "(JJLjava/lang/String;Ljava/lang/String;[B)J", staticCFunction(::update))
+        registerNativeFunction(
+            "push",
+            "(JLjava/lang/String;Ljava/lang/String;[B)J",
+            staticCFunction(::push)
+        )
+        registerNativeFunction(
+            "update",
+            "(JJLjava/lang/String;Ljava/lang/String;[B)J",
+            staticCFunction(::update)
+        )
         registerNativeFunction("pop", "(JJ)V", staticCFunction(::pop))
     }
 }
 
 private fun create(env: JNIEnvVar, clazz: jclass, name: jstring): jlong {
-    return StableRef.create(createNotificationHandler(name.toKString())).asCPointer().rawValue.toLong()
+    return StableRef.create(createNotificationHandler(name.toKString()))
+        .asCPointer().rawValue.toLong()
 }
 
 private fun destroy(env: JNIEnvVar, clazz: jclass, handler: jlong) {
