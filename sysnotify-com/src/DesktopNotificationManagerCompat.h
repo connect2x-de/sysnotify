@@ -55,7 +55,7 @@ namespace DesktopNotificationManagerCompat {
     /// <summary>
     /// Creates a toast notifier. You must have called RegisterActivator first (and also RegisterAumidAndComServer if you're a classic Win32 app), or this will throw an exception.
     /// </summary>
-    HRESULT CreateToastNotifier(IToastNotifier** notifier);
+    HRESULT CreateToastNotifier(const wchar_t* name, IToastNotifier** notifier);
 
     /// <summary>
     /// Creates an XmlDocument initialized with the specified string. This is simply a convenience helper method.

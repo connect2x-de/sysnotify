@@ -32,47 +32,60 @@ internal object NativeLoader {
     private const val PLATFORM_WINDOWS: String = "windows"
     private const val PLATFORM_LINUX: String = "linux"
     private const val PLATFORM_MACOS: String = "macos" // "Stop calling it OSX!"
+
+    // If you change this, make sure to update the same code in build.gradle.kts too
+    private val architecture: String = when (System.getProperty("os.arch")) {
+        "i386", "i486", "i586", "i686", "x86", "x32" -> "x86"
+        "x64", "amd64", "x86_64", "x86-64" -> "x64"
+        "aarch64", "arm64" -> "arm64"
+        "arm", "armv7", "aarch32" -> "arm32"
+        else -> throw IllegalStateException("Could not determine host architecture")
+    }
+    private val os: String = System.getProperty("os.name").let {
+        when {
+            it.contains("windows", true) -> PLATFORM_WINDOWS
+            it.contains("linux", true) -> PLATFORM_LINUX
+            it.contains("osx", true) || it.contains("mac", true) -> PLATFORM_MACOS
+            else -> throw IllegalStateException("Unsupported target platform")
+        }
+    }
+    private val libPrefix: String = if (os == PLATFORM_WINDOWS) "" else "lib"
+    private val libExtension: String = when (os) {
+        PLATFORM_WINDOWS -> "dll"
+        PLATFORM_MACOS -> "dylib"
+        else -> "so"
+    }
+
     private val isLoaded: AtomicBoolean = AtomicBoolean(false)
 
     @Suppress("UnsafeDynamicallyLoadedCode")
+    private fun unpackAndLoad(name: String) {
+        val filePath = Path("natives") / "$os-$architecture" / "$libPrefix$name.$libExtension"
+        val targetDirectory = Path(System.getProperty("user.home")) / ".sysnotify"
+        val targetPath = targetDirectory / filePath
+        Files.createDirectories(targetPath.parent)
+        this::class.java.getResourceAsStream("/${filePath.joinToString("/")}").use {
+            Files.copy(
+                requireNotNull(it) { "Could not read JAR resource" },
+                targetPath,
+                StandardCopyOption.REPLACE_EXISTING
+            )
+        }
+        System.load(targetPath.pathString)
+    }
+
     fun ensureLoaded() {
         if (!isLoaded.compareAndSet(false, true)) return
         try {
-            // If you change this, make sure to update the same code in build.gradle.kts too
-            val architecture = when (System.getProperty("os.arch")) {
-                "i386", "i486", "i586", "i686", "x86", "x32" -> "x86"
-                "x64", "amd64", "x86_64", "x86-64" -> "x64"
-                "aarch64", "arm64" -> "arm64"
-                "arm", "armv7", "aarch32" -> "arm32"
-                else -> throw IllegalStateException("Could not determine host architecture")
-            }
-            val os = System.getProperty("os.name").let {
-                when {
-                    it.contains("windows", true) -> PLATFORM_WINDOWS
-                    it.contains("linux", true) -> PLATFORM_LINUX
-                    it.contains("osx", true) || it.contains("mac", true) -> PLATFORM_MACOS
-                    else -> throw IllegalStateException("Unsupported target platform")
+            when (os) {
+                PLATFORM_LINUX -> System.loadLibrary("notify")
+                PLATFORM_WINDOWS -> {
+                    System.loadLibrary("msvcrt")
+                    System.loadLibrary("kernel32")
+                    unpackAndLoad("sysnotify-com")
                 }
             }
-            val libPrefix = if (os == PLATFORM_WINDOWS) "" else "lib"
-            val extension = when (os) {
-                PLATFORM_WINDOWS -> "dll"
-                PLATFORM_MACOS -> "dylib"
-                else -> "so"
-            }
-            val filePath = Path("natives") / "$os-$architecture" / "${libPrefix}sysnotify.$extension"
-            val targetDirectory = Path(System.getProperty("user.home")) / ".sysnotify"
-            val targetPath = targetDirectory / filePath
-            Files.createDirectories(targetPath.parent)
-            this::class.java.getResourceAsStream("/${filePath.joinToString("/")}").use {
-                Files.copy(
-                    requireNotNull(it) { "Could not read JAR resource" },
-                    targetPath,
-                    StandardCopyOption.REPLACE_EXISTING
-                )
-            }
-            if (os == PLATFORM_LINUX) System.loadLibrary("notify")
-            System.load(targetPath.pathString)
+            unpackAndLoad("sysnotify")
         } catch (error: Throwable) { // Catch any type of error we might encounter and rethrow
             throw NativeLoaderException(error)
         }

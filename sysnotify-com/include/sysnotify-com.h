@@ -34,6 +34,7 @@
 #define SYSNOTIFY_API __declspec(dllexport) // Make functions visible when building a shared object
 #define SYSNOTIFY_OK 0
 #define SYSNOTIFY_ERR_INVALID_ARG 1
+#define SYSNOTIFY_ERR_ABORTED 2
 
 #ifdef __cplusplus
 extern "C" {
@@ -52,11 +53,12 @@ typedef struct sn_notification_content {
 typedef struct sn_notification_handler_* sn_notification_handler;
 typedef struct sn_notification_* sn_notification;
 
-SYSNOTIFY_API sn_error sn_com_init(sn_notification_handler* handler);
-SYSNOTIFY_API sn_error sn_com_deinit(sn_notification_handler handler);
-SYSNOTIFY_API sn_error sn_com_push(sn_notification_handler handler, const sn_notification_content_t* content, sn_notification* notification);
-SYSNOTIFY_API sn_error sn_com_update(sn_notification_handler handler, sn_notification notification, const sn_notification_content_t* content);
-SYSNOTIFY_API sn_error sn_com_pop(sn_notification_handler handler, sn_notification notification);
+SYSNOTIFY_API sn_error sysnotify_com_create(const char* name, sn_notification_handler* handler);
+SYSNOTIFY_API sn_error sysnotify_com_destroy(sn_notification_handler handler);
+SYSNOTIFY_API sn_error sysnotify_com_push(sn_notification_handler handler, const sn_notification_content_t* content, sn_notification* notification);
+SYSNOTIFY_API sn_error sysnotify_com_update(sn_notification_handler handler, sn_notification notification, const sn_notification_content_t* content);
+SYSNOTIFY_API sn_error sysnotify_com_pop(sn_notification_handler handler, sn_notification notification);
+SYSNOTIFY_API sn_error sysnotify_com_get_last_error(sn_notification_handler handler, char const** last_error);
 
 #ifdef __cplusplus
 }

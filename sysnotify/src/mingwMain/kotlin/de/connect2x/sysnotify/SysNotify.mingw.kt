@@ -17,8 +17,24 @@
 
 package de.connect2x.sysnotify
 
+import de.connect2x.sysnotify.com.SYSNOTIFY_ERR_ABORTED
+import de.connect2x.sysnotify.com.SYSNOTIFY_ERR_INVALID_ARG
+import de.connect2x.sysnotify.com.SYSNOTIFY_OK
+import de.connect2x.sysnotify.com.sn_error
+import de.connect2x.sysnotify.com.sn_notification_handler
+import de.connect2x.sysnotify.com.sn_notification_handlerVar
+import de.connect2x.sysnotify.com.sysnotify_com_create
+import de.connect2x.sysnotify.com.sysnotify_com_destroy
+import de.connect2x.sysnotify.com.sysnotify_com_get_last_error
+import kotlinx.cinterop.ByteVar
 import kotlinx.cinterop.COpaquePointer
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.alloc
+import kotlinx.cinterop.allocPointerTo
+import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.ptr
+import kotlinx.cinterop.toKStringFromUtf8
+import kotlinx.cinterop.value
 
 internal data class WindowsNotificationHandle(
     val address: COpaquePointer
@@ -27,6 +43,11 @@ internal data class WindowsNotificationHandle(
 internal class WindowsNotificationHandler(
     override val name: String,
 ) : NotificationHandler {
+    private val address: sn_notification_handler = memScoped {
+        val pointer = alloc<sn_notification_handlerVar>()
+        sysnotify_com_create(name, pointer.ptr).check()
+        requireNotNull(pointer.value) { "Could not create COM adaptor instance" }
+    }
     override val platform: NotificationPlatform = NotificationPlatform.WINDOWS
 
     override val capabilities: NotificationCapabilities = NotificationCapabilities(
@@ -37,12 +58,37 @@ internal class WindowsNotificationHandler(
         isPopSupported = false
     )
 
+    override fun close() {
+        sysnotify_com_destroy(address).check()
+    }
+
     override suspend fun push(notification: Notification): NotificationHandle? {
-        return null
+        return null // TODO: ...
     }
 
     override suspend fun pop(handle: NotificationHandle) {
+        // TODO: ...
+    }
 
+    private fun sn_error.check() {
+        if (this == SYSNOTIFY_OK) return
+        throw IllegalStateException(
+            when (this) {
+                SYSNOTIFY_ERR_INVALID_ARG -> "Invalid COM argument"
+                SYSNOTIFY_ERR_ABORTED -> "COM operation aborted"
+                else -> "Unknown COM error"
+            }
+        )
+    }
+
+    private fun sn_error.throwIfError() {
+        memScoped {
+            val error = allocPointerTo<ByteVar>()
+            sysnotify_com_get_last_error(address, error.ptr)
+            error.value?.apply {
+                throw IllegalStateException(toKStringFromUtf8())
+            }
+        }
     }
 }
 

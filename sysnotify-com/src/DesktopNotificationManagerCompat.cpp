@@ -98,12 +98,12 @@ namespace DesktopNotificationManagerCompat {
                                                     reinterpret_cast<const BYTE*>(exePathStr.c_str()), dataSize));
     }
 
-    HRESULT CreateToastNotifier(IToastNotifier** notifier) {
+    HRESULT CreateToastNotifier(const wchar_t* name, IToastNotifier** notifier) {
         RETURN_IF_FAILED(EnsureRegistered());
         ComPtr<IToastNotificationManagerStatics> toastStatics;
         RETURN_IF_FAILED(Windows::Foundation::GetActivationFactory(
             HStringReference(RuntimeClass_Windows_UI_Notifications_ToastNotificationManager).Get(), &toastStatics));
-        return toastStatics->CreateToastNotifier(notifier);
+        return toastStatics->CreateToastNotifierWithId(HStringReference(name).Get(), notifier);
     }
 
     HRESULT CreateXmlDocumentFromString(const wchar_t* xmlString, IXmlDocument** doc) {

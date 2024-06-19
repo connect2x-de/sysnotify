@@ -23,40 +23,39 @@
 
 #include <NotificationActivationCallback.h>
 #include <fmt/format.h>
+#include <iostream>
 #include <stdexcept>
+#include <utility>
 #include <windows.ui.notifications.h>
 
-// Anonymous namespace for implementing our COM activator
-namespace {
-    using namespace ABI::Windows::Data::Xml::Dom;
-    using namespace ABI::Windows::UI::Notifications;
-    using namespace Microsoft::WRL;
+using namespace ABI::Windows::Data::Xml::Dom;
+using namespace ABI::Windows::UI::Notifications;
+using namespace Microsoft::WRL;
 
-    class __declspec(uuid("54BF154E-5239-42FA-B80C-6E405A0F413E")) NotificationActivator final
-        : public RuntimeClass<RuntimeClassFlags<ClassicCom>, INotificationActivationCallback> {
-    public:
-        [[nodiscard]] HRESULT __stdcall Activate(LPCWSTR appUserModelId,
-                                                 LPCWSTR invokedArgs,
-                                                 const NOTIFICATION_USER_INPUT_DATA* data,
-                                                 ULONG dataCount) final {
-            return S_OK;// TODO: Implement action callbacks.. somehow..
-        }
-    };
+class __declspec(uuid("54BF154E-5239-42FA-B80C-6E405A0F413E")) NotificationActivator final
+    : public RuntimeClass<RuntimeClassFlags<ClassicCom>, INotificationActivationCallback> {
+public:
+    [[nodiscard]] virtual HRESULT __stdcall Activate(_In_ LPCWSTR appUserModelId,
+                                                     _In_ LPCWSTR invokedArgs,
+                                                     _In_reads_(dataCount) const NOTIFICATION_USER_INPUT_DATA* data,
+                                                     ULONG dataCountc) override {
+        return S_OK;// TODO: Implement action callbacks.. somehow..
+    }
+};
 
-    CoCreatableClass(NotificationActivator)// There is no compile error here, just your IDE being a little confused by this macro
-}// namespace
+CoCreatableClass(NotificationActivator)// There is no compile error here, just your IDE being a little confused by this macro
 
 namespace sysnotify {
     [[nodiscard]] auto guid_to_string(const GUID& guid) noexcept -> std::string {
         LPOLESTR result = nullptr;
         StringFromCLSID(guid, &result);
-        auto wide_result = kstd::unicode::convert<char>(std::wstring_view {result});
+        auto wide_result = kstd::unicode::convert<char>(std::wstring_view(result));
         CoTaskMemFree(result);
         return wide_result;
     }
 
     struct NotificationHandle final {
-        IToastNotification* notification;
+        ComPtr<IToastNotification> notification;
 
         [[nodiscard]] auto operator==(std::nullptr_t) const noexcept -> bool {
             return notification == nullptr;
@@ -68,27 +67,41 @@ namespace sysnotify {
     };
 
     class NotificationHandler final {
-        IToastNotifier* _notifier;
+        ComPtr<IToastNotifier> _notifier;
+        std::string _last_error;
 
     public:
-        NotificationHandler()
-            : _notifier(nullptr) {
+        explicit NotificationHandler(const char* name)
+            : _notifier(nullptr)
+            , _last_error("") {
+            if(CoInitialize(nullptr) != S_OK) {
+                throw std::runtime_error("Could not initialize COM");
+            }
+            std::cout << "Initialized COM for process\n";
             const auto guid = __uuidof(NotificationActivator);
             if(DesktopNotificationManagerCompat::RegisterComServer(guid) != S_OK) {
                 throw std::runtime_error(fmt::format("Could not register COM server with GUID {}", guid_to_string(guid)));
             }
+            std::cout << "Registered with COM server\n";
             if(DesktopNotificationManagerCompat::RegisterActivator() != S_OK) {
                 throw std::runtime_error(fmt::format("Could not register activator for notification handler {}", guid_to_string(guid)));
             }
-            if(DesktopNotificationManagerCompat::CreateToastNotifier(&_notifier) != S_OK) {
+            std::cout << "Registered COM activator\n";
+            IToastNotifier* notifier = nullptr;
+            const auto wide_name = kstd::unicode::convert<wchar_t>(std::string_view(name));
+            if(DesktopNotificationManagerCompat::CreateToastNotifier(wide_name.c_str(), &notifier) != S_OK || notifier == nullptr) {
                 throw std::runtime_error(
                     fmt::format("Could not create toast notifier instance for notification handler {}", guid_to_string(guid)));
             }
+            _notifier = ComPtr<IToastNotifier>(notifier);
+            std::cout << "Created IToastNotifier instance\n";
         }
 
-        ~NotificationHandler() noexcept = default;
+        ~NotificationHandler() {
+            CoUninitialize();
+        }
 
-        [[nodiscard]] auto push(const sn_notification_content_t& content) noexcept -> NotificationHandle* {
+        [[nodiscard]] inline auto format_content(const sn_notification_content_t& content) noexcept -> ComPtr<IXmlDocument> {
             // @formatter:off
             const auto formatted_content = kstd::unicode::convert<wchar_t>(fmt::format(R"(
 <toast>
@@ -106,63 +119,115 @@ namespace sysnotify {
                document == nullptr) {
                 return nullptr;
             }
-            IToastNotification* handle = nullptr;
-            if(DesktopNotificationManagerCompat::CreateToastNotification(document, &handle) != S_OK || handle == nullptr) {
+            return {document};
+        }
+
+        [[nodiscard]] inline auto create_notification(const sn_notification_content_t& content) noexcept -> ComPtr<IToastNotification> {
+            auto document = format_content(content);
+            IToastNotification* notification = nullptr;
+            if(DesktopNotificationManagerCompat::CreateToastNotification(document.Get(), &notification) != S_OK ||
+               notification == nullptr) {
                 return nullptr;
             }
-            _notifier->Show(handle);
-            return new NotificationHandle(handle);
+            return {notification};
         }
 
-        auto update(NotificationHandle* handle, const sn_notification_content_t& content) noexcept -> void {
+        [[nodiscard]] inline auto push(const sn_notification_content_t& content) noexcept -> NotificationHandle* {
+            auto notification = create_notification(content);
+            _notifier->Show(notification.Get());
+            return new NotificationHandle(std::move(notification));
         }
 
-        auto pop(NotificationHandle* handle) noexcept -> void {
+        inline auto update(NotificationHandle* handle, const sn_notification_content_t& content) noexcept -> void {
+            _notifier->Hide(handle->notification.Get());
+            auto new_notification = create_notification(content);
+            _notifier->Show(new_notification.Get());
+            handle->notification = std::move(new_notification);
+        }
+
+        inline auto pop(NotificationHandle* handle) noexcept -> void {
+            _notifier->Hide(handle->notification.Get());
             delete handle;// We only free the handle, COM objects don't get freed explicitly
+        }
+
+        inline auto set_last_error(const char* error) noexcept -> void {
+            _last_error = error;
+        }
+
+        [[nodiscard]] inline auto get_last_error() const noexcept -> const std::string& {
+            return _last_error;
         }
     };
 }// namespace sysnotify
 
+#define TRY_OR_RETURN(b)                     \
+    do {                                     \
+        try {                                \
+            b                                \
+        }                                    \
+        catch(const std::exception& error) { \
+            return SYSNOTIFY_ERR_ABORTED;    \
+        }                                    \
+    } while(false)
+
 extern "C" {
 
-SYSNOTIFY_API sn_error sn_com_init(sn_notification_handler* handler) {
+SYSNOTIFY_API sn_error sysnotify_com_create(const char* name, sn_notification_handler* handler) {
     using namespace sysnotify;
     if(handler == nullptr) {
         return SYSNOTIFY_ERR_INVALID_ARG;
     }
-    *handler = reinterpret_cast<sn_notification_handler>(new NotificationHandler());
+    TRY_OR_RETURN({ *handler = reinterpret_cast<sn_notification_handler>(new NotificationHandler(name)); });
     return SYSNOTIFY_OK;
 }
 
-SYSNOTIFY_API sn_error sn_com_deinit(sn_notification_handler handler) {
+SYSNOTIFY_API sn_error sysnotify_com_destroy(sn_notification_handler handler) {
     using namespace sysnotify;
     if(handler == nullptr) {
         return SYSNOTIFY_ERR_INVALID_ARG;
     }
-    delete reinterpret_cast<NotificationHandler*>(handler);
+    TRY_OR_RETURN({ delete reinterpret_cast<NotificationHandler*>(handler); });
     return SYSNOTIFY_OK;
 }
 
-SYSNOTIFY_API sn_error sn_com_push(sn_notification_handler handler,
-                                      const sn_notification_content_t* content,
-                                      sn_notification* notification) {
+SYSNOTIFY_API sn_error sysnotify_com_push(sn_notification_handler handler,
+                                          const sn_notification_content_t* content,
+                                          sn_notification* notification) {
     using namespace sysnotify;
     if(handler == nullptr || content == nullptr) {
         return SYSNOTIFY_ERR_INVALID_ARG;
     }
-    *notification = reinterpret_cast<sn_notification>(reinterpret_cast<NotificationHandler*>(handler)->push(*content));
+    TRY_OR_RETURN({ *notification = reinterpret_cast<sn_notification>(reinterpret_cast<NotificationHandler*>(handler)->push(*content)); });
     return SYSNOTIFY_OK;
 }
 
-SYSNOTIFY_API sn_error sn_com_update(sn_notification_handler handler,
-                                        sn_notification notification,
-                                        const sn_notification_content_t* content) {
+SYSNOTIFY_API sn_error sysnotify_com_update(sn_notification_handler handler,
+                                            sn_notification notification,
+                                            const sn_notification_content_t* content) {
     using namespace sysnotify;
+    if(handler == nullptr || notification == nullptr || content == nullptr) {
+        return SYSNOTIFY_ERR_INVALID_ARG;
+    }
+    TRY_OR_RETURN(
+        { reinterpret_cast<NotificationHandler*>(handler)->update(reinterpret_cast<NotificationHandle*>(notification), *content); });
     return SYSNOTIFY_OK;
 }
 
-SYSNOTIFY_API sn_error sn_com_pop(sn_notification_handler handler, sn_notification notification) {
+SYSNOTIFY_API sn_error sysnotify_com_pop(sn_notification_handler handler, sn_notification notification) {
     using namespace sysnotify;
+    if(handler == nullptr || notification == nullptr) {
+        return SYSNOTIFY_ERR_INVALID_ARG;
+    }
+    TRY_OR_RETURN({ reinterpret_cast<NotificationHandler*>(handler)->pop(reinterpret_cast<NotificationHandle*>(notification)); });
+    return SYSNOTIFY_OK;
+}
+
+SYSNOTIFY_API sn_error sysnotify_com_get_last_error(sn_notification_handler handler, char const** last_error) {
+    using namespace sysnotify;
+    if(handler == nullptr) {
+        return SYSNOTIFY_ERR_INVALID_ARG;
+    }
+    *last_error = reinterpret_cast<NotificationHandler*>(handler)->get_last_error().c_str();
     return SYSNOTIFY_OK;
 }
 }
