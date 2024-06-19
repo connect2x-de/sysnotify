@@ -17,8 +17,6 @@
 
 package de.connect2x.sysnotify
 
-import de.connect2x.sysnotify.com.SYSNOTIFY_ERR_ABORTED
-import de.connect2x.sysnotify.com.SYSNOTIFY_ERR_INVALID_ARG
 import de.connect2x.sysnotify.com.SYSNOTIFY_OK
 import de.connect2x.sysnotify.com.sn_error
 import de.connect2x.sysnotify.com.sn_notification_handler
@@ -26,15 +24,26 @@ import de.connect2x.sysnotify.com.sn_notification_handlerVar
 import de.connect2x.sysnotify.com.sysnotify_com_create
 import de.connect2x.sysnotify.com.sysnotify_com_destroy
 import de.connect2x.sysnotify.com.sysnotify_com_get_last_error
-import kotlinx.cinterop.ByteVar
 import kotlinx.cinterop.COpaquePointer
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.alloc
-import kotlinx.cinterop.allocPointerTo
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.toKStringFromUtf8
 import kotlinx.cinterop.value
+
+@Suppress("NOTHING_TO_INLINE")
+private inline fun sn_error.check() {
+    if (this == SYSNOTIFY_OK) return
+    throwLastError()
+}
+
+@Suppress("NOTHING_TO_INLINE")
+private inline fun throwLastError() {
+    sysnotify_com_get_last_error()?.apply {
+        throw IllegalStateException(toKStringFromUtf8())
+    }
+}
 
 internal data class WindowsNotificationHandle(
     val address: COpaquePointer
@@ -68,27 +77,6 @@ internal class WindowsNotificationHandler(
 
     override suspend fun pop(handle: NotificationHandle) {
         // TODO: ...
-    }
-
-    private fun sn_error.check() {
-        if (this == SYSNOTIFY_OK) return
-        throw IllegalStateException(
-            when (this) {
-                SYSNOTIFY_ERR_INVALID_ARG -> "Invalid COM argument"
-                SYSNOTIFY_ERR_ABORTED -> "COM operation aborted"
-                else -> "Unknown COM error"
-            }
-        )
-    }
-
-    private fun sn_error.throwIfError() {
-        memScoped {
-            val error = allocPointerTo<ByteVar>()
-            sysnotify_com_get_last_error(address, error.ptr)
-            error.value?.apply {
-                throw IllegalStateException(toKStringFromUtf8())
-            }
-        }
     }
 }
 

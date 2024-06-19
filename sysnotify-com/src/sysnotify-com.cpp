@@ -46,6 +46,8 @@ public:
 CoCreatableClass(NotificationActivator)// There is no compile error here, just your IDE being a little confused by this macro
 
     namespace sysnotify {
+    std::string g_last_error {};
+
     [[nodiscard]] auto guid_to_string(const GUID& guid) noexcept -> std::string {
         LPOLESTR result = nullptr;
         StringFromCLSID(guid, &result);
@@ -56,12 +58,10 @@ CoCreatableClass(NotificationActivator)// There is no compile error here, just y
 
     class NotificationHandler final {
         ComPtr<IToastNotifier> _notifier;
-        std::string _last_error;
 
     public:
         explicit NotificationHandler(const char* name)
-            : _notifier(nullptr)
-            , _last_error("") {
+            : _notifier(nullptr) {
             if(CoInitialize(nullptr) != S_OK) {
                 throw std::runtime_error("Could not initialize COM");
             }
@@ -133,14 +133,6 @@ CoCreatableClass(NotificationActivator)// There is no compile error here, just y
             _notifier->Hide(handle->Get());
             delete handle;// We only free the handle, COM objects don't get freed explicitly
         }
-
-        inline auto set_last_error(const char* error) noexcept -> void {
-            _last_error = error;
-        }
-
-        [[nodiscard]] inline auto get_last_error() const noexcept -> const std::string& {
-            return _last_error;
-        }
     };
 }// namespace sysnotify
 
@@ -150,6 +142,8 @@ CoCreatableClass(NotificationActivator)// There is no compile error here, just y
             b                                \
         }                                    \
         catch(const std::exception& error) { \
+            using namespace sysnotify;       \
+            g_last_error = error.what();     \
             return SYSNOTIFY_ERR_ABORTED;    \
         }                                    \
     } while(false)
@@ -207,12 +201,8 @@ SYSNOTIFY_API sn_error sysnotify_com_pop(sn_notification_handler handler, sn_not
     return SYSNOTIFY_OK;
 }
 
-SYSNOTIFY_API sn_error sysnotify_com_get_last_error(sn_notification_handler handler, char const** last_error) {
+SYSNOTIFY_API const char* sysnotify_com_get_last_error() {
     using namespace sysnotify;
-    if(handler == nullptr) {
-        return SYSNOTIFY_ERR_INVALID_ARG;
-    }
-    *last_error = reinterpret_cast<NotificationHandler*>(handler)->get_last_error().c_str();
-    return SYSNOTIFY_OK;
+    return g_last_error.c_str();
 }
 }

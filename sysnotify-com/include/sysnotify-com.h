@@ -58,7 +58,7 @@ SYSNOTIFY_API sn_error sysnotify_com_destroy(sn_notification_handler handler);
 SYSNOTIFY_API sn_error sysnotify_com_push(sn_notification_handler handler, const sn_notification_content_t* content, sn_notification* notification);
 SYSNOTIFY_API sn_error sysnotify_com_update(sn_notification_handler handler, sn_notification notification, const sn_notification_content_t* content);
 SYSNOTIFY_API sn_error sysnotify_com_pop(sn_notification_handler handler, sn_notification notification);
-SYSNOTIFY_API sn_error sysnotify_com_get_last_error(sn_notification_handler handler, char const** last_error);
+SYSNOTIFY_API const char* sysnotify_com_get_last_error();
 
 #ifdef __cplusplus
 }
