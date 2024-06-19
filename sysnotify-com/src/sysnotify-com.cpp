@@ -77,16 +77,13 @@ namespace sysnotify {
             if(CoInitialize(nullptr) != S_OK) {
                 throw std::runtime_error("Could not initialize COM");
             }
-            std::cout << "Initialized COM for process\n";
             const auto guid = __uuidof(NotificationActivator);
             if(DesktopNotificationManagerCompat::RegisterComServer(guid) != S_OK) {
                 throw std::runtime_error(fmt::format("Could not register COM server with GUID {}", guid_to_string(guid)));
             }
-            std::cout << "Registered with COM server\n";
             if(DesktopNotificationManagerCompat::RegisterActivator() != S_OK) {
                 throw std::runtime_error(fmt::format("Could not register activator for notification handler {}", guid_to_string(guid)));
             }
-            std::cout << "Registered COM activator\n";
             IToastNotifier* notifier = nullptr;
             const auto wide_name = kstd::unicode::convert<wchar_t>(std::string_view(name));
             if(DesktopNotificationManagerCompat::CreateToastNotifier(wide_name.c_str(), &notifier) != S_OK || notifier == nullptr) {
@@ -94,7 +91,6 @@ namespace sysnotify {
                     fmt::format("Could not create toast notifier instance for notification handler {}", guid_to_string(guid)));
             }
             _notifier = ComPtr<IToastNotifier>(notifier);
-            std::cout << "Created IToastNotifier instance\n";
         }
 
         ~NotificationHandler() {
