@@ -29,14 +29,17 @@ import kotlinx.cinterop.value
 import libnotify.GError
 import libnotify.GdkColorspace
 import libnotify.NotifyNotification
+import libnotify.NotifyUrgency
 import libnotify.g_error_free
 import libnotify.gdk_pixbuf_new_from_bytes
 import libnotify.gdk_pixbuf_unref
 import libnotify.notify_init
 import libnotify.notify_notification_close
 import libnotify.notify_notification_new
+import libnotify.notify_notification_set_hint_string
 import libnotify.notify_notification_set_image_from_pixbuf
 import libnotify.notify_notification_set_timeout
+import libnotify.notify_notification_set_urgency
 import libnotify.notify_notification_show
 import libnotify.notify_notification_update
 import libnotify.notify_uninit
@@ -122,6 +125,13 @@ internal class LinuxNotificationHandler(
             icon = DEFAULT_ICON
         ) ?: return null
         notify_notification_set_timeout(notificationAddress, 5000) // 5 seconds by default
+        notify_notification_set_urgency(notificationAddress, NotifyUrgency.NOTIFY_URGENCY_NORMAL)
+        // On supported FreeDesktop based platforms like GNOME and KDE this will play the default notification sound
+        notify_notification_set_hint_string(
+            notificationAddress,
+            "sound-file",
+            "/usr/share/sounds/freedesktop/stereo/message.oga"
+        )
         setIcon(notificationAddress, notification.icon)
         return if (show(notificationAddress)) LinuxNotificationHandle(notificationAddress) else null
     }
