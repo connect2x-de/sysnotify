@@ -223,24 +223,6 @@ namespace sysnotify {
         module.IncrementObjectCount();
         SYSNOTIFY_LOG_DEBUG("Registering COM objects");
         module.RegisterObjects();
-
-        //OLECHAR* clsid = nullptr;
-        //SYSNOTIFY_REQUIRE_SUCCESS(StringFromCLSID(ACTIVATOR_CLSID, &clsid));
-        //std::wstring clsid_string(clsid);
-        //CoTaskMemFree(clsid);
-        //const auto sub_key = kstd::unicode::convert<wchar_t>(
-        //    fmt::format(R"(SOFTWARE\Classes\CLSID\{}\LocalServer32)", kstd::unicode::convert<char>(clsid_string)));
-        //
-        //HKEY key {};
-        //if(RegOpenKeyExW(HKEY_CURRENT_USER, sub_key.c_str(), 0, KEY_READ, &key) == ERROR_SUCCESS) {
-        //    log::info("Registry key for COM activator already installed, skipping");
-        //    return;// The registry key is already installed
-        //}
-        //
-        //const auto path_string = get_process_path().wstring();
-        //SYSNOTIFY_REQUIRE_SUCCESS(HRESULT_FROM_WIN32(RegSetKeyValueW(HKEY_CURRENT_USER, sub_key.c_str(), nullptr, REG_SZ,
-        //                                                             path_string.c_str(), (path_string.length() + 1) * sizeof(wchar_t))));
-        //log::info("Created COM activator registry key {}", kstd::unicode::convert<char>(sub_key));
     }
 
     auto NotificationHandler::push(const NotificationContent& content) -> GUID {
