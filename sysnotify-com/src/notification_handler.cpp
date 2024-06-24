@@ -77,9 +77,16 @@ namespace sysnotify {
         SYSNOTIFY_LOG_DEBUG("Initializing COM interface");
         SYSNOTIFY_REQUIRE_SUCCESS(CoInitializeEx(nullptr, COINIT::COINIT_MULTITHREADED));
         if(create_shortcut) {
-            register_com_server(create_shortcut_if_needed());
+            create_shortcut_if_needed();
         }
 
+        SYSNOTIFY_LOG_DEBUG("Creating COM module");
+        auto& module = Module<OutOfProc>::Create([] {
+        });
+        SYSNOTIFY_LOG_DEBUG("Created COM module at {}", fmt::ptr(&module));
+        module.IncrementObjectCount();
+        SYSNOTIFY_LOG_DEBUG("Registering COM objects");
+        module.RegisterObjects();
         set_aumid();
 
         // Create notifier
@@ -155,7 +162,7 @@ namespace sysnotify {
         }
     }
 
-    auto NotificationHandler::create_shortcut_if_needed() -> std::filesystem::path {
+    auto NotificationHandler::create_shortcut_if_needed() -> void {
         const auto executable_path = get_process_path();
 
         SYSNOTIFY_LOG_DEBUG("Looking for registered COM server shortcut");
@@ -168,7 +175,7 @@ namespace sysnotify {
                              fmt::format("{}.lnk", kstd::unicode::convert<char>(_app_name));
         if(std::filesystem::exists(shortcut_path)) {
             log::info("Found shortcut at {}, skipping creation", shortcut_path.string());
-            return shortcut_path;// We don't have to do anything if the shortcut already exists
+            return;// We don't have to do anything if the shortcut already exists
         }
         log::info("Didn't find a shortcut, creating one at {}", shortcut_path.string());
 
@@ -211,18 +218,6 @@ namespace sysnotify {
         SYSNOTIFY_LOG_DEBUG("Created shell link persist file at {}", fmt::ptr(persist_file.Get()));
         SYSNOTIFY_REQUIRE_SUCCESS(persist_file->Save(shortcut_path.c_str(), TRUE));
         SYSNOTIFY_LOG_DEBUG("Created COM service shortcut at {}", shortcut_path.string());
-
-        return shortcut_path;
-    }
-
-    auto NotificationHandler::register_com_server(const std::filesystem::path& path) -> void {
-        SYSNOTIFY_LOG_DEBUG("Creating COM module");
-        auto& module = Module<OutOfProc>::Create([] {
-        });
-        SYSNOTIFY_LOG_DEBUG("Created COM module at {}", fmt::ptr(&module));
-        module.IncrementObjectCount();
-        SYSNOTIFY_LOG_DEBUG("Registering COM objects");
-        module.RegisterObjects();
     }
 
     auto NotificationHandler::push(const NotificationContent& content) -> GUID {

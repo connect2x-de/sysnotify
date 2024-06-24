@@ -44,9 +44,8 @@ namespace sysnotify {
         std::wstring _app_name;
         std::wstring _aum_id;
 
-        auto create_shortcut_if_needed() -> std::filesystem::path;
+        auto create_shortcut_if_needed() -> void;
         auto set_aumid() -> void;
-        static auto register_com_server(const std::filesystem::path& path) -> void;
 
         [[nodiscard]] auto get_notification(const GUID& guid) -> ComPtr<IToastNotification>;
 
