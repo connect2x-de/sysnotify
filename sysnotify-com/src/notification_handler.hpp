@@ -46,7 +46,7 @@ namespace sysnotify {
 
         auto create_shortcut_if_needed() -> void;
         auto set_aumid() -> void;
-
+        [[nodiscard]] auto create_content_document(const NotificationContent& content) -> ComPtr<IXmlDocument>;
         [[nodiscard]] auto get_notification(const GUID& guid) -> ComPtr<IToastNotification>;
 
     public:

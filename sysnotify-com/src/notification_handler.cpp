@@ -220,7 +220,7 @@ namespace sysnotify {
         SYSNOTIFY_LOG_DEBUG("Created COM service shortcut at {}", shortcut_path.string());
     }
 
-    auto NotificationHandler::push(const NotificationContent& content) -> GUID {
+    auto NotificationHandler::create_content_document(const NotificationContent& content) -> ComPtr<IXmlDocument> {
         ComPtr<IXmlDocument> document {};
         SYSNOTIFY_REQUIRE_SUCCESS(
             Windows::Foundation::ActivateInstance(HStringReference(RuntimeClass_Windows_Data_Xml_Dom_XmlDocument).Get(), &document));
@@ -233,8 +233,12 @@ namespace sysnotify {
         const auto content_string = format_content(content);
         SYSNOTIFY_REQUIRE_SUCCESS(document_io->LoadXml(HStringReference(content_string.c_str()).Get()));
 
+        return document;
+    }
+
+    auto NotificationHandler::push(const NotificationContent& content) -> GUID {
         ComPtr<IToastNotification> notification {};
-        SYSNOTIFY_REQUIRE_SUCCESS(_factory->CreateToastNotification(document.Get(), &notification));
+        SYSNOTIFY_REQUIRE_SUCCESS(_factory->CreateToastNotification(create_content_document(content).Get(), &notification));
         SYSNOTIFY_REQUIRE(notification);
         SYSNOTIFY_LOG_DEBUG("Created toast notification at {}", fmt::ptr(notification.Get()));
 
@@ -301,14 +305,11 @@ namespace sysnotify {
 
     auto NotificationHandler::update(const GUID& tag, const NotificationContent& content) -> void {
         auto notification = get_notification(tag);
-
         ComPtr<IXmlDocument> document {};
         SYSNOTIFY_REQUIRE_SUCCESS(notification->get_Content(&document));
         SYSNOTIFY_REQUIRE(document);
-
+        SYSNOTIFY_REQUIRE_SUCCESS(create_content_document(content).CopyTo(&document));
         SYSNOTIFY_REQUIRE_SUCCESS(_notifier->Show(notification.Get()));
-
-        // TODO: ...
     }
 
     auto NotificationHandler::pop(const GUID& tag) -> void {

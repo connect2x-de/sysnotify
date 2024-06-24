@@ -21,7 +21,7 @@ import de.connect2x.sysnotify.NotificationHandler
 import de.connect2x.sysnotify.create
 
 fun main() = application {
-    val notificationHandler = NotificationHandler.create("sysnotify-sample")
+    val notificationHandler = NotificationHandler.create("Sysnotify Sample")
     Window(title = "Sysnotify Sample", onCloseRequest = {
         notificationHandler.close()
         exitApplication()
