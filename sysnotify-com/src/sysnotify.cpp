@@ -36,7 +36,15 @@ namespace sysnotify {
     }
 
     [[nodiscard]] auto make_content(const sn_notification_content* content) noexcept -> NotificationContent {
-        return {.title = content->title, .description = content->description};
+        const size_t icon_size = (content->icon_width * content->icon_height) << 2;
+        std::vector<uint8_t> icon_data(icon_size, 0);
+        memcpy(icon_data.data(), content->icon, icon_size);
+        return {
+            .title = content->title,
+            .description = content->description,
+            .icon = std::move(icon_data),
+            .action = [action = content->action]{ action(); }
+        };
     }
 }// namespace sysnotify
 

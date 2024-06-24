@@ -35,12 +35,14 @@ typedef int sn_bool;
 typedef int sn_error;
 typedef struct sn_notification_handler_* sn_notification_handler;
 typedef struct sn_notification_* sn_notification;
-typedef void (*sn_notification_action)(sn_notification notification);
+typedef void (*sn_notification_action)();
 
 typedef struct sn_notification_content_ {
     const char* title;
     const char* description;
     const char* icon;
+    int icon_width;
+    int icon_height;
     sn_notification_action action;
 } sn_notification_content;
 
