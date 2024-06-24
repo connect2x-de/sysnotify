@@ -55,7 +55,7 @@ namespace sysnotify {
         NotificationHandler(NotificationHandler&&) noexcept = default;
         ~NotificationHandler();
 
-        auto operator=(const NotificationHandler&) noexcept -> NotificationHandler& = default;
+        auto operator=(const NotificationHandler&) noexcept -> NotificationHandler& = delete;
         auto operator=(NotificationHandler&&) noexcept -> NotificationHandler& = default;
 
         auto push(const NotificationContent& content) -> GUID;
