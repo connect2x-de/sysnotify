@@ -17,19 +17,21 @@
 
 package de.connect2x.sysnotify
 
+import de.connect2x.sysnotify.com.SYSNOTIFY_FALSE
 import de.connect2x.sysnotify.com.SYSNOTIFY_OK
+import de.connect2x.sysnotify.com.SYSNOTIFY_TRUE
 import de.connect2x.sysnotify.com.sn_error
 import de.connect2x.sysnotify.com.sn_notification
 import de.connect2x.sysnotify.com.sn_notificationVar
-import de.connect2x.sysnotify.com.sn_notification_content_t
+import de.connect2x.sysnotify.com.sn_notification_content
 import de.connect2x.sysnotify.com.sn_notification_handler
 import de.connect2x.sysnotify.com.sn_notification_handlerVar
-import de.connect2x.sysnotify.com.sysnotify_com_create
-import de.connect2x.sysnotify.com.sysnotify_com_destroy
-import de.connect2x.sysnotify.com.sysnotify_com_get_last_error
-import de.connect2x.sysnotify.com.sysnotify_com_pop
-import de.connect2x.sysnotify.com.sysnotify_com_push
-import de.connect2x.sysnotify.com.sysnotify_com_update
+import de.connect2x.sysnotify.com.sysnotify_handler_create
+import de.connect2x.sysnotify.com.sysnotify_handler_destroy
+import de.connect2x.sysnotify.com.sysnotify_handler_pop
+import de.connect2x.sysnotify.com.sysnotify_handler_push
+import de.connect2x.sysnotify.com.sysnotify_handler_update
+import de.connect2x.sysnotify.com.sysnotify_get_last_error
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.MemScope
 import kotlinx.cinterop.alloc
@@ -46,7 +48,7 @@ private inline fun sn_error.check() {
 
 @Suppress("NOTHING_TO_INLINE")
 private inline fun throwLastError() {
-    sysnotify_com_get_last_error()?.apply {
+    sysnotify_get_last_error()?.apply {
         throw IllegalStateException(toKStringFromUtf8())
     }
 }
@@ -60,7 +62,7 @@ internal class WindowsNotificationHandler(
 ) : NotificationHandler {
     private val address: sn_notification_handler = memScoped {
         val pointer = alloc<sn_notification_handlerVar>()
-        sysnotify_com_create(name, pointer.ptr).check()
+        sysnotify_handler_create(name, "de.connect2x.sysnotify.$name", SYSNOTIFY_TRUE, pointer.ptr).check()
         requireNotNull(pointer.value) { "Could not create COM adaptor instance" }
     }
     override val platform: NotificationPlatform = NotificationPlatform.WINDOWS
@@ -74,12 +76,12 @@ internal class WindowsNotificationHandler(
     )
 
     override fun close() {
-        sysnotify_com_destroy(address).check()
+        sysnotify_handler_destroy(address).check()
     }
 
     @Suppress("NOTHING_TO_INLINE")
-    private inline fun MemScope.allocNotification(notification: Notification): sn_notification_content_t {
-        val content = alloc<sn_notification_content_t>()
+    private inline fun MemScope.allocNotification(notification: Notification): sn_notification_content {
+        val content = alloc<sn_notification_content>()
         content.title = allocCString(notification.title)
         content.description = allocCString(notification.description)
         return content
@@ -89,7 +91,7 @@ internal class WindowsNotificationHandler(
         return memScoped {
             val content = allocNotification(notification)
             val handle = alloc<sn_notificationVar>()
-            sysnotify_com_push(address, content.ptr, handle.ptr).check()
+            sysnotify_handler_push(address, content.ptr, handle.ptr).check()
             WindowsNotificationHandle(requireNotNull(handle.value))
         }
     }
@@ -101,14 +103,14 @@ internal class WindowsNotificationHandler(
         require(handle is WindowsNotificationHandle) { "Handle is not a Windows notification handle" }
         memScoped {
             val content = allocNotification(notification)
-            sysnotify_com_update(address, handle.address, content.ptr).check()
+            sysnotify_handler_update(address, handle.address, content.ptr).check()
         }
         return handle
     }
 
     override suspend fun pop(handle: NotificationHandle) {
         require(handle is WindowsNotificationHandle) { "Handle is not a Windows notification handle" }
-        sysnotify_com_pop(address, handle.address).check()
+        sysnotify_handler_pop(address, handle.address).check()
     }
 }
 

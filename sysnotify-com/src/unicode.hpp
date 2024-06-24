@@ -316,7 +316,8 @@ namespace kstd::unicode {
     }
 
     template<typename CHAR_OUT, typename... OUT_ARGS, typename CHAR_IN, typename... IN_ARGS>
-    [[nodiscard]] auto convert(const std::basic_string_view<CHAR_IN, IN_ARGS...>& value) noexcept -> std::basic_string<CHAR_OUT, OUT_ARGS...> {
+    [[nodiscard]] auto
+        convert(const std::basic_string_view<CHAR_IN, IN_ARGS...>& value) noexcept -> std::basic_string<CHAR_OUT, OUT_ARGS...> {
         const auto* value_address = value.data();
         size_t count = 0;
         convert_buffer<CHAR_OUT, CHAR_IN>(value_address, nullptr, &count);
