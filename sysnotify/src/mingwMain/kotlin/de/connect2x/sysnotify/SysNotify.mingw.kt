@@ -93,7 +93,6 @@ internal class WindowsNotificationHandler(
         sysnotify_handler_create(
             name,
             "de.connect2x.sysnotify.$name",
-            SYSNOTIFY_TRUE,
             pointer.ptr
         ).check()
         requireNotNull(pointer.value) { "Could not create COM adaptor instance" }

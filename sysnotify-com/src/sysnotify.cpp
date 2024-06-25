@@ -43,14 +43,13 @@ extern "C" {
 
 SYSNOTIFY_API sn_error sysnotify_handler_create(const char* app_name,
                                                 const char* aum_id,
-                                                sn_bool create_shortcut,
                                                 sn_notification_handler* handler) {
     using namespace sysnotify;
     if(app_name == nullptr || aum_id == nullptr || handler == nullptr) {
         return SYSNOTIFY_ERR_INVALID_ARG;
     }
     SYSNOTIFY_HANDLE_EXCEPTIONS({
-        *handler = reinterpret_cast<sn_notification_handler>(new NotificationHandler(app_name, aum_id, create_shortcut == SYSNOTIFY_TRUE));
+        *handler = reinterpret_cast<sn_notification_handler>(new NotificationHandler(app_name, aum_id));
     });
     return SYSNOTIFY_OK;
 }

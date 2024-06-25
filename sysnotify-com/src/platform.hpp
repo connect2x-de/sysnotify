@@ -45,6 +45,7 @@
 #include <psapi.h>
 #include <windows.ui.notifications.h>
 #include <wrl.h>
+#include <appmodel.h>
 // @formatter:on
 
 #include "unicode.hpp"
@@ -126,6 +127,11 @@ namespace sysnotify {
         SYSNOTIFY_REQUIRE(new_length > 0);
         executable_path.resize(new_length);
         return executable_path;
+    }
+
+    [[nodiscard]] inline auto is_packaged_app() -> bool {
+        uint32_t length = 0U;
+        return GetCurrentPackageId(&length, nullptr) == S_OK && length > 0;
     }
 }// namespace sysnotify
 

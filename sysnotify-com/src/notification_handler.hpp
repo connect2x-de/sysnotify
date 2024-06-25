@@ -58,7 +58,7 @@ namespace sysnotify {
         [[nodiscard]] auto get_notification(const GUID& tag) -> ComPtr<IToastNotification>;
 
     public:
-        NotificationHandler(const std::string& app_name, const std::string& aum_id, bool create_shortcut);
+        NotificationHandler(const std::string& app_name, const std::string& aum_id);
         NotificationHandler(const NotificationHandler&) noexcept = delete;
         NotificationHandler(NotificationHandler&&) noexcept = default;
         ~NotificationHandler();

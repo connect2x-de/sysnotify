@@ -80,12 +80,12 @@ namespace sysnotify {
 
     // ComAdaptor implementation
 
-    NotificationHandler::NotificationHandler(const std::string& app_name, const std::string& aum_id, bool create_shortcut)
+    NotificationHandler::NotificationHandler(const std::string& app_name, const std::string& aum_id)
         : _app_name(kstd::unicode::convert<wchar_t>(app_name))
         , _aum_id(kstd::unicode::convert<wchar_t>(aum_id)) {
         SYSNOTIFY_LOG_DEBUG("Initializing COM interface");
         SYSNOTIFY_REQUIRE_SUCCESS(CoInitializeEx(nullptr, COINIT::COINIT_MULTITHREADED));
-        if(create_shortcut) {
+        if(!is_packaged_app()) {
             create_shortcut_if_needed();
         }
 

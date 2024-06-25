@@ -28,7 +28,6 @@ extern "C" {
 
 SYSNOTIFY_API sn_error sysnotify_handler_create(const char* app_name,
                                                 const char* aum_id,
-                                                sn_bool create_shortcut,
                                                 sn_notification_handler* handler);
 
 SYSNOTIFY_API sn_error sysnotify_handler_destroy(sn_notification_handler handler);
