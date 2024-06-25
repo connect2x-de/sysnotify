@@ -21,7 +21,7 @@
 #include "platform.hpp"
 
 #define SYSNOTIFY_DEFINE_LOG_FUNCTION(n, L)                                         \
-    template<bool TFlush = false, typename... TArgs>                                \
+    template<bool TFlush = true, typename... TArgs>                                 \
     auto n(fmt::format_string<TArgs...> format, TArgs&&... args) noexcept -> void { \
         log<L, TFlush>(std::move(format), std::forward<TArgs>(args)...);            \
     }
@@ -43,7 +43,7 @@ namespace sysnotify::log {
         }
     }
 
-    template<Level TLevel, bool TFlush = false, typename... TArgs>
+    template<Level TLevel, bool TFlush = true, typename... TArgs>
     auto log(fmt::format_string<TArgs...> format, TArgs&&... args) noexcept -> void {
         auto formatted_message = fmt::format(std::move(format), std::forward<TArgs>(args)...);
         auto log_entry = fmt::format("{} {}\n", get_level_string<TLevel>(), std::move(formatted_message));
@@ -70,5 +70,5 @@ namespace sysnotify::log {
 #ifdef SYSNOTIFY_DEBUG
 #define SYSNOTIFY_LOG_DEBUG(f, ...) sysnotify::log::debug(f, ##__VA_ARGS__)
 #else
-#define SYSNOTIFY_LOG_DEBUG(f, ...) sysnotify::log::info(f, ##__VA_ARGS__)
+#define SYSNOTIFY_LOG_DEBUG(f, ...)
 #endif

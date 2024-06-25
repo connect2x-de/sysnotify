@@ -21,7 +21,4 @@ target_compile_definitions(sysnotify-com PUBLIC
         FMT_EXCEPTIONS=1
         FMT_NOEXCEPT=0)
 target_include_directories(sysnotify-com PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
-
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    target_compile_definitions(sysnotify-com PRIVATE SYSNOTIFY_DEBUG=1)
-endif()
+target_compile_definitions(sysnotify-com PRIVATE SYSNOTIFY_DEBUG=$ENV{SYSNOTIFY_DEBUG})
