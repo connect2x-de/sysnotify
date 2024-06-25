@@ -22,12 +22,21 @@
 #include <propkey.h>
 #include <propvarutil.h>
 #include <shobjidl_core.h>
+#include <ShlObj.h>
 #include <wrl/module.h>
 #include <wrl/wrappers/corewrappers.h>
+#include <wrl/implements.h>
+#include <wrl/event.h>
+#include <winrt/Windows.Storage.h>
+#include <winrt/Windows.Storage.Streams.h>
+#include <winrt/Windows.Graphics.Imaging.h>
+#include <roapi.h>
 
 #include "log.hpp"
 
 namespace sysnotify {
+    using namespace winrt;
+
     constexpr size_t GUID_BUFFER_SIZE = 40;
 
     // COM objects
@@ -121,11 +130,12 @@ namespace sysnotify {
         CoUninitialize();
     }
 
+    // <image placement='appLogoOverride' src='ms-appx:///Images/AppLogo.png'/>
     // https://learn.microsoft.com/en-us/windows/apps/design/shell/tiles-and-notifications/adaptive-interactive-toasts
     // https://learn.microsoft.com/en-us/uwp/schemas/tiles/toastschema/element-audio
     [[nodiscard]] inline auto format_content(const NotificationContent& content) -> std::wstring {
         return kstd::unicode::convert<wchar_t>(fmt::format(R"(
-<toast scenario="reminder">
+<toast>
     <visual>
         <binding template="ToastGeneric">
             <text>{}</text>
@@ -134,8 +144,7 @@ namespace sysnotify {
     </visual>
     <audio src="ms-winsoundevent:Notification.Default" loop="false" />
 </toast>
-)",
-                                                           content.title, content.description));
+)", content.title, content.description));
     }
 
     auto NotificationHandler::set_aumid() -> void {
@@ -166,6 +175,7 @@ namespace sysnotify {
         const auto executable_path = get_process_path();
 
         SYSNOTIFY_LOG_DEBUG("Looking for registered COM server shortcut");
+
         std::wstring app_data_dir(MAX_PATH, 0);
         const auto app_data_dir_length = GetEnvironmentVariableW(L"APPDATA", app_data_dir.data(), MAX_PATH);
         SYSNOTIFY_REQUIRE(app_data_dir_length > 0);
@@ -223,7 +233,7 @@ namespace sysnotify {
     auto NotificationHandler::create_content_document(const NotificationContent& content) -> ComPtr<IXmlDocument> {
         ComPtr<IXmlDocument> document {};
         SYSNOTIFY_REQUIRE_SUCCESS(
-            Windows::Foundation::ActivateInstance(HStringReference(RuntimeClass_Windows_Data_Xml_Dom_XmlDocument).Get(), &document));
+            ActivateInstance(HStringReference(RuntimeClass_Windows_Data_Xml_Dom_XmlDocument).Get(), &document));
         SYSNOTIFY_REQUIRE(document);
         SYSNOTIFY_LOG_DEBUG("Created XML content document at {}", fmt::ptr(document.Get()));
 
@@ -234,6 +244,32 @@ namespace sysnotify {
         SYSNOTIFY_REQUIRE_SUCCESS(document_io->LoadXml(HStringReference(content_string.c_str()).Get()));
 
         return document;
+    }
+
+    [[nodiscard]] inline auto make_icon_if_present(const NotificationContent& content) -> std::optional<std::filesystem::path> {
+        using namespace winrt::Windows::Storage;
+        using namespace winrt::Windows::Storage::Streams;
+        using namespace winrt::Windows::Graphics::Imaging;
+
+        const auto width = content.icon_width;
+        const auto height = content.icon_height;
+        if(width <= 0 || height <= 0) {
+            return std::nullopt;
+        }
+
+        // Load icon data into software bitmap instance
+        SoftwareBitmap bitmap(BitmapPixelFormat::Rgba8, width, height);
+        DataWriter writer{};
+        const auto icon_size = (static_cast<size_t>(width) * height) << 2;
+        std::vector<uint8_t> icon_data(icon_size);
+        memcpy(icon_data.data(), content.icon, icon_size);
+        writer.WriteBytes(icon_data);
+        bitmap.CopyFromBuffer(writer.DetachBuffer());
+
+        // Create a storage file for the image we want to export
+        // TODO: ...
+
+        return std::nullopt;
     }
 
     auto NotificationHandler::push(const NotificationContent& content) -> GUID {
@@ -255,6 +291,7 @@ namespace sysnotify {
         notification2->put_Tag(HStringReference(tag_string.c_str()).Get());
         SYSNOTIFY_LOG_DEBUG("Updated notification tag");
 
+        _tags[tag] = NotificationTag(tag, make_icon_if_present(content));
         SYSNOTIFY_REQUIRE_SUCCESS(_notifier->Show(notification.Get()));
 
         return tag;
@@ -314,5 +351,9 @@ namespace sysnotify {
 
     auto NotificationHandler::pop(const GUID& tag) -> void {
         SYSNOTIFY_REQUIRE_SUCCESS(_notifier->Hide(get_notification(tag).Get()));
+    }
+
+    auto NotificationHandler::is_valid_tag(const GUID& tag) -> bool {
+        return _tags.contains(tag);
     }
 }// namespace sysnotify

@@ -70,5 +70,5 @@ namespace sysnotify::log {
 #ifdef SYSNOTIFY_DEBUG
 #define SYSNOTIFY_LOG_DEBUG(f, ...) sysnotify::log::debug(f, ##__VA_ARGS__)
 #else
-#define SYSNOTIFY_LOG_DEBUG(f, ...)
+#define SYSNOTIFY_LOG_DEBUG(f, ...) sysnotify::log::info(f, ##__VA_ARGS__)
 #endif

@@ -25,7 +25,7 @@
 #pragma once
 
 #include "platform.hpp"
-#include "notification_content.hpp"
+#include "sysnotify_types.h"
 
 namespace sysnotify {
     using namespace Windows::Foundation;
@@ -35,7 +35,14 @@ namespace sysnotify {
     using namespace ABI::Windows::Data::Xml::Dom;
     using namespace ABI::Windows::UI::Notifications;
 
+    using NotificationContent = sn_notification_content;
+
     class NotificationHandler final {
+        struct NotificationTag final {
+            GUID tag;
+            std::optional<std::filesystem::path> icon_path;
+        };
+
         ComPtr<IToastNotificationManagerStatics> _manager;
         ComPtr<IToastNotificationManagerStatics2> _manager2;
         ComPtr<IToastNotifier> _notifier;
@@ -43,11 +50,12 @@ namespace sysnotify {
         ComPtr<IToastNotificationHistory> _history;
         std::wstring _app_name;
         std::wstring _aum_id;
+        phmap::parallel_flat_hash_map<GUID, NotificationTag> _tags;
 
         auto create_shortcut_if_needed() -> void;
         auto set_aumid() -> void;
         [[nodiscard]] auto create_content_document(const NotificationContent& content) -> ComPtr<IXmlDocument>;
-        [[nodiscard]] auto get_notification(const GUID& guid) -> ComPtr<IToastNotification>;
+        [[nodiscard]] auto get_notification(const GUID& tag) -> ComPtr<IToastNotification>;
 
     public:
         NotificationHandler(const std::string& app_name, const std::string& aum_id, bool create_shortcut);
@@ -61,5 +69,6 @@ namespace sysnotify {
         auto push(const NotificationContent& content) -> GUID;
         auto update(const GUID& tag, const NotificationContent& content) -> void;
         auto pop(const GUID& tag) -> void;
+        auto is_valid_tag(const GUID& tag) -> bool;
     };
 }// namespace sysnotify

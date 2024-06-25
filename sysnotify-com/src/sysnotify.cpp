@@ -31,20 +31,11 @@
     } while(false)
 
 namespace sysnotify {
+    // Ensure our type sizes match at compile time
+    static_assert(sizeof(sn_notification_tag) == sizeof(GUID));
+
     namespace {
         std::string g_last_error = "";
-    }
-
-    [[nodiscard]] auto make_content(const sn_notification_content* content) noexcept -> NotificationContent {
-        const size_t icon_size = (content->icon_width * content->icon_height) << 2;
-        std::vector<uint8_t> icon_data(icon_size, 0);
-        memcpy(icon_data.data(), content->icon, icon_size);
-        return {
-            .title = content->title,
-            .description = content->description,
-            .icon = std::move(icon_data),
-            .action = [action = content->action]{ action(); }
-        };
     }
 }// namespace sysnotify
 
@@ -54,64 +45,74 @@ SYSNOTIFY_API sn_error sysnotify_handler_create(const char* app_name,
                                                 const char* aum_id,
                                                 sn_bool create_shortcut,
                                                 sn_notification_handler* handler) {
+    using namespace sysnotify;
     if(app_name == nullptr || aum_id == nullptr || handler == nullptr) {
         return SYSNOTIFY_ERR_INVALID_ARG;
     }
     SYSNOTIFY_HANDLE_EXCEPTIONS({
-        *handler = reinterpret_cast<sn_notification_handler>(
-            new sysnotify::NotificationHandler(app_name, aum_id, static_cast<bool>(create_shortcut)));
+        *handler = reinterpret_cast<sn_notification_handler>(new NotificationHandler(app_name, aum_id, create_shortcut == SYSNOTIFY_TRUE));
     });
     return SYSNOTIFY_OK;
 }
 
 SYSNOTIFY_API sn_error sysnotify_handler_destroy(sn_notification_handler handler) {
+    using namespace sysnotify;
     if(handler == nullptr) {
         return SYSNOTIFY_ERR_INVALID_ARG;
     }
-    SYSNOTIFY_HANDLE_EXCEPTIONS({ delete reinterpret_cast<sysnotify::NotificationHandler*>(handler); });
+    SYSNOTIFY_HANDLE_EXCEPTIONS({ delete reinterpret_cast<NotificationHandler*>(handler); });
     return SYSNOTIFY_OK;
 }
 
 SYSNOTIFY_API sn_error sysnotify_handler_push(sn_notification_handler handler,
                                               const sn_notification_content* content,
-                                              sn_notification* notification) {
+                                              sn_notification_tag* notification) {
+    using namespace sysnotify;
     if(handler == nullptr || content == nullptr || notification == nullptr) {
         return SYSNOTIFY_ERR_INVALID_ARG;
     }
     SYSNOTIFY_HANDLE_EXCEPTIONS({
-        auto* handle = new GUID();
-        *handle = reinterpret_cast<sysnotify::NotificationHandler*>(handler)->push(sysnotify::make_content(content));
-        *notification = reinterpret_cast<sn_notification>(handle);
+        const auto tag = reinterpret_cast<NotificationHandler*>(handler)->push(*content);
+        *notification = *reinterpret_cast<const sn_notification_tag*>(&tag);
     });
     return SYSNOTIFY_OK;
 }
 
 SYSNOTIFY_API sn_error sysnotify_handler_update(sn_notification_handler handler,
-                                                sn_notification notification,
+                                                const sn_notification_tag* notification,
                                                 const sn_notification_content* content) {
+    using namespace sysnotify;
     if(handler == nullptr || notification == nullptr || content == nullptr) {
         return SYSNOTIFY_ERR_INVALID_ARG;
     }
-    SYSNOTIFY_HANDLE_EXCEPTIONS({
-        reinterpret_cast<sysnotify::NotificationHandler*>(handler)->update(*reinterpret_cast<GUID*>(notification),
-                                                                           sysnotify::make_content(content));
-    });
+    SYSNOTIFY_HANDLE_EXCEPTIONS(
+        { reinterpret_cast<NotificationHandler*>(handler)->update(*reinterpret_cast<const GUID*>(notification), *content); });
     return SYSNOTIFY_OK;
 }
 
-SYSNOTIFY_API sn_error sysnotify_handler_pop(sn_notification_handler handler, sn_notification notification) {
+SYSNOTIFY_API sn_error sysnotify_handler_pop(sn_notification_handler handler, const sn_notification_tag* notification) {
+    using namespace sysnotify;
     if(handler == nullptr || notification == nullptr) {
         return SYSNOTIFY_ERR_INVALID_ARG;
     }
+    SYSNOTIFY_HANDLE_EXCEPTIONS({ reinterpret_cast<NotificationHandler*>(handler)->pop(*reinterpret_cast<const GUID*>(notification)); });
+    return SYSNOTIFY_OK;
+}
+
+SYSNOTIFY_API sn_error sysnotify_handler_is_valid_tag(sn_notification_handler handler, const sn_notification_tag* tag, sn_bool* is_valid) {
+    using namespace sysnotify;
+    if(handler == nullptr || tag == nullptr) {
+        return SYSNOTIFY_ERR_INVALID_ARG;
+    }
     SYSNOTIFY_HANDLE_EXCEPTIONS({
-        auto* handle = reinterpret_cast<GUID*>(notification);
-        reinterpret_cast<sysnotify::NotificationHandler*>(handler)->pop(*handle);
-        delete handle;
+        *is_valid = static_cast<sn_bool>(
+            reinterpret_cast<sysnotify::NotificationHandler*>(handler)->is_valid_tag(*reinterpret_cast<const GUID*>(tag)));
     });
     return SYSNOTIFY_OK;
 }
 
 SYSNOTIFY_API const char* sysnotify_get_last_error() {
-    return sysnotify::g_last_error.c_str();
+    using namespace sysnotify;
+    return g_last_error.c_str();
 }
 }

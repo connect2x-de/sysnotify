@@ -18,33 +18,13 @@
 
 #pragma once
 
+#include "sysnotify_types.h"
+
 #define SYSNOTIFY_API __declspec(dllexport)
-
-#define SYSNOTIFY_OK 0
-#define SYSNOTIFY_ERR_INVALID_ARG 1
-#define SYSNOTIFY_ERR_EXCEPTION 2
-
-#define SYSNOTIFY_FALSE 0
-#define SYSNOTIFY_TRUE 1
 
 #ifdef __cplusplus
 extern "C" {
 #endif//__cplusplus
-
-typedef int sn_bool;
-typedef int sn_error;
-typedef struct sn_notification_handler_* sn_notification_handler;
-typedef struct sn_notification_* sn_notification;
-typedef void (*sn_notification_action)();
-
-typedef struct sn_notification_content_ {
-    const char* title;
-    const char* description;
-    const char* icon;
-    int icon_width;
-    int icon_height;
-    sn_notification_action action;
-} sn_notification_content;
 
 SYSNOTIFY_API sn_error sysnotify_handler_create(const char* app_name,
                                                 const char* aum_id,
@@ -55,13 +35,15 @@ SYSNOTIFY_API sn_error sysnotify_handler_destroy(sn_notification_handler handler
 
 SYSNOTIFY_API sn_error sysnotify_handler_push(sn_notification_handler handler,
                                               const sn_notification_content* content,
-                                              sn_notification* notification);
+                                              sn_notification_tag* tag);
 
 SYSNOTIFY_API sn_error sysnotify_handler_update(sn_notification_handler handler,
-                                                sn_notification notification,
+                                                const sn_notification_tag* tag,
                                                 const sn_notification_content* content);
 
-SYSNOTIFY_API sn_error sysnotify_handler_pop(sn_notification_handler handler, sn_notification notification);
+SYSNOTIFY_API sn_error sysnotify_handler_pop(sn_notification_handler handler, const sn_notification_tag* tag);
+
+SYSNOTIFY_API sn_error sysnotify_handler_is_valid_tag(sn_notification_handler handler, const sn_notification_tag* tag, sn_bool* is_valid);
 
 SYSNOTIFY_API const char* sysnotify_get_last_error();
 

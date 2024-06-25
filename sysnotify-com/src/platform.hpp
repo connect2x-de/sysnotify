@@ -23,7 +23,6 @@
 #include <cstdint>
 #include <cstring>
 #include <filesystem>
-#include <fmt/format.h>
 #include <functional>
 #include <iostream>
 #include <source_location>
@@ -32,6 +31,11 @@
 #include <string_view>
 #include <utility>
 #include <vector>
+#include <optional>
+#include <unordered_map>
+
+#include <fmt/format.h>
+#include <parallel_hashmap/phmap.h>
 
 // @formatter:off
 #define WIN32_LEAN_AND_MEAN// Disable parts of the API we don't need to save compile time
@@ -82,13 +86,41 @@ namespace sysnotify {
         throw std::runtime_error(fmt::format("'{}' failed at {}:{}:{} - {}", code, location.file_name(), location.function_name(),
                                              location.line(), get_last_error()));
     }
+
+    template<typename T>
+    inline auto combined_hash(size_t hash1, const T& value) noexcept -> size_t {
+        hash1^= std::hash<T>()(value) + 0x9E3779B9 + (hash1 << 6) + (hash1 >> 2);
+        return hash1;
+    }
+
+    inline auto combine_hashes(size_t hash1, size_t hash2) noexcept -> size_t {
+        hash1^= hash2 + 0x9E3779B9 + (hash1 << 6) + (hash1 >> 2);
+        return hash1;
+    }
+
+    namespace detail {
+        template<typename T, size_t TSize, size_t TIndex = 0>
+        inline auto array_hash(const T(&array)[TSize], size_t& hash) noexcept -> void {
+            hash = combined_hash(hash, array[TIndex]);
+            if constexpr(TIndex < TSize - 1) {
+                array_hash<T, TSize, TIndex + 1>(array, hash);
+            }
+        }
+    }
+
+    template<typename T, size_t TSize>
+    inline auto array_hash(const T(&array)[TSize]) noexcept -> size_t {
+        size_t result = 0;
+        detail::array_hash<T, TSize>(array, result);
+        return result;
+    }
 }// namespace sysnotify
 
 #define SYSNOTIFY_REQUIRE_SUCCESS(x) sysnotify::require_success(x, #x)
 #define SYSNOTIFY_REQUIRE(x) sysnotify::require(x, #x)
 
 namespace sysnotify {
-    [[nodiscard]] inline auto get_process_path(HANDLE process = GetCurrentProcess()) noexcept -> std::filesystem::path {
+    [[nodiscard]] inline auto get_process_path(HANDLE process = GetCurrentProcess()) -> std::filesystem::path {
         std::wstring executable_path(MAX_PATH, 0);
         const auto new_length = GetModuleFileNameExW(process, nullptr, executable_path.data(), MAX_PATH);
         SYSNOTIFY_REQUIRE(new_length > 0);
@@ -96,3 +128,17 @@ namespace sysnotify {
         return executable_path;
     }
 }// namespace sysnotify
+
+// Allow GUIDs to be used as keys to hash tables
+namespace std {
+    template<>
+    struct hash<GUID> final {
+        inline auto operator ()(const GUID& value) noexcept -> size_t {
+            auto hash = std::hash<decltype(value.Data1)>()(value.Data1);
+            hash = sysnotify::combined_hash(hash, value.Data2);
+            hash = sysnotify::combined_hash(hash, value.Data3);
+            hash = sysnotify::combine_hashes(hash, sysnotify::array_hash(value.Data4));
+            return hash;
+        }
+    };
+}

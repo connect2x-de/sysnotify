@@ -14,24 +14,26 @@
  */
 
 @file:OptIn(ExperimentalForeignApi::class)
+@file:Suppress("NOTHING_TO_INLINE")
 
 package de.connect2x.sysnotify
 
-import de.connect2x.sysnotify.com.SYSNOTIFY_FALSE
+import com.benasher44.uuid.Uuid
 import de.connect2x.sysnotify.com.SYSNOTIFY_OK
 import de.connect2x.sysnotify.com.SYSNOTIFY_TRUE
+import de.connect2x.sysnotify.com.sn_boolVar
 import de.connect2x.sysnotify.com.sn_error
-import de.connect2x.sysnotify.com.sn_notification
-import de.connect2x.sysnotify.com.sn_notificationVar
 import de.connect2x.sysnotify.com.sn_notification_content
 import de.connect2x.sysnotify.com.sn_notification_handler
 import de.connect2x.sysnotify.com.sn_notification_handlerVar
+import de.connect2x.sysnotify.com.sn_notification_tag
+import de.connect2x.sysnotify.com.sysnotify_get_last_error
 import de.connect2x.sysnotify.com.sysnotify_handler_create
 import de.connect2x.sysnotify.com.sysnotify_handler_destroy
+import de.connect2x.sysnotify.com.sysnotify_handler_is_valid_tag
 import de.connect2x.sysnotify.com.sysnotify_handler_pop
 import de.connect2x.sysnotify.com.sysnotify_handler_push
 import de.connect2x.sysnotify.com.sysnotify_handler_update
-import de.connect2x.sysnotify.com.sysnotify_get_last_error
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.MemScope
 import kotlinx.cinterop.alloc
@@ -40,29 +42,60 @@ import kotlinx.cinterop.ptr
 import kotlinx.cinterop.toKStringFromUtf8
 import kotlinx.cinterop.value
 
-@Suppress("NOTHING_TO_INLINE")
 private inline fun sn_error.check() {
     if (this == SYSNOTIFY_OK) return
     throwLastError()
 }
 
-@Suppress("NOTHING_TO_INLINE")
 private inline fun throwLastError() {
     sysnotify_get_last_error()?.apply {
         throw IllegalStateException(toKStringFromUtf8())
     }
 }
 
+private inline fun sn_notification_tag.toUuid(): Uuid = Uuid(lower.toLong(), upper.toLong())
+
+private inline fun MemScope.allocNotification(notification: Notification): sn_notification_content {
+    val content = alloc<sn_notification_content>()
+    content.title = allocCString(notification.title)
+    content.description = allocCString(notification.description)
+    return content
+}
+
+private inline fun MemScope.allocNotificationTag(tag: Uuid): sn_notification_tag {
+    val result = alloc<sn_notification_tag>()
+    result.lower = tag.leastSignificantBits.toULong()
+    result.upper = tag.mostSignificantBits.toULong()
+    return result
+}
+
 internal data class WindowsNotificationHandle(
-    val address: sn_notification
-) : NotificationHandle
+    val handler: WindowsNotificationHandler,
+    val tag: Uuid
+) : NotificationHandle {
+    val isValid: Boolean
+        get() = memScoped {
+            val result = alloc<sn_boolVar>()
+            sysnotify_handler_is_valid_tag(
+                handler.address,
+                allocNotificationTag(tag).ptr,
+                result.ptr
+            ).check()
+            return result.value == SYSNOTIFY_TRUE
+        }
+}
 
 internal class WindowsNotificationHandler(
     override val name: String,
 ) : NotificationHandler {
-    private val address: sn_notification_handler = memScoped {
+    internal val address: sn_notification_handler = memScoped {
         val pointer = alloc<sn_notification_handlerVar>()
-        sysnotify_handler_create(name, "de.connect2x.sysnotify.$name", SYSNOTIFY_TRUE, pointer.ptr).check()
+        sysnotify_handler_create(
+            name,
+            "de.connect2x.sysnotify.$name",
+            SYSNOTIFY_TRUE,
+            pointer.ptr
+        ).check()
         requireNotNull(pointer.value) { "Could not create COM adaptor instance" }
     }
     override val platform: NotificationPlatform = NotificationPlatform.WINDOWS
@@ -79,20 +112,12 @@ internal class WindowsNotificationHandler(
         sysnotify_handler_destroy(address).check()
     }
 
-    @Suppress("NOTHING_TO_INLINE")
-    private inline fun MemScope.allocNotification(notification: Notification): sn_notification_content {
-        val content = alloc<sn_notification_content>()
-        content.title = allocCString(notification.title)
-        content.description = allocCString(notification.description)
-        return content
-    }
-
     override suspend fun push(notification: Notification): NotificationHandle {
         return memScoped {
+            val handle = alloc<sn_notification_tag>()
             val content = allocNotification(notification)
-            val handle = alloc<sn_notificationVar>()
             sysnotify_handler_push(address, content.ptr, handle.ptr).check()
-            WindowsNotificationHandle(requireNotNull(handle.value))
+            WindowsNotificationHandle(this@WindowsNotificationHandler, handle.toUuid())
         }
     }
 
@@ -102,15 +127,22 @@ internal class WindowsNotificationHandler(
     ): NotificationHandle {
         require(handle is WindowsNotificationHandle) { "Handle is not a Windows notification handle" }
         memScoped {
+            val tag = allocNotificationTag(handle.tag)
             val content = allocNotification(notification)
-            sysnotify_handler_update(address, handle.address, content.ptr).check()
+            sysnotify_handler_update(
+                address,
+                tag.ptr,
+                content.ptr
+            ).check()
         }
         return handle
     }
 
     override suspend fun pop(handle: NotificationHandle) {
         require(handle is WindowsNotificationHandle) { "Handle is not a Windows notification handle" }
-        sysnotify_handler_pop(address, handle.address).check()
+        memScoped {
+            sysnotify_handler_pop(address, allocNotificationTag(handle.tag).ptr).check()
+        }
     }
 }
 

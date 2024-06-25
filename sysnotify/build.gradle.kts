@@ -209,6 +209,14 @@ if (os.isWindows) {
                 mustRunAfter(*dependencies)
             }
         }
+        val cmakeConfigure = findByName(":sysnotify-com:cmakeConfigure")?.apply {
+            dependsOn(":sysnotify-com:cmakeClean")
+            mustRunAfter(":sysnotify-com:cmakeClean")
+        }
+        findByName(":sysnotify-com:cmakeBuild")?.apply {
+            dependsOn(cmakeConfigure)
+            mustRunAfter(cmakeConfigure)
+        }
     }
 }
 
