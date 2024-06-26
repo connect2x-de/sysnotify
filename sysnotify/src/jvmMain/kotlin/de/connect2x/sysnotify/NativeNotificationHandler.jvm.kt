@@ -60,7 +60,8 @@ object NativeNotificationHandler {
         icon: ByteArray?,
         activateAction: NativeNotificationAction?,
         dismissAction: NativeDismissalAction?,
-        failAction: NativeNotificationAction?
+        failAction: NativeNotificationAction?,
+        removeAction: NativeNotificationAction?
     ): Long
 
     @JvmStatic

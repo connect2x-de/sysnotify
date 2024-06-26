@@ -97,6 +97,7 @@ internal fun registerNatives() {
             parameter(typeNativeNotificationAction)
             parameter(typeNativeDismissalAction)
             parameter(typeNativeNotificationAction)
+            parameter(typeNativeNotificationAction)
             returns(JvmBuiltinType.LONG)
         }
         registerNativeFunction("update", staticCFunction(::update)) {
@@ -178,11 +179,13 @@ private fun push(
     icon: jbyteArray?,
     activateAction: jobject?,
     dismissAction: jobject?,
-    failAction: jobject?
+    failAction: jobject?,
+    removeAction: jobject?
 ): jlong {
-    var activateActionRef = activateAction?.newGlobalRef()
-    var dismissActionRef = dismissAction?.newGlobalRef()
-    var failActionRef = failAction?.newGlobalRef()
+    val activateActionRef = activateAction?.newGlobalRef()
+    val dismissActionRef = dismissAction?.newGlobalRef()
+    val failActionRef = failAction?.newGlobalRef()
+    val removeActionRef = removeAction?.newGlobalRef()
     return runBlocking {
         requireNotNull(handler.toCPointer<CPointed>())
             .asStableRef<NotificationHandler>()
@@ -194,20 +197,12 @@ private fun push(
                     activateAction = callback@{
                         if (activateActionRef == null) return@callback
                         jvmEnvironment {
-                            memScoped {
-                                requireNotNull(pointed?.CallVoidMethodA) { "Could not access JNIEnv::CallVoidMethodA" }(
-                                    this@jvmEnvironment.ptr,
-                                    activateActionRef,
-                                    typeNativeNotificationAction.jClass.getMethod("invoke") {},
-                                    null
-                                )
-                            }
-                            activateActionRef?.deleteGlobalRef()
-                            activateActionRef = null
-                            dismissActionRef?.deleteGlobalRef()
-                            dismissActionRef = null
-                            failActionRef?.deleteGlobalRef()
-                            failActionRef = null
+                            requireNotNull(pointed?.CallVoidMethodA) { "Could not access JNIEnv::CallVoidMethodA" }(
+                                this@jvmEnvironment.ptr,
+                                activateActionRef,
+                                typeNativeNotificationAction.jClass.getMethod("invoke") {},
+                                null
+                            )
                         }
                     },
                     dismissAction = callback@{ reason ->
@@ -225,27 +220,32 @@ private fun push(
                                     }.ptr // Allocate reason as index on stack
                                 )
                             }
-                            if (reason == NotificationDismissalReason.TIMED_OUT) return@callback
-                            dismissActionRef?.deleteGlobalRef()
                         }
                     },
                     failAction = callback@{
                         if (failActionRef == null) return@callback
                         jvmEnvironment {
-                            memScoped {
-                                requireNotNull(pointed?.CallVoidMethodA) { "Could not access JNIEnv::CallVoidMethodA" }(
-                                    this@jvmEnvironment.ptr,
-                                    failActionRef,
-                                    typeNativeNotificationAction.jClass.getMethod("invoke") {},
-                                    null
-                                )
-                            }
+                            requireNotNull(pointed?.CallVoidMethodA) { "Could not access JNIEnv::CallVoidMethodA" }(
+                                this@jvmEnvironment.ptr,
+                                failActionRef,
+                                typeNativeNotificationAction.jClass.getMethod("invoke") {},
+                                null
+                            )
+                        }
+                    },
+                    removeAction = callback@{
+                        jvmEnvironment {
                             activateActionRef?.deleteGlobalRef()
-                            activateActionRef = null
                             dismissActionRef?.deleteGlobalRef()
-                            dismissActionRef = null
                             failActionRef?.deleteGlobalRef()
-                            failActionRef = null
+                            if (removeActionRef == null) return@callback
+                            requireNotNull(pointed?.CallVoidMethodA) { "Could not access JNIEnv::CallVoidMethodA" }(
+                                this@jvmEnvironment.ptr,
+                                removeActionRef,
+                                typeNativeNotificationAction.jClass.getMethod("invoke") {},
+                                null
+                            )
+                            removeActionRef.deleteGlobalRef()
                         }
                     }
                 )

@@ -152,24 +152,22 @@ internal class WindowsNotificationHandler(
             user_data = StableRef.create(notification).asCPointer()
             activate_action =
                 staticCFunction { _: CPointer<sn_notification_tag>?, userData: COpaquePointer? ->
-                    requireNotNull(userData).asStableRef<Notification>().apply {
-                        get().activateAction?.invoke()
-                        dispose()
-                    }
+                    requireNotNull(userData).asStableRef<Notification>()
+                        .get().activateAction?.invoke()
                 }
             dismiss_action =
                 staticCFunction { _: CPointer<sn_notification_tag>?, userData: COpaquePointer?, reason: sn_notification_dismissal_reason ->
-                    requireNotNull(userData).asStableRef<Notification>().apply {
-                        val actualReason = NotificationDismissalReason.entries[reason]
-                        get().dismissAction?.invoke(actualReason)
-                        if (actualReason == NotificationDismissalReason.TIMED_OUT) return@staticCFunction
-                        dispose()
-                    }
+                    requireNotNull(userData).asStableRef<Notification>()
+                        .get().dismissAction?.invoke(NotificationDismissalReason.entries[reason])
                 }
             fail_action =
                 staticCFunction { _: CPointer<sn_notification_tag>?, userData: COpaquePointer? ->
+                    requireNotNull(userData).asStableRef<Notification>().get().failAction?.invoke()
+                }
+            remove_action =
+                staticCFunction { _: CPointer<sn_notification_tag>?, userData: COpaquePointer? ->
                     requireNotNull(userData).asStableRef<Notification>().apply {
-                        get().failAction?.invoke()
+                        get().removeAction?.invoke()
                         dispose()
                     }
                 }

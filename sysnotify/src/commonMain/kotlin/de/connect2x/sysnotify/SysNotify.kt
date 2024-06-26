@@ -70,7 +70,8 @@ data class Notification(
     val icon: ByteArray? = null,
     val activateAction: (() -> Unit)? = null,
     val dismissAction: ((NotificationDismissalReason) -> Unit)? = null,
-    val failAction: (() -> Unit)? = null
+    val failAction: (() -> Unit)? = null,
+    val removeAction: (() -> Unit)? = null
 ) {
     // Begin ugly generated code
     override fun equals(other: Any?): Boolean {
@@ -88,6 +89,7 @@ data class Notification(
         if (activateAction != other.activateAction) return false
         if (dismissAction != other.dismissAction) return false
         if (failAction != other.failAction) return false
+        if (removeAction != other.removeAction) return false
 
         return true
     }
@@ -99,6 +101,7 @@ data class Notification(
         result = 31 * result + (activateAction?.hashCode() ?: 0)
         result = 31 * result + (dismissAction?.hashCode() ?: 0)
         result = 31 * result + (failAction?.hashCode() ?: 0)
+        result = 31 * result + (removeAction?.hashCode() ?: 0)
         return result
     }
     // End ugly generated code

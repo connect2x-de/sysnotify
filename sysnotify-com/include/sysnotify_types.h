@@ -61,6 +61,7 @@ typedef struct sn_notification_content_ {
     sn_notification_action activate_action;
     sn_notification_dismissal_action dismiss_action;
     sn_notification_action fail_action;
+    sn_notification_action remove_action;
     void* user_data;
 } sn_notification_content;
 

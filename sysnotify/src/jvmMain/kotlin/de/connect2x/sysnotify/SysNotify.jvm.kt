@@ -50,7 +50,8 @@ private class JvmNotificationHandler(
             icon = notification.icon,
             activateAction = { notification.activateAction?.invoke() },
             dismissAction = { notification.dismissAction?.invoke(NotificationDismissalReason.entries[it]) },
-            failAction = { notification.failAction?.invoke() }
+            failAction = { notification.failAction?.invoke() },
+            removeAction = { notification.removeAction?.invoke() }
         )
         return if (handle != 0L) JvmNotificationHandle(handle)
         else null
