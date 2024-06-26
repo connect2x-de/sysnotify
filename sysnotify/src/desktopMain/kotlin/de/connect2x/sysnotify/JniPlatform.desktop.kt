@@ -26,7 +26,9 @@ import jni.JavaVMVar
 import jni.jboolean
 import jni.jbyteArray
 import jni.jclass
+import jni.jfieldID
 import jni.jint
+import jni.jmethodID
 import jni.jstring
 import kotlinx.cinterop.ByteVar
 import kotlinx.cinterop.COpaquePointer
@@ -50,6 +52,13 @@ import platform.posix.memcpy
 import kotlin.experimental.ExperimentalNativeApi
 
 internal lateinit var environment: JNIEnvVar
+
+internal data class FieldCacheKey(val name: String, val type: JvmType)
+internal data class MethodCacheKey(val name: String, val paramTypes: List<JvmType>)
+
+internal val classCache: HashMap<String, jclass> = HashMap()
+internal val fieldCache: HashMap<jclass, HashMap<FieldCacheKey, jfieldID>> = HashMap()
+internal val methodCache: HashMap<jclass, HashMap<MethodCacheKey, jmethodID>> = HashMap()
 
 @Suppress("UNUSED_PARAMETER", "UNUSED")
 @CName("JNI_OnLoad")
@@ -113,7 +122,7 @@ internal inline fun jbyteArray.toByteArray(): ByteArray {
 }
 
 internal inline fun MemScope.allocCString(value: String?): CPointer<ByteVar>? {
-    if(value == null) return null
+    if (value == null) return null
     val length = value.length
     val data = allocArray<ByteVar>(length + 1)
     data[length] = 0 // Make sure we have a null-terminator at the end
@@ -131,7 +140,7 @@ internal inline fun jclass.registerNativeFunction(
     memScoped {
         val method = alloc<JNINativeMethod>()
         method.name = allocCString(name)
-        method.signature = allocCString(JvmSignature.of(signature))
+        method.signature = allocCString(JvmSignature.of(signature).signatureString)
         method.fnPtr = address
         checkNotNull(environment.pointed?.RegisterNatives) { "Could not access JNI:RegisterNatives function" }(
             environment.ptr,
@@ -139,5 +148,68 @@ internal inline fun jclass.registerNativeFunction(
             method.ptr,
             1
         )
+    }
+}
+
+internal inline val JvmRefType.jClass: jclass
+    get() = classCache.getOrPut(objectName) {
+        memScoped {
+            requireNotNull(
+                requireNotNull(requireNotNull(environment.pointed) { "Could not access JNI environment" }.FindClass) { "Could not access JNIEnv::FindClass" }(
+                    environment.ptr,
+                    allocCString(objectName)
+                )
+            ) { "Could not find class '$typeName'" }
+        }
+    }
+
+internal inline fun jclass.getMethod(
+    name: String,
+    isStatic: Boolean = false,
+    signature: JvmSignature.() -> Unit
+): jmethodID {
+    val env = checkNotNull(environment.pointed)
+    val signatureData = JvmSignature.of(signature)
+    return methodCache.getOrPut(this) { HashMap() }
+        .getOrPut(MethodCacheKey(name, signatureData.signature.parameters)) {
+            memScoped {
+                checkNotNull(
+                    if (isStatic) checkNotNull(env.GetStaticMethodID)(
+                        environment.ptr,
+                        this@getMethod,
+                        allocCString(name),
+                        allocCString(signatureData.signatureString)
+                    )
+                    else checkNotNull(env.GetMethodID)(
+                        environment.ptr,
+                        this@getMethod,
+                        allocCString(name),
+                        allocCString(signatureData.signatureString)
+                    )
+                ) { "Could not find method $name${signatureData.signatureString}" }
+            }
+        }
+}
+
+internal inline fun jclass.getField(name: String, isStatic: Boolean, type: JvmType): jfieldID {
+    val env = checkNotNull(environment.pointed)
+    val typeString = type.objectName
+    return fieldCache.getOrPut(this) { HashMap() }.getOrPut(FieldCacheKey(name, type)) {
+        memScoped {
+            checkNotNull(
+                if (isStatic) checkNotNull(env.GetStaticFieldID)(
+                    environment.ptr,
+                    this@getField,
+                    allocCString(name),
+                    allocCString(typeString)
+                )
+                else checkNotNull(env.GetFieldID)(
+                    environment.ptr,
+                    this@getField,
+                    allocCString(name),
+                    allocCString(typeString)
+                )
+            ) { "Could not find field $name : $typeString" }
+        }
     }
 }

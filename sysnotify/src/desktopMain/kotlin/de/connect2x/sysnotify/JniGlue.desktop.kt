@@ -30,32 +30,20 @@ import kotlinx.cinterop.CPointed
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.StableRef
 import kotlinx.cinterop.asStableRef
-import kotlinx.cinterop.invoke
-import kotlinx.cinterop.memScoped
-import kotlinx.cinterop.pointed
-import kotlinx.cinterop.ptr
 import kotlinx.cinterop.staticCFunction
 import kotlinx.cinterop.toCPointer
 import kotlinx.coroutines.runBlocking
 
 internal expect fun createNotificationHandler(name: String): NotificationHandler
 
-internal fun registerNatives() {
-    val tNativeNotificationHandler = JvmRefType("de.connect2x.sysnotify.NativeNotificationHandler")
-    val tNativeNotificationAction = JvmRefType("de.connect2x.sysnotify.NativeNotificationAction")
-    val tString = JvmRefType("java.lang.String")
+private val typeNativeNotificationHandler = JvmRefType("de.connect2x.sysnotify.NativeNotificationHandler")
+private val typeNativeNotificationAction = JvmRefType("de.connect2x.sysnotify.NativeNotificationAction")
+private val typeString = JvmRefType("java.lang.String")
 
-    memScoped {
-        val env = checkNotNull(environment.pointed) { "Could not access JNI environment" }
-        checkNotNull(
-            checkNotNull(env.FindClass) { "Could not access JNI:FindClass function" }(
-                environment.ptr,
-                allocCString(tNativeNotificationHandler.objectName)
-            )
-        ) { "Could not find class de.connect2x.sysnotify.NativeNotificationHandler" }
-    }.apply {
+internal fun registerNatives() {
+    typeNativeNotificationHandler.jClass.apply {
         registerNativeFunction("create", staticCFunction(::create)) {
-            parameter(tString)
+            parameter(typeString)
             returns(JvmBuiltinType.LONG)
         }
         registerNativeFunction("destroy", staticCFunction(::destroy)) {
@@ -93,19 +81,19 @@ internal fun registerNatives() {
         }
         registerNativeFunction("push", staticCFunction(::push)) {
             parameter(JvmBuiltinType.LONG)
-            parameter(tString)
-            parameter(tString)
+            parameter(typeString)
+            parameter(typeString)
             parameter(JvmBuiltinType.BYTE.array())
-            parameter(tNativeNotificationAction)
-            parameter(tNativeNotificationAction)
-            parameter(tNativeNotificationAction)
+            parameter(typeNativeNotificationAction)
+            parameter(typeNativeNotificationAction)
+            parameter(typeNativeNotificationAction)
             returns(JvmBuiltinType.LONG)
         }
         registerNativeFunction("update", staticCFunction(::update)) {
             parameter(JvmBuiltinType.LONG)
             parameter(JvmBuiltinType.LONG)
-            parameter(tString)
-            parameter(tString)
+            parameter(typeString)
+            parameter(typeString)
             parameter(JvmBuiltinType.BYTE.array())
             returns(JvmBuiltinType.LONG)
         }
@@ -190,9 +178,9 @@ private fun push(
                     title = title?.toKString() ?: "Unknown",
                     description = description?.toKString(),
                     icon = icon?.toByteArray(),
-                    activateAction = {},
-                    dismissAction = {},
-                    failAction = {}
+                    activateAction = { println("ACTIVATED") },
+                    dismissAction = { println("DISMISSED") },
+                    failAction = { println("FAILED") }
                 )
             )
     }?.let { StableRef.create(it).asCPointer().rawValue.toLong() } ?: 0

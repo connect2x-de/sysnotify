@@ -13,15 +13,27 @@
  * limitations under the License.
  */
 
+@file:OptIn(ExperimentalForeignApi::class)
+
 package de.connect2x.sysnotify
+
+import kotlinx.cinterop.ExperimentalForeignApi
 
 internal interface JvmType {
     val typeName: String
     val objectName: String
         get() = typeName
-    fun toSignatureString(): String = typeName
 
+    fun toSignatureString(): String = typeName
     fun array(depth: Int = 1): JvmArrayType = JvmArrayType(this, depth)
+}
+
+internal data class JvmRefType(override val typeName: String) : JvmType {
+    override val objectName: String = typeName.replace('.', '/')
+
+    override fun toSignatureString(): String {
+        return "L$objectName;"
+    }
 }
 
 internal enum class JvmBuiltinType(private val signature: String) : JvmType {
@@ -38,15 +50,8 @@ internal enum class JvmBuiltinType(private val signature: String) : JvmType {
     // @formatter:on
 
     override val typeName: String = name.lowercase()
+
     override fun toSignatureString(): String = signature
-}
-
-internal data class JvmRefType(override val typeName: String) : JvmType {
-    override val objectName: String = typeName.replace('.', '/')
-
-    override fun toSignatureString(): String {
-        return "L$objectName;"
-    }
 }
 
 internal data class JvmArrayType(private val type: JvmType, private val depth: Int = 1) : JvmType {
@@ -54,7 +59,7 @@ internal data class JvmArrayType(private val type: JvmType, private val depth: I
 
     override fun toSignatureString(): String {
         val builder = StringBuilder()
-        for(i in 0 until depth) builder.append('[')
+        for (i in 0 until depth) builder.append('[')
         builder.append(type.toSignatureString())
         return builder.toString()
     }
@@ -70,16 +75,18 @@ internal class JvmSignature {
     internal var returnType: JvmType = JvmBuiltinType.VOID
 
     companion object {
-        inline fun of(scope: JvmSignature.() -> Unit): String {
+        data class JvmSignatureResult(val signatureString: String, val signature: JvmSignature)
+
+        inline fun of(scope: JvmSignature.() -> Unit): JvmSignatureResult {
             val signature = JvmSignature().apply(scope)
             val builder = StringBuilder()
             builder.append('(')
-            for(param in signature.parameters) {
+            for (param in signature.parameters) {
                 builder.append(param.toSignatureString())
             }
             builder.append(')')
             builder.append(signature.returnType.toSignatureString())
-            return builder.toString()
+            return JvmSignatureResult(builder.toString(), signature)
         }
     }
 
