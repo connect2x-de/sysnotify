@@ -27,22 +27,35 @@
 #include <wrl/wrappers/corewrappers.h>
 #include <wrl/implements.h>
 #include <wrl/event.h>
+#include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Storage.h>
 #include <winrt/Windows.Storage.Streams.h>
 #include <winrt/Windows.Graphics.Imaging.h>
+#include <winrt/Windows.UI.Notifications.h>
 #include <roapi.h>
 
 #include "log.hpp"
 
 namespace sysnotify {
-    using namespace winrt;
+    // Windows foundation library
+    namespace wfl {
+        using namespace Windows::Foundation;
+    }
 
-    constexpr size_t GUID_BUFFER_SIZE = 40;
+    // Windows runtime (not WRL)
+    namespace wrt {
+        using namespace winrt::Windows;
+        using namespace winrt::Windows::Storage;
+        using namespace winrt::Windows::Storage::Streams;
+        using namespace winrt::Windows::Graphics::Imaging;
+        using namespace winrt::Windows::Foundation;
+        using namespace winrt::Windows::UI::Notifications;
+    }
 
     // COM objects
 
     class __declspec(uuid("54BF154E-5239-42FA-B80C-6E405A0F413E")) NotificationActivator final
-        : public RuntimeClass<RuntimeClassFlags<ClassicCom>, INotificationActivationCallback> {
+        : public wrl::RuntimeClass<wrl::RuntimeClassFlags<wrl::ClassicCom>, INotificationActivationCallback> {
         long _ref_count = 0;
 
     public:
@@ -50,7 +63,11 @@ namespace sysnotify {
                                                          LPCWSTR invoked_args,
                                                          const NOTIFICATION_USER_INPUT_DATA* data,
                                                          ULONG data_count) override {
-            return S_OK;// TODO: Implement action callbacks.. somehow..
+            /*
+             * This COM object is a dummy right now and might be used to implement
+             * additional functionality in the future, such as cold-launching.
+             */
+            return S_OK;
         }
 
         [[nodiscard]] virtual HRESULT __stdcall QueryInterface(REFIID riid, void** ppObj) override {
@@ -90,7 +107,7 @@ namespace sysnotify {
         }
 
         SYSNOTIFY_LOG_DEBUG("Creating COM module");
-        auto& module = Module<OutOfProc>::Create([] {
+        auto& module = wrl::Module<wrl::OutOfProc>::Create([] {
         });
         SYSNOTIFY_LOG_DEBUG("Created COM module at {}", fmt::ptr(&module));
         module.IncrementObjectCount();
@@ -101,14 +118,14 @@ namespace sysnotify {
         // Create notifier
         SYSNOTIFY_LOG_DEBUG("Creating toast notifier instance");
         SYSNOTIFY_REQUIRE_SUCCESS(
-            GetActivationFactory(HStringReference(RuntimeClass_Windows_UI_Notifications_ToastNotificationManager).Get(), &_manager));
+            wfl::GetActivationFactory(wrl::HStringReference(RuntimeClass_Windows_UI_Notifications_ToastNotificationManager).Get(), &_manager));
         SYSNOTIFY_REQUIRE(_manager);
-        SYSNOTIFY_REQUIRE_SUCCESS(_manager->CreateToastNotifierWithId(HStringReference(_aum_id.c_str()).Get(), &_notifier));
+        SYSNOTIFY_REQUIRE_SUCCESS(_manager->CreateToastNotifierWithId(wrl::HStringReference(_aum_id.c_str()).Get(), &_notifier));
         SYSNOTIFY_LOG_DEBUG("Created toast notifier at {}", fmt::ptr(_notifier.Get()));
 
         // Create factory
         SYSNOTIFY_REQUIRE_SUCCESS(
-            GetActivationFactory(HStringReference(RuntimeClass_Windows_UI_Notifications_ToastNotification).Get(), &_factory));
+            wfl::GetActivationFactory(wrl::HStringReference(RuntimeClass_Windows_UI_Notifications_ToastNotification).Get(), &_factory));
         SYSNOTIFY_REQUIRE(_factory);
         SYSNOTIFY_LOG_DEBUG("Created toast notification factory at {}", fmt::ptr(_factory.Get()));
 
@@ -122,7 +139,7 @@ namespace sysnotify {
     }
 
     NotificationHandler::~NotificationHandler() {
-        auto& module = Module<OutOfProc>::GetModule();
+        auto& module = wrl::Module<wrl::OutOfProc>::GetModule();
         module.DecrementObjectCount();
         SYSNOTIFY_LOG_DEBUG("Unregistering COM objects");
         module.UnregisterObjects();
@@ -191,7 +208,7 @@ namespace sysnotify {
 
         // Create shell link
         SYSNOTIFY_LOG_DEBUG("Creating COM shell link");
-        ComPtr<IShellLinkW> shell_link {};
+        wrl::ComPtr<IShellLinkW> shell_link {};
         SYSNOTIFY_REQUIRE_SUCCESS(CoCreateInstance(CLSID_ShellLink, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&shell_link)));
         SYSNOTIFY_REQUIRE(shell_link);
         SYSNOTIFY_REQUIRE_SUCCESS(shell_link->SetPath(executable_path.c_str()));
@@ -200,7 +217,7 @@ namespace sysnotify {
 
         // Set up property store interface
         SYSNOTIFY_LOG_DEBUG("Creating shell link property store");
-        ComPtr<IPropertyStore> property_store {};
+        wrl::ComPtr<IPropertyStore> property_store {};
         SYSNOTIFY_REQUIRE_SUCCESS(shell_link.As(&property_store));
         SYSNOTIFY_REQUIRE(property_store);
         SYSNOTIFY_LOG_DEBUG("Created shell link property store at {}", fmt::ptr(property_store.Get()));
@@ -222,7 +239,7 @@ namespace sysnotify {
         SYSNOTIFY_REQUIRE_SUCCESS(property_store->Commit());
 
         // Save shortcut to file
-        ComPtr<IPersistFile> persist_file {};
+        wrl::ComPtr<IPersistFile> persist_file {};
         SYSNOTIFY_REQUIRE_SUCCESS(shell_link.As(&persist_file));
         SYSNOTIFY_REQUIRE(persist_file);
         SYSNOTIFY_LOG_DEBUG("Created shell link persist file at {}", fmt::ptr(persist_file.Get()));
@@ -230,39 +247,39 @@ namespace sysnotify {
         SYSNOTIFY_LOG_DEBUG("Created COM service shortcut at {}", shortcut_path.string());
     }
 
-    auto NotificationHandler::create_content_document(const NotificationContent& content) -> ComPtr<IXmlDocument> {
-        ComPtr<IXmlDocument> document {};
+    auto NotificationHandler::create_content_document(const NotificationContent& content) -> wrl::ComPtr<abi::IXmlDocument> {
+        wrl::ComPtr<abi::IXmlDocument> document {};
         SYSNOTIFY_REQUIRE_SUCCESS(
-            ActivateInstance(HStringReference(RuntimeClass_Windows_Data_Xml_Dom_XmlDocument).Get(), &document));
+            wfl::ActivateInstance(wrl::HStringReference(RuntimeClass_Windows_Data_Xml_Dom_XmlDocument).Get(), &document));
         SYSNOTIFY_REQUIRE(document);
         SYSNOTIFY_LOG_DEBUG("Created XML content document at {}", fmt::ptr(document.Get()));
 
-        ComPtr<IXmlDocumentIO> document_io {};
+        wrl::ComPtr<abi::IXmlDocumentIO> document_io {};
         SYSNOTIFY_REQUIRE_SUCCESS(document.As(&document_io));
         SYSNOTIFY_REQUIRE(document_io);
         const auto content_string = format_content(content);
-        SYSNOTIFY_REQUIRE_SUCCESS(document_io->LoadXml(HStringReference(content_string.c_str()).Get()));
+        SYSNOTIFY_REQUIRE_SUCCESS(document_io->LoadXml(wrl::HStringReference(content_string.c_str()).Get()));
 
         return document;
     }
 
     [[nodiscard]] inline auto make_icon_if_present(const NotificationContent& content) -> std::optional<std::filesystem::path> {
-        using namespace winrt::Windows::Storage;
-        using namespace winrt::Windows::Storage::Streams;
-        using namespace winrt::Windows::Graphics::Imaging;
-
         const auto width = content.icon_width;
         const auto height = content.icon_height;
         if(width <= 0 || height <= 0) {
-            return std::nullopt;
+            return std::nullopt; // No icon if width or height are leq 0..
+        }
+        const auto* icon_data_src = content.icon;
+        if(icon_data_src == nullptr) {
+            return std::nullopt; // No icon if the data pointer is null..c
         }
 
         // Load icon data into software bitmap instance
-        SoftwareBitmap bitmap(BitmapPixelFormat::Rgba8, width, height);
-        DataWriter writer{};
+        wrt::SoftwareBitmap bitmap(wrt::BitmapPixelFormat::Rgba8, width, height);
+        wrt::DataWriter writer{};
         const auto icon_size = (static_cast<size_t>(width) * height) << 2;
         std::vector<uint8_t> icon_data(icon_size);
-        memcpy(icon_data.data(), content.icon, icon_size);
+        memcpy(icon_data.data(), icon_data_src, icon_size);
         writer.WriteBytes(icon_data);
         bitmap.CopyFromBuffer(writer.DetachBuffer());
 
@@ -272,38 +289,99 @@ namespace sysnotify {
         return std::nullopt;
     }
 
+    auto NotificationHandler::register_actions(wrl::ComPtr<abi::IToastNotification>& notification, const GUID& tag, const NotificationContent& content) -> void {
+        // Set up event callbacks
+        using ActivationCallback = wrt::TypedEventHandler<wrt::ToastNotification, wrt::IInspectable>;
+        using DismissCallback = wrt::TypedEventHandler<wrt::ToastNotification, wrt::ToastDismissedEventArgs>;
+        using FailCallback = wrt::TypedEventHandler<wrt::ToastNotification, wrt::ToastFailedEventArgs>;
+
+        EventRegistrationToken activate_event_token{};
+        EventRegistrationToken dismiss_event_token{};
+        EventRegistrationToken fail_event_token{};
+
+        /**
+         * This deserves a small explanation as the code is a little bit convoluted;
+         *
+         * We inject lambda-based callbacks into the notification itself to avoid
+         * using the provided COM object for click callbacks, since this allows us
+         * to have a lot more granular control over how the toast is handled by the caller.
+         *
+         * We create a Windows Runtime based implementation of an ITypedEventHandler<IToastNotification, _>
+         * and grab its underlying COM address to cast it to the desired interface type, similar to a
+         * call to QueryInterface. The very long type name in the as<>() call is the ABI type of the
+         * event handler implementation generated by Windows internal IDL (i suppose since the names are horrible?).
+         *
+         * The actual callback lambdas copies the address of the notification's action function by value,
+         * as well as the provided user_data (in the sn_notification_content structure) alongside a copy
+         * of the this-pointer of the current NotificationHandler instance to allow accessing the _tags map.
+         */
+
+        // @formatter:off
+        if(content.activate_action != nullptr) {
+            SYSNOTIFY_LOG_DEBUG("Injecting activate callback into notification {}", guid_to_string(tag));
+            notification->add_Activated(ActivationCallback(
+                [action = content.activate_action, user_data = content.user_data, tag, this](const wrt::ToastNotification& n, const wrt::IInspectable& args){
+                    action(reinterpret_cast<const sn_notification_tag*>(&tag), user_data);
+                    _tags.erase(tag); // If the toast is activated, it is removed
+                    SYSNOTIFY_LOG_DEBUG("Removed notification {} from tag map: activated", guid_to_string(tag));
+                }).as<__FITypedEventHandler_2_Windows__CUI__CNotifications__CToastNotification_IInspectable>().get(), &activate_event_token);
+        }
+
+        if(content.dismiss_action != nullptr) {
+            SYSNOTIFY_LOG_DEBUG("Injecting dismiss callback into notification {}", guid_to_string(tag));
+            notification->add_Dismissed(DismissCallback(
+                [action = content.dismiss_action, user_data = content.user_data, tag, this](const wrt::ToastNotification& n, const wrt::ToastDismissedEventArgs& args){
+                    action(reinterpret_cast<const sn_notification_tag*>(&tag), user_data);
+                    _tags.erase(tag); // If the toast is dismissed, it is removed
+                    SYSNOTIFY_LOG_DEBUG("Removed notification {} from tag map: dismissed", guid_to_string(tag));
+                }).as<__FITypedEventHandler_2_Windows__CUI__CNotifications__CToastNotification_Windows__CUI__CNotifications__CToastDismissedEventArgs>().get(), &dismiss_event_token);
+        }
+
+        if(content.fail_action != nullptr) {
+            SYSNOTIFY_LOG_DEBUG("Injecting fail callback into notification {}", guid_to_string(tag));
+            notification->add_Failed(FailCallback(
+                [action = content.fail_action, user_data = content.user_data, tag, this](const wrt::ToastNotification& n, const wrt::ToastFailedEventArgs& args){
+                    action(reinterpret_cast<const sn_notification_tag*>(&tag), user_data);
+                    _tags.erase(tag); // If the toast has failed, we need to remove it too
+                    SYSNOTIFY_LOG_DEBUG("Removed notification {} from tag map: failed", guid_to_string(tag));
+                }).as<__FITypedEventHandler_2_Windows__CUI__CNotifications__CToastNotification_Windows__CUI__CNotifications__CToastFailedEventArgs>().get(), &fail_event_token);
+        }
+        // @formatter:on
+    }
+
     auto NotificationHandler::push(const NotificationContent& content) -> GUID {
-        ComPtr<IToastNotification> notification {};
+        wrl::ComPtr<abi::IToastNotification> notification {};
         SYSNOTIFY_REQUIRE_SUCCESS(_factory->CreateToastNotification(create_content_document(content).Get(), &notification));
         SYSNOTIFY_REQUIRE(notification);
         SYSNOTIFY_LOG_DEBUG("Created toast notification at {}", fmt::ptr(notification.Get()));
 
+        // Generate and update tag
         GUID tag {};
         SYSNOTIFY_REQUIRE_SUCCESS(CoCreateGuid(&tag));
-        std::wstring tag_string(GUID_BUFFER_SIZE, 0);
-        const auto tag_length = StringFromGUID2(tag, tag_string.data(), GUID_BUFFER_SIZE);
-        SYSNOTIFY_REQUIRE(tag_length > 0);
-        tag_string.resize(tag_length);
+        const auto tag_string = guid_to_wstring(tag);
         SYSNOTIFY_LOG_DEBUG("Created notification tag GUID {}", kstd::unicode::convert<char>(tag_string));
 
-        ComPtr<IToastNotification2> notification2 {};
+        wrl::ComPtr<abi::IToastNotification2> notification2 {};
         SYSNOTIFY_REQUIRE_SUCCESS(notification.As(&notification2));
-        notification2->put_Tag(HStringReference(tag_string.c_str()).Get());
+        notification2->put_Tag(wrl::HStringReference(tag_string.c_str()).Get());
         SYSNOTIFY_LOG_DEBUG("Updated notification tag");
 
-        _tags[tag] = NotificationTag(tag, make_icon_if_present(content));
+        register_actions(notification, tag, content);
+
+        // Add to internal map and display toast
+        _tags[tag] = {tag, make_icon_if_present(content)};
         SYSNOTIFY_REQUIRE_SUCCESS(_notifier->Show(notification.Get()));
 
         return tag;
     }
 
-    auto NotificationHandler::get_notification(const GUID& tag) -> ComPtr<IToastNotification> {
-        ComPtr<IToastNotificationHistory2> history2 {};
+    auto NotificationHandler::get_notification(const GUID& tag) -> wrl::ComPtr<abi::IToastNotification> {
+        wrl::ComPtr<abi::IToastNotificationHistory2> history2 {};
         SYSNOTIFY_REQUIRE_SUCCESS(_history.As(&history2));
         SYSNOTIFY_REQUIRE(history2);
 
-        ComPtr<IVectorView<ToastNotification*>> notifications {};
-        SYSNOTIFY_REQUIRE_SUCCESS(history2->GetHistoryWithId(HStringReference(_aum_id.c_str()).Get(), &notifications));
+        wrl::ComPtr<abi::IVectorView<abi::ToastNotification*>> notifications {};
+        SYSNOTIFY_REQUIRE_SUCCESS(history2->GetHistoryWithId(wrl::HStringReference(_aum_id.c_str()).Get(), &notifications));
         SYSNOTIFY_REQUIRE(notifications);
 
         uint32_t notification_count = 0;
@@ -313,11 +391,11 @@ namespace sysnotify {
         }
 
         for(uint32_t index = 0; index < notification_count; ++index) {
-            ComPtr<IToastNotification> notification {};
+            wrl::ComPtr<abi::IToastNotification> notification {};
             SYSNOTIFY_REQUIRE_SUCCESS(notifications->GetAt(index, &notification));
             SYSNOTIFY_REQUIRE(notification);
 
-            ComPtr<IToastNotification2> notification2 {};
+            wrl::ComPtr<abi::IToastNotification2> notification2 {};
             SYSNOTIFY_REQUIRE_SUCCESS(notification.As(&notification2));
             SYSNOTIFY_REQUIRE(notification2);
 
@@ -342,7 +420,7 @@ namespace sysnotify {
 
     auto NotificationHandler::update(const GUID& tag, const NotificationContent& content) -> void {
         auto notification = get_notification(tag);
-        ComPtr<IXmlDocument> document {};
+        wrl::ComPtr<abi::IXmlDocument> document {};
         SYSNOTIFY_REQUIRE_SUCCESS(notification->get_Content(&document));
         SYSNOTIFY_REQUIRE(document);
         SYSNOTIFY_REQUIRE_SUCCESS(create_content_document(content).CopyTo(&document));

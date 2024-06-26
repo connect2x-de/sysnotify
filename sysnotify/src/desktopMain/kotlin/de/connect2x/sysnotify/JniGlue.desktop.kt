@@ -24,6 +24,7 @@ import jni.jbyteArray
 import jni.jclass
 import jni.jint
 import jni.jlong
+import jni.jobject
 import jni.jstring
 import kotlinx.cinterop.CPointed
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -40,39 +41,78 @@ import kotlinx.coroutines.runBlocking
 internal expect fun createNotificationHandler(name: String): NotificationHandler
 
 internal fun registerNatives() {
+    val tNativeNotificationHandler = JvmRefType("de.connect2x.sysnotify.NativeNotificationHandler")
+    val tNativeNotificationAction = JvmRefType("de.connect2x.sysnotify.NativeNotificationAction")
+    val tString = JvmRefType("java.lang.String")
+
     memScoped {
         val env = checkNotNull(environment.pointed) { "Could not access JNI environment" }
         checkNotNull(
             checkNotNull(env.FindClass) { "Could not access JNI:FindClass function" }(
                 environment.ptr,
-                allocCString("de/connect2x/sysnotify/NativeNotificationHandler")
+                allocCString(tNativeNotificationHandler.objectName)
             )
         ) { "Could not find class de.connect2x.sysnotify.NativeNotificationHandler" }
     }.apply {
-        registerNativeFunction("create", "(Ljava/lang/String;)J", staticCFunction(::create))
-        registerNativeFunction("destroy", "(J)V", staticCFunction(::destroy))
-        registerNativeFunction("getPlatform", "(J)I", staticCFunction(::getPlatform))
-        registerNativeFunction("isTitleSupported", "(J)Z", staticCFunction(::isTitleSupported))
+        registerNativeFunction("create", staticCFunction(::create)) {
+            parameter(tString)
+            returns(JvmBuiltinType.LONG)
+        }
+        registerNativeFunction("destroy", staticCFunction(::destroy)) {
+            parameter(JvmBuiltinType.LONG)
+        }
+        registerNativeFunction("getPlatform", staticCFunction(::getPlatform)) {
+            parameter(JvmBuiltinType.LONG)
+            returns(JvmBuiltinType.INT)
+        }
+        registerNativeFunction("isTitleSupported", staticCFunction(::isTitleSupported)) {
+            parameter(JvmBuiltinType.LONG)
+            returns(JvmBuiltinType.BOOLEAN)
+        }
         registerNativeFunction(
             "isDescriptionSupported",
-            "(J)Z",
             staticCFunction(::isDescriptionSupported)
-        )
-        registerNativeFunction("isIconSupported", "(J)Z", staticCFunction(::isIconSupported))
-        registerNativeFunction("isActionSupported", "(J)Z", staticCFunction(::isActionSupported))
-        registerNativeFunction("isPopSupported", "(J)Z", staticCFunction(::isPopSupported))
-        registerNativeFunction("requestPermissions", "(J)V", staticCFunction(::requestPermissions))
-        registerNativeFunction(
-            "push",
-            "(JLjava/lang/String;Ljava/lang/String;[B)J",
-            staticCFunction(::push)
-        )
-        registerNativeFunction(
-            "update",
-            "(JJLjava/lang/String;Ljava/lang/String;[B)J",
-            staticCFunction(::update)
-        )
-        registerNativeFunction("pop", "(JJ)V", staticCFunction(::pop))
+        ) {
+            parameter(JvmBuiltinType.LONG)
+            returns(JvmBuiltinType.BOOLEAN)
+        }
+        registerNativeFunction("isIconSupported", staticCFunction(::isIconSupported)) {
+            parameter(JvmBuiltinType.LONG)
+            returns(JvmBuiltinType.BOOLEAN)
+        }
+        registerNativeFunction("isActionSupported", staticCFunction(::isActionSupported)) {
+            parameter(JvmBuiltinType.LONG)
+            returns(JvmBuiltinType.BOOLEAN)
+        }
+        registerNativeFunction("isPopSupported", staticCFunction(::isPopSupported)) {
+            parameter(JvmBuiltinType.LONG)
+            returns(JvmBuiltinType.BOOLEAN)
+        }
+        registerNativeFunction("requestPermissions", staticCFunction(::requestPermissions)) {
+            parameter(JvmBuiltinType.LONG)
+        }
+        registerNativeFunction("push", staticCFunction(::push)) {
+            parameter(JvmBuiltinType.LONG)
+            parameter(tString)
+            parameter(tString)
+            parameter(JvmBuiltinType.BYTE.array())
+            parameter(tNativeNotificationAction)
+            parameter(tNativeNotificationAction)
+            parameter(tNativeNotificationAction)
+            returns(JvmBuiltinType.LONG)
+        }
+        registerNativeFunction("update", staticCFunction(::update)) {
+            parameter(JvmBuiltinType.LONG)
+            parameter(JvmBuiltinType.LONG)
+            parameter(tString)
+            parameter(tString)
+            parameter(JvmBuiltinType.BYTE.array())
+            returns(JvmBuiltinType.LONG)
+        }
+        registerNativeFunction("pop", staticCFunction(::pop)) {
+            parameter(JvmBuiltinType.LONG)
+            parameter(JvmBuiltinType.LONG)
+        }
     }
 }
 
@@ -137,7 +177,10 @@ private fun push(
     handler: jlong,
     title: jstring?,
     description: jstring?,
-    icon: jbyteArray?
+    icon: jbyteArray?,
+    activateAction: jobject?,
+    dismissAction: jobject?,
+    failAction: jobject?
 ): jlong {
     return runBlocking {
         checkNotNull(handler.toCPointer<CPointed>())
@@ -146,7 +189,10 @@ private fun push(
                 Notification(
                     title = title?.toKString() ?: "Unknown",
                     description = description?.toKString(),
-                    icon = icon?.toByteArray()
+                    icon = icon?.toByteArray(),
+                    activateAction = {},
+                    dismissAction = {},
+                    failAction = {}
                 )
             )
     }?.let { StableRef.create(it).asCPointer().rawValue.toLong() } ?: 0

@@ -39,13 +39,12 @@ typedef int sn_bool;
 typedef int sn_error;
 typedef struct sn_notification_handler_* sn_notification_handler;
 
-// A notification tag can be interpreted as a 128-bit UUIDv4
 typedef struct sn_notification_tag_ {
     uint64_t lower;
     uint64_t upper;
 } sn_notification_tag;
 
-typedef void (*sn_notification_action)(const sn_notification_tag* tag);
+typedef void (*sn_notification_action)(const sn_notification_tag* tag, void* user_data);
 
 typedef struct sn_notification_content_ {
     const char* title;
@@ -55,7 +54,8 @@ typedef struct sn_notification_content_ {
     int icon_height;
     sn_notification_action activate_action;
     sn_notification_action dismiss_action;
-    sn_notification_action failed_action;
+    sn_notification_action fail_action;
+    void* user_data;
 } sn_notification_content;
 
 #ifdef __cplusplus

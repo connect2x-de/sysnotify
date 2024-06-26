@@ -117,7 +117,10 @@ kotlin {
     mingwX64 {
         compilations["main"].cinterops {
             val sysnotifycom by creating {
-                headers("${comPath / "include" / "sysnotify.h"}")
+                headers(
+                    "${comPath / "include" / "sysnotify_types.h"}",
+                    "${comPath / "include" / "sysnotify.h"}"
+                )
             }
             val jni by creating {
                 compilerOpts("-I${jniHeaders / "win32"}")

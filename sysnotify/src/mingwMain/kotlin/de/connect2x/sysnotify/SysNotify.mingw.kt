@@ -34,13 +34,24 @@ import de.connect2x.sysnotify.com.sysnotify_handler_is_valid_tag
 import de.connect2x.sysnotify.com.sysnotify_handler_pop
 import de.connect2x.sysnotify.com.sysnotify_handler_push
 import de.connect2x.sysnotify.com.sysnotify_handler_update
+import kotlinx.cinterop.COpaquePointer
+import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.MemScope
+import kotlinx.cinterop.StableRef
 import kotlinx.cinterop.alloc
+import kotlinx.cinterop.asStableRef
 import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.pin
 import kotlinx.cinterop.ptr
+import kotlinx.cinterop.rawValue
+import kotlinx.cinterop.staticCFunction
 import kotlinx.cinterop.toKStringFromUtf8
 import kotlinx.cinterop.value
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
 private inline fun sn_error.check() {
     if (this == SYSNOTIFY_OK) return
@@ -55,25 +66,18 @@ private inline fun throwLastError() {
 
 private inline fun sn_notification_tag.toUuid(): Uuid = Uuid(lower.toLong(), upper.toLong())
 
-private inline fun MemScope.allocNotification(notification: Notification): sn_notification_content {
-    val content = alloc<sn_notification_content>()
-    content.title = allocCString(notification.title)
-    content.description = allocCString(notification.description)
-    return content
-}
-
 private inline fun MemScope.allocNotificationTag(tag: Uuid): sn_notification_tag {
-    val result = alloc<sn_notification_tag>()
-    result.lower = tag.leastSignificantBits.toULong()
-    result.upper = tag.mostSignificantBits.toULong()
-    return result
+    return alloc<sn_notification_tag> {
+        lower = tag.leastSignificantBits.toULong()
+        upper = tag.mostSignificantBits.toULong()
+    }
 }
 
 internal data class WindowsNotificationHandle(
     val handler: WindowsNotificationHandler,
     val tag: Uuid
 ) : NotificationHandle {
-    val isValid: Boolean
+    inline val isValid: Boolean
         get() = memScoped {
             val result = alloc<sn_boolVar>()
             sysnotify_handler_is_valid_tag(
@@ -104,7 +108,7 @@ internal class WindowsNotificationHandler(
         isDescriptionSupported = true,
         isIconSupported = true,
         isActionSupported = true,
-        isPopSupported = false
+        isPopSupported = true
     )
 
     override fun close() {
@@ -125,6 +129,7 @@ internal class WindowsNotificationHandler(
         notification: Notification
     ): NotificationHandle {
         require(handle is WindowsNotificationHandle) { "Handle is not a Windows notification handle" }
+        require(handle.isValid) { "Handle is not valid" }
         memScoped {
             val tag = allocNotificationTag(handle.tag)
             val content = allocNotification(notification)
@@ -139,8 +144,38 @@ internal class WindowsNotificationHandler(
 
     override suspend fun pop(handle: NotificationHandle) {
         require(handle is WindowsNotificationHandle) { "Handle is not a Windows notification handle" }
+        require(handle.isValid) { "Handle is not valid" }
         memScoped {
             sysnotify_handler_pop(address, allocNotificationTag(handle.tag).ptr).check()
+        }
+    }
+
+    private inline fun MemScope.allocNotification(notification: Notification): sn_notification_content {
+        return alloc<sn_notification_content> {
+            title = allocCString(notification.title)
+            description = allocCString(notification.description)
+            user_data = StableRef.create(notification).asCPointer()
+            activate_action =
+                staticCFunction { _: CPointer<sn_notification_tag>?, userData: COpaquePointer? ->
+                    checkNotNull(userData).asStableRef<Notification>().apply {
+                        get().activateAction?.invoke()
+                        dispose()
+                    }
+                }
+            dismiss_action =
+                staticCFunction { _: CPointer<sn_notification_tag>?, userData: COpaquePointer? ->
+                    checkNotNull(userData).asStableRef<Notification>().apply {
+                        get().dismissAction?.invoke()
+                        dispose()
+                    }
+                }
+            fail_action =
+                staticCFunction { _: CPointer<sn_notification_tag>?, userData: COpaquePointer? ->
+                    checkNotNull(userData).asStableRef<Notification>().apply {
+                        get().failAction?.invoke()
+                        dispose()
+                    }
+                }
         }
     }
 }

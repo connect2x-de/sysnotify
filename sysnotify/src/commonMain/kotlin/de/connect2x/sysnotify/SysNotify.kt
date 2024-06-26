@@ -48,8 +48,11 @@ data class Notification(
     val title: String? = null,
     val description: String? = null,
     val icon: ByteArray? = null,
-    val action: (() -> Unit)? = null
+    val activateAction: (() -> Unit)? = null,
+    val dismissAction: (() -> Unit)? = null,
+    val failAction: (() -> Unit)? = null
 ) {
+    // Begin ugly generated code
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other == null || this::class != other::class) return false
@@ -62,7 +65,9 @@ data class Notification(
             if (other.icon == null) return false
             if (!icon.contentEquals(other.icon)) return false
         } else if (other.icon != null) return false
-        if (action != other.action) return false
+        if (activateAction != other.activateAction) return false
+        if (dismissAction != other.dismissAction) return false
+        if (failAction != other.failAction) return false
 
         return true
     }
@@ -71,10 +76,12 @@ data class Notification(
         var result = title?.hashCode() ?: 0
         result = 31 * result + (description?.hashCode() ?: 0)
         result = 31 * result + (icon?.contentHashCode() ?: 0)
-        result = 31 * result + (action?.hashCode() ?: 0)
+        result = 31 * result + (activateAction?.hashCode() ?: 0)
+        result = 31 * result + (dismissAction?.hashCode() ?: 0)
+        result = 31 * result + (failAction?.hashCode() ?: 0)
         return result
     }
-
+    // End ugly generated code
 }
 
 /**

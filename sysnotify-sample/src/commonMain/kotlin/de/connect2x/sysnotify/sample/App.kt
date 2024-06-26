@@ -85,14 +85,17 @@ fun App(notificationHandler: NotificationHandler) {
                     modifier = Modifier.weight(1F).padding(vertical = 10.dp)
                 )
             }
-            // TODO: implement icon (and somehow action?)
+            // TODO: implement icon
             Row {
                 Button(
                     onClick = {
                         coroutineScope.launch {
                             notificationHandler.push(Notification(
                                 title = title,
-                                description = description
+                                description = description,
+                                activateAction = { println("Notification activated!") },
+                                dismissAction = { println("Notification dismissed!") },
+                                failAction = { println("Notification failed!") }
                             ))
                         }
                     },

@@ -46,7 +46,10 @@ private class JvmNotificationHandler(
             handler = address,
             title = notification.title ?: "Unknown",
             description = notification.description,
-            icon = notification.icon
+            icon = notification.icon,
+            activateAction = { notification.activateAction?.invoke() },
+            dismissAction = { notification.dismissAction?.invoke() },
+            failAction = { notification.failAction?.invoke() }
         )
         return if (handle != 0L) JvmNotificationHandle(handle)
         else null

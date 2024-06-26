@@ -14,7 +14,8 @@ target_link_libraries(sysnotify-com PRIVATE
         kernel32.lib
         ole32.lib
         user32.lib
-        runtimeobject.lib)
+        runtimeobject.lib
+        WindowsApp.lib)
 
 target_compile_definitions(sysnotify-com PUBLIC
         FMT_HEADER_ONLY=1

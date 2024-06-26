@@ -28,12 +28,18 @@
 #include "sysnotify_types.h"
 
 namespace sysnotify {
-    using namespace Windows::Foundation;
-    using namespace Microsoft::WRL;
-    using namespace Microsoft::WRL::Wrappers;
-    using namespace ABI::Windows::Foundation::Collections;
-    using namespace ABI::Windows::Data::Xml::Dom;
-    using namespace ABI::Windows::UI::Notifications;
+    // Windows runtime library (not WRT)
+    namespace wrl {
+        using namespace Microsoft::WRL;
+        using namespace Microsoft::WRL::Wrappers;
+    }
+
+    // Windows ABI
+    namespace abi {
+        using namespace ABI::Windows::Foundation::Collections;
+        using namespace ABI::Windows::Data::Xml::Dom;
+        using namespace ABI::Windows::UI::Notifications;
+    }
 
     using NotificationContent = sn_notification_content;
 
@@ -43,19 +49,20 @@ namespace sysnotify {
             std::optional<std::filesystem::path> icon_path;
         };
 
-        ComPtr<IToastNotificationManagerStatics> _manager;
-        ComPtr<IToastNotificationManagerStatics2> _manager2;
-        ComPtr<IToastNotifier> _notifier;
-        ComPtr<IToastNotificationFactory> _factory;
-        ComPtr<IToastNotificationHistory> _history;
+        wrl::ComPtr<abi::IToastNotificationManagerStatics> _manager;
+        wrl::ComPtr<abi::IToastNotificationManagerStatics2> _manager2;
+        wrl::ComPtr<abi::IToastNotifier> _notifier;
+        wrl::ComPtr<abi::IToastNotificationFactory> _factory;
+        wrl::ComPtr<abi::IToastNotificationHistory> _history;
         std::wstring _app_name;
         std::wstring _aum_id;
         phmap::parallel_flat_hash_map<GUID, NotificationTag> _tags;
 
         auto create_shortcut_if_needed() -> void;
         auto set_aumid() -> void;
-        [[nodiscard]] auto create_content_document(const NotificationContent& content) -> ComPtr<IXmlDocument>;
-        [[nodiscard]] auto get_notification(const GUID& tag) -> ComPtr<IToastNotification>;
+        [[nodiscard]] auto create_content_document(const NotificationContent& content) -> wrl::ComPtr<abi::IXmlDocument>;
+        [[nodiscard]] auto get_notification(const GUID& tag) -> wrl::ComPtr<abi::IToastNotification>;
+        auto register_actions(wrl::ComPtr<abi::IToastNotification>& notification, const GUID& tag, const NotificationContent& content) -> void;
 
     public:
         NotificationHandler(const std::string& app_name, const std::string& aum_id);

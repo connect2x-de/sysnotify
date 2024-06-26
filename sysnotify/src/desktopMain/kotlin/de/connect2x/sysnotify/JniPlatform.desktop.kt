@@ -125,13 +125,13 @@ internal inline fun MemScope.allocCString(value: String?): CPointer<ByteVar>? {
 
 internal inline fun jclass.registerNativeFunction(
     name: String,
-    signature: String,
-    address: COpaquePointer
+    address: COpaquePointer,
+    signature: JvmSignature.() -> Unit
 ) {
     memScoped {
         val method = alloc<JNINativeMethod>()
         method.name = allocCString(name)
-        method.signature = allocCString(signature)
+        method.signature = allocCString(JvmSignature.of(signature))
         method.fnPtr = address
         checkNotNull(environment.pointed?.RegisterNatives) { "Could not access JNI:RegisterNatives function" }(
             environment.ptr,

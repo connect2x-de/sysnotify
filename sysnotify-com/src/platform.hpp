@@ -121,6 +121,8 @@ namespace sysnotify {
 #define SYSNOTIFY_REQUIRE(x) sysnotify::require(x, #x)
 
 namespace sysnotify {
+    constexpr size_t GUID_BUFFER_SIZE = 40;
+
     [[nodiscard]] inline auto get_process_path(HANDLE process = GetCurrentProcess()) -> std::filesystem::path {
         std::wstring executable_path(MAX_PATH, 0);
         const auto new_length = GetModuleFileNameExW(process, nullptr, executable_path.data(), MAX_PATH);
@@ -132,6 +134,18 @@ namespace sysnotify {
     [[nodiscard]] inline auto is_packaged_app() -> bool {
         uint32_t length = 0U;
         return GetCurrentPackageId(&length, nullptr) == S_OK && length > 0;
+    }
+
+    [[nodiscard]] inline auto guid_to_wstring(const GUID& value) -> std::wstring {
+        std::wstring result(GUID_BUFFER_SIZE, 0);
+        const auto tag_length = StringFromGUID2(value, result.data(), GUID_BUFFER_SIZE);
+        SYSNOTIFY_REQUIRE(tag_length > 0);
+        result.resize(tag_length);
+        return result;
+    }
+
+    [[nodiscard]] inline auto guid_to_string(const GUID& value) -> std::string {
+        return kstd::unicode::convert<char>(guid_to_wstring(value));
     }
 }// namespace sysnotify
 
