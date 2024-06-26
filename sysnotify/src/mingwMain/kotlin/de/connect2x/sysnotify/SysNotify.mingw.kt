@@ -24,6 +24,7 @@ import de.connect2x.sysnotify.com.SYSNOTIFY_TRUE
 import de.connect2x.sysnotify.com.sn_boolVar
 import de.connect2x.sysnotify.com.sn_error
 import de.connect2x.sysnotify.com.sn_notification_content
+import de.connect2x.sysnotify.com.sn_notification_dismissal_reason
 import de.connect2x.sysnotify.com.sn_notification_handler
 import de.connect2x.sysnotify.com.sn_notification_handlerVar
 import de.connect2x.sysnotify.com.sn_notification_tag
@@ -42,16 +43,10 @@ import kotlinx.cinterop.StableRef
 import kotlinx.cinterop.alloc
 import kotlinx.cinterop.asStableRef
 import kotlinx.cinterop.memScoped
-import kotlinx.cinterop.pin
 import kotlinx.cinterop.ptr
-import kotlinx.cinterop.rawValue
 import kotlinx.cinterop.staticCFunction
 import kotlinx.cinterop.toKStringFromUtf8
 import kotlinx.cinterop.value
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 
 private inline fun sn_error.check() {
     if (this == SYSNOTIFY_OK) return
@@ -157,21 +152,23 @@ internal class WindowsNotificationHandler(
             user_data = StableRef.create(notification).asCPointer()
             activate_action =
                 staticCFunction { _: CPointer<sn_notification_tag>?, userData: COpaquePointer? ->
-                    checkNotNull(userData).asStableRef<Notification>().apply {
+                    requireNotNull(userData).asStableRef<Notification>().apply {
                         get().activateAction?.invoke()
                         dispose()
                     }
                 }
             dismiss_action =
-                staticCFunction { _: CPointer<sn_notification_tag>?, userData: COpaquePointer? ->
-                    checkNotNull(userData).asStableRef<Notification>().apply {
-                        get().dismissAction?.invoke()
+                staticCFunction { _: CPointer<sn_notification_tag>?, userData: COpaquePointer?, reason: sn_notification_dismissal_reason ->
+                    requireNotNull(userData).asStableRef<Notification>().apply {
+                        val actualReason = NotificationDismissalReason.entries[reason]
+                        get().dismissAction?.invoke(actualReason)
+                        if (actualReason == NotificationDismissalReason.TIMED_OUT) return@staticCFunction
                         dispose()
                     }
                 }
             fail_action =
                 staticCFunction { _: CPointer<sn_notification_tag>?, userData: COpaquePointer? ->
-                    checkNotNull(userData).asStableRef<Notification>().apply {
+                    requireNotNull(userData).asStableRef<Notification>().apply {
                         get().failAction?.invoke()
                         dispose()
                     }

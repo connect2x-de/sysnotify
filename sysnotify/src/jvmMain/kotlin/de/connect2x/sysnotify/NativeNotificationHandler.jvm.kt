@@ -16,7 +16,11 @@
 package de.connect2x.sysnotify
 
 fun interface NativeNotificationAction {
-    operator fun invoke()
+    fun invoke()
+}
+
+fun interface NativeDismissalAction {
+    fun invoke(reason: Int)
 }
 
 object NativeNotificationHandler {
@@ -55,7 +59,7 @@ object NativeNotificationHandler {
         description: String?,
         icon: ByteArray?,
         activateAction: NativeNotificationAction?,
-        dismissAction: NativeNotificationAction?,
+        dismissAction: NativeDismissalAction?,
         failAction: NativeNotificationAction?
     ): Long
 

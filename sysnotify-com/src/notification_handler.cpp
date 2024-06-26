@@ -321,9 +321,9 @@ namespace sysnotify {
             SYSNOTIFY_LOG_DEBUG("Injecting activate callback into notification {}", guid_to_string(tag));
             notification->add_Activated(ActivationCallback(
                 [action = content.activate_action, user_data = content.user_data, tag, this](const wrt::ToastNotification& n, const wrt::IInspectable& args){
+                    SYSNOTIFY_LOG_DEBUG("Removing notification {} from tag map: activated", guid_to_string(tag));
                     action(reinterpret_cast<const sn_notification_tag*>(&tag), user_data);
                     _tags.erase(tag); // If the toast is activated, it is removed
-                    SYSNOTIFY_LOG_DEBUG("Removed notification {} from tag map: activated", guid_to_string(tag));
                 }).as<__FITypedEventHandler_2_Windows__CUI__CNotifications__CToastNotification_IInspectable>().get(), &activate_event_token);
         }
 
@@ -331,9 +331,21 @@ namespace sysnotify {
             SYSNOTIFY_LOG_DEBUG("Injecting dismiss callback into notification {}", guid_to_string(tag));
             notification->add_Dismissed(DismissCallback(
                 [action = content.dismiss_action, user_data = content.user_data, tag, this](const wrt::ToastNotification& n, const wrt::ToastDismissedEventArgs& args){
-                    action(reinterpret_cast<const sn_notification_tag*>(&tag), user_data);
-                    _tags.erase(tag); // If the toast is dismissed, it is removed
-                    SYSNOTIFY_LOG_DEBUG("Removed notification {} from tag map: dismissed", guid_to_string(tag));
+                    sn_notification_dismissal_reason reason = -1;
+                    switch(args.Reason()) {
+                        case wrt::ToastDismissalReason::UserCanceled:
+                            reason = SYSNOTIFY_DISMISSAL_REASON_USER_CANCELED;
+                            break;
+                        case wrt::ToastDismissalReason::ApplicationHidden:
+                            reason = SYSNOTIFY_DISMISSAL_REASON_APP_HIDDEN;
+                            break;
+                        case wrt::ToastDismissalReason::TimedOut:
+                            reason = SYSNOTIFY_DISMISSAL_REASON_TIMED_OUT;
+                            break;
+                    }
+                    SYSNOTIFY_LOG_DEBUG("Removing notification {} from tag map: dismissed ({})", guid_to_string(tag), reason);
+                    action(reinterpret_cast<const sn_notification_tag*>(&tag), user_data, reason);
+                    _tags.erase(tag); // If the toast is dismissed by the user, it is removed
                 }).as<__FITypedEventHandler_2_Windows__CUI__CNotifications__CToastNotification_Windows__CUI__CNotifications__CToastDismissedEventArgs>().get(), &dismiss_event_token);
         }
 
@@ -341,9 +353,9 @@ namespace sysnotify {
             SYSNOTIFY_LOG_DEBUG("Injecting fail callback into notification {}", guid_to_string(tag));
             notification->add_Failed(FailCallback(
                 [action = content.fail_action, user_data = content.user_data, tag, this](const wrt::ToastNotification& n, const wrt::ToastFailedEventArgs& args){
+                    SYSNOTIFY_LOG_DEBUG("Removing notification {} from tag map: failed", guid_to_string(tag));
                     action(reinterpret_cast<const sn_notification_tag*>(&tag), user_data);
                     _tags.erase(tag); // If the toast has failed, we need to remove it too
-                    SYSNOTIFY_LOG_DEBUG("Removed notification {} from tag map: failed", guid_to_string(tag));
                 }).as<__FITypedEventHandler_2_Windows__CUI__CNotifications__CToastNotification_Windows__CUI__CNotifications__CToastFailedEventArgs>().get(), &fail_event_token);
         }
         // @formatter:on

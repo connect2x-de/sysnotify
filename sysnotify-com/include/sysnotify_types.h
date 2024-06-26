@@ -28,6 +28,10 @@
 #define SYSNOTIFY_ERR_INVALID_ARG 1
 #define SYSNOTIFY_ERR_EXCEPTION 2
 
+#define SYSNOTIFY_DISMISSAL_REASON_USER_CANCELED 0
+#define SYSNOTIFY_DISMISSAL_REASON_APP_HIDDEN 1
+#define SYSNOTIFY_DISMISSAL_REASON_TIMED_OUT 2
+
 #define SYSNOTIFY_FALSE 0
 #define SYSNOTIFY_TRUE 1
 
@@ -37,6 +41,7 @@ extern "C" {
 
 typedef int sn_bool;
 typedef int sn_error;
+typedef int sn_notification_dismissal_reason;
 typedef struct sn_notification_handler_* sn_notification_handler;
 
 typedef struct sn_notification_tag_ {
@@ -45,6 +50,7 @@ typedef struct sn_notification_tag_ {
 } sn_notification_tag;
 
 typedef void (*sn_notification_action)(const sn_notification_tag* tag, void* user_data);
+typedef void (*sn_notification_dismissal_action)(const sn_notification_tag* tag, void* user_data, sn_notification_dismissal_reason reason);
 
 typedef struct sn_notification_content_ {
     const char* title;
@@ -53,7 +59,7 @@ typedef struct sn_notification_content_ {
     int icon_width;
     int icon_height;
     sn_notification_action activate_action;
-    sn_notification_action dismiss_action;
+    sn_notification_dismissal_action dismiss_action;
     sn_notification_action fail_action;
     void* user_data;
 } sn_notification_content;

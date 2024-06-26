@@ -26,18 +26,28 @@ import jni.jint
 import jni.jlong
 import jni.jobject
 import jni.jstring
+import jni.jvalue
 import kotlinx.cinterop.CPointed
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.StableRef
+import kotlinx.cinterop.alloc
 import kotlinx.cinterop.asStableRef
+import kotlinx.cinterop.invoke
+import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.pointed
+import kotlinx.cinterop.ptr
 import kotlinx.cinterop.staticCFunction
 import kotlinx.cinterop.toCPointer
 import kotlinx.coroutines.runBlocking
 
 internal expect fun createNotificationHandler(name: String): NotificationHandler
 
-private val typeNativeNotificationHandler = JvmRefType("de.connect2x.sysnotify.NativeNotificationHandler")
-private val typeNativeNotificationAction = JvmRefType("de.connect2x.sysnotify.NativeNotificationAction")
+private val typeNativeNotificationHandler =
+    JvmRefType("de.connect2x.sysnotify.NativeNotificationHandler")
+private val typeNativeNotificationAction =
+    JvmRefType("de.connect2x.sysnotify.NativeNotificationAction")
+private val typeNativeDismissalAction =
+    JvmRefType("de.connect2x.sysnotify.NativeDismissalAction")
 private val typeString = JvmRefType("java.lang.String")
 
 internal fun registerNatives() {
@@ -85,7 +95,7 @@ internal fun registerNatives() {
             parameter(typeString)
             parameter(JvmBuiltinType.BYTE.array())
             parameter(typeNativeNotificationAction)
-            parameter(typeNativeNotificationAction)
+            parameter(typeNativeDismissalAction)
             parameter(typeNativeNotificationAction)
             returns(JvmBuiltinType.LONG)
         }
@@ -110,50 +120,50 @@ private fun create(env: JNIEnvVar, clazz: jclass, name: jstring): jlong {
 }
 
 private fun destroy(env: JNIEnvVar, clazz: jclass, handler: jlong) {
-    checkNotNull(handler.toCPointer<CPointed>())
+    requireNotNull(handler.toCPointer<CPointed>())
         .asStableRef<NotificationHandler>()
         .dispose()
 }
 
 private fun getPlatform(env: JNIEnvVar, clazz: jclass, handler: jlong): jint {
-    return checkNotNull(handler.toCPointer<CPointed>())
+    return requireNotNull(handler.toCPointer<CPointed>())
         .asStableRef<NotificationHandler>()
         .get().platform.ordinal
 }
 
 private fun isTitleSupported(env: JNIEnvVar, clazz: jclass, handler: jlong): jboolean {
-    return checkNotNull(handler.toCPointer<CPointed>())
+    return requireNotNull(handler.toCPointer<CPointed>())
         .asStableRef<NotificationHandler>()
         .get().capabilities.isTitleSupported.toJBoolean()
 }
 
 private fun isDescriptionSupported(env: JNIEnvVar, clazz: jclass, handler: jlong): jboolean {
-    return checkNotNull(handler.toCPointer<CPointed>())
+    return requireNotNull(handler.toCPointer<CPointed>())
         .asStableRef<NotificationHandler>()
         .get().capabilities.isDescriptionSupported.toJBoolean()
 }
 
 private fun isIconSupported(env: JNIEnvVar, clazz: jclass, handler: jlong): jboolean {
-    return checkNotNull(handler.toCPointer<CPointed>())
+    return requireNotNull(handler.toCPointer<CPointed>())
         .asStableRef<NotificationHandler>()
         .get().capabilities.isIconSupported.toJBoolean()
 }
 
 private fun isActionSupported(env: JNIEnvVar, clazz: jclass, handler: jlong): jboolean {
-    return checkNotNull(handler.toCPointer<CPointed>())
+    return requireNotNull(handler.toCPointer<CPointed>())
         .asStableRef<NotificationHandler>()
         .get().capabilities.isActionSupported.toJBoolean()
 }
 
 private fun isPopSupported(env: JNIEnvVar, clazz: jclass, handler: jlong): jboolean {
-    return checkNotNull(handler.toCPointer<CPointed>())
+    return requireNotNull(handler.toCPointer<CPointed>())
         .asStableRef<NotificationHandler>()
         .get().capabilities.isPopSupported.toJBoolean()
 }
 
 private fun requestPermissions(env: JNIEnvVar, clazz: jclass, handler: jlong) {
     runBlocking {
-        checkNotNull(handler.toCPointer<CPointed>())
+        requireNotNull(handler.toCPointer<CPointed>())
             .asStableRef<NotificationHandler>()
             .get().requestPermissions()
     }
@@ -170,17 +180,74 @@ private fun push(
     dismissAction: jobject?,
     failAction: jobject?
 ): jlong {
+    var activateActionRef = activateAction?.newGlobalRef()
+    var dismissActionRef = dismissAction?.newGlobalRef()
+    var failActionRef = failAction?.newGlobalRef()
     return runBlocking {
-        checkNotNull(handler.toCPointer<CPointed>())
+        requireNotNull(handler.toCPointer<CPointed>())
             .asStableRef<NotificationHandler>()
             .get().push(
                 Notification(
                     title = title?.toKString() ?: "Unknown",
                     description = description?.toKString(),
                     icon = icon?.toByteArray(),
-                    activateAction = { println("ACTIVATED") },
-                    dismissAction = { println("DISMISSED") },
-                    failAction = { println("FAILED") }
+                    activateAction = callback@{
+                        if (activateActionRef == null) return@callback
+                        jvmEnvironment {
+                            memScoped {
+                                requireNotNull(pointed?.CallVoidMethodA) { "Could not access JNIEnv::CallVoidMethodA" }(
+                                    this@jvmEnvironment.ptr,
+                                    activateActionRef,
+                                    typeNativeNotificationAction.jClass.getMethod("invoke") {},
+                                    null
+                                )
+                            }
+                            activateActionRef?.deleteGlobalRef()
+                            activateActionRef = null
+                            dismissActionRef?.deleteGlobalRef()
+                            dismissActionRef = null
+                            failActionRef?.deleteGlobalRef()
+                            failActionRef = null
+                        }
+                    },
+                    dismissAction = callback@{ reason ->
+                        if (dismissActionRef == null) return@callback
+                        jvmEnvironment {
+                            memScoped {
+                                requireNotNull(pointed?.CallVoidMethodA) { "Could not access JNIEnv::CallVoidMethodA" }(
+                                    this@jvmEnvironment.ptr,
+                                    dismissActionRef,
+                                    typeNativeDismissalAction.jClass.getMethod("invoke") {
+                                        parameter(JvmBuiltinType.INT)
+                                    },
+                                    alloc<jvalue> {
+                                        i = reason.ordinal
+                                    }.ptr // Allocate reason as index on stack
+                                )
+                            }
+                            if (reason == NotificationDismissalReason.TIMED_OUT) return@callback
+                            dismissActionRef?.deleteGlobalRef()
+                        }
+                    },
+                    failAction = callback@{
+                        if (failActionRef == null) return@callback
+                        jvmEnvironment {
+                            memScoped {
+                                requireNotNull(pointed?.CallVoidMethodA) { "Could not access JNIEnv::CallVoidMethodA" }(
+                                    this@jvmEnvironment.ptr,
+                                    failActionRef,
+                                    typeNativeNotificationAction.jClass.getMethod("invoke") {},
+                                    null
+                                )
+                            }
+                            activateActionRef?.deleteGlobalRef()
+                            activateActionRef = null
+                            dismissActionRef?.deleteGlobalRef()
+                            dismissActionRef = null
+                            failActionRef?.deleteGlobalRef()
+                            failActionRef = null
+                        }
+                    }
                 )
             )
     }?.let { StableRef.create(it).asCPointer().rawValue.toLong() } ?: 0
@@ -195,9 +262,10 @@ private fun update(
     description: jstring?,
     icon: jbyteArray?
 ): jlong {
-    val handle = checkNotNull(notification.toCPointer<CPointed>()).asStableRef<NotificationHandle>()
+    val handle =
+        requireNotNull(notification.toCPointer<CPointed>()).asStableRef<NotificationHandle>()
     val result = runBlocking {
-        checkNotNull(handler.toCPointer<CPointed>())
+        requireNotNull(handler.toCPointer<CPointed>())
             .asStableRef<NotificationHandler>()
             .get().update(
                 handle.get(),
@@ -218,9 +286,10 @@ private fun pop(
     handler: jlong,
     notification: jlong
 ) {
-    val handle = checkNotNull(notification.toCPointer<CPointed>()).asStableRef<NotificationHandle>()
+    val handle =
+        requireNotNull(notification.toCPointer<CPointed>()).asStableRef<NotificationHandle>()
     runBlocking {
-        checkNotNull(handler.toCPointer<CPointed>())
+        requireNotNull(handler.toCPointer<CPointed>())
             .asStableRef<NotificationHandler>()
             .get().pop(handle.get())
         handle.dispose() // Make sure to dispose old handle

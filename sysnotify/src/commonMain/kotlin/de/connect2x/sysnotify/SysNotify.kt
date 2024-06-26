@@ -44,12 +44,32 @@ data class NotificationCapabilities(
         isTitleSupported || isDescriptionSupported || isIconSupported || isActionSupported
 }
 
+enum class NotificationDismissalReason {
+    /**
+     * This action is triggered when the notification is dismissed by
+     * a user action like swiping it away.
+     */
+    USER_CANCELED,
+
+    /**
+     * This action is triggered when the notification is dismissed
+     * programmatically, like by calling [NotificationHandler.pop].
+     */
+    APPLICATION_HIDDEN,
+
+    /**
+     * This action is triggered when the notification is hidden
+     * automatically if the default amount for being visible has expired.
+     */
+    TIMED_OUT
+}
+
 data class Notification(
     val title: String? = null,
     val description: String? = null,
     val icon: ByteArray? = null,
     val activateAction: (() -> Unit)? = null,
-    val dismissAction: (() -> Unit)? = null,
+    val dismissAction: ((NotificationDismissalReason) -> Unit)? = null,
     val failAction: (() -> Unit)? = null
 ) {
     // Begin ugly generated code
@@ -112,7 +132,10 @@ interface NotificationHandler : AutoCloseable {
     suspend fun push(notification: Notification): NotificationHandle?
     suspend fun pop(handle: NotificationHandle)
 
-    suspend fun update(handle: NotificationHandle, notification: Notification): NotificationHandle? {
+    suspend fun update(
+        handle: NotificationHandle,
+        notification: Notification
+    ): NotificationHandle? {
         pop(handle)
         return push(notification)
     }
@@ -138,7 +161,10 @@ object NoopNotificationHandler : NotificationHandler {
         throw UnsupportedOperationException()
     }
 
-    override suspend fun update(handle: NotificationHandle, notification: Notification): NotificationHandle? {
+    override suspend fun update(
+        handle: NotificationHandle,
+        notification: Notification
+    ): NotificationHandle? {
         throw UnsupportedOperationException()
     }
 
