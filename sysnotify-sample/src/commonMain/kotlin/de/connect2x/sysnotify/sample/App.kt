@@ -95,7 +95,8 @@ fun App(notificationHandler: NotificationHandler) {
                                 description = description,
                                 activateAction = { println("Notification activated!") },
                                 dismissAction = { println("Notification dismissed!") },
-                                failAction = { println("Notification failed!") }
+                                failAction = { println("Notification failed!") },
+                                removeAction = { println("Notification removed!") }
                             ))
                         }
                     },

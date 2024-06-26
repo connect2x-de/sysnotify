@@ -33,13 +33,13 @@ namespace sysnotify::log {
     [[nodiscard]] constexpr auto get_level_string() noexcept -> std::string_view {
         using namespace std::string_view_literals;
         if constexpr(TLevel == Level::INFO) {
-            return "[-INFO--]"sv;
+            return "[Sysnotify COM][-INFO--]"sv;
         }
         else if constexpr(TLevel == Level::ERROR) {
-            return "[-ERROR-]"sv;
+            return "[Sysnotify COM][-ERROR-]"sv;
         }
         else {
-            return "[-DEBUG-]"sv;// Everything else is debug!
+            return "[Sysnotify COM][-DEBUG-]"sv;// Everything else is debug!
         }
     }
 
