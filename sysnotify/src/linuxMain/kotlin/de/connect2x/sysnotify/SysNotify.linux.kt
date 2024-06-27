@@ -92,7 +92,7 @@ internal class LinuxNotificationHandler(
             icon.data.usePinned { pinnedArray ->
                 val data = g_bytes_new_static(pinnedArray.addressOf(0), icon.data.size.toULong())
                 val buffer = gdk_pixbuf_new_from_bytes(
-                    data, GdkColorspace.GDK_COLORSPACE_RGB, 1, 8, width, height, width * 4
+                    data, GdkColorspace.GDK_COLORSPACE_RGB, 1, 8, width, height, width shl 2
                 )
                 notify_notification_set_icon_from_pixbuf(nativeNotification, buffer)
                 gdk_pixbuf_unref(buffer)
