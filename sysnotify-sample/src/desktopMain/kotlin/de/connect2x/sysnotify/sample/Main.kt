@@ -20,9 +20,9 @@ import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import de.connect2x.sysnotify.NotificationHandler
+import de.connect2x.sysnotify.NotificationIcon
 import de.connect2x.sysnotify.create
-import org.jetbrains.skia.Image
-import org.jetbrains.skiko.toBitmap
+import de.connect2x.sysnotify.fromBufferedImage
 import javax.imageio.ImageIO
 
 fun main() {
@@ -30,16 +30,16 @@ fun main() {
         val icon =
             this::class.java.getResourceAsStream("/assets/icons/app_icon.png")
                 .use { ImageIO.read(it) }
-        val iconImage = Image.makeFromBitmap(icon.toBitmap())
         val notificationHandler = NotificationHandler.create("Sysnotify Sample")
+
         Window(
             title = "Sysnotify Sample",
-            icon = BitmapPainter(iconImage.toComposeImageBitmap()),
+            icon = BitmapPainter(icon.toComposeImageBitmap()),
             onCloseRequest = {
                 notificationHandler.close()
                 exitApplication()
             }) {
-            App(notificationHandler)
+            App(notificationHandler, NotificationIcon.fromBufferedImage(icon))
         }
     }
 }

@@ -15,6 +15,8 @@
 
 package de.connect2x.sysnotify
 
+import java.awt.image.BufferedImage
+
 private data class JvmNotificationHandle(
     val address: Long
 ) : NotificationHandle
@@ -47,9 +49,9 @@ private class JvmNotificationHandler(
             handler = address,
             title = notification.title ?: "Unknown",
             description = notification.description,
-            icon = notification.icon,
-            iconWidth = notification.iconWidth,
-            iconHeight = notification.iconHeight,
+            icon = notification.icon?.data,
+            iconWidth = notification.icon?.width ?: 0,
+            iconHeight = notification.icon?.height ?: 0,
             activateAction = { notification.onActivated?.invoke() },
             dismissAction = { notification.onDismissed?.invoke(NotificationDismissalReason.entries[it]) },
             failAction = { notification.onFailed?.invoke() },
@@ -69,9 +71,9 @@ private class JvmNotificationHandler(
             notification = handle.address,
             title = notification.title ?: "Unknown",
             description = notification.description,
-            icon = notification.icon,
-            iconWidth = notification.iconWidth,
-            iconHeight = notification.iconHeight
+            icon = notification.icon?.data,
+            iconWidth = notification.icon?.width ?: 0,
+            iconHeight = notification.icon?.height ?: 0
         )
         return if (newHandle != 0L) JvmNotificationHandle(newHandle)
         else null
@@ -86,3 +88,23 @@ private class JvmNotificationHandler(
 fun NotificationHandler.Companion.create(
     name: String
 ): NotificationHandler = JvmNotificationHandler(name)
+
+fun NotificationIcon.Companion.fromBufferedImage(image: BufferedImage): NotificationIcon {
+    val width = image.width
+    val height = image.height
+    val iconPixelCount = width * height
+    val rawPixelData = IntArray(iconPixelCount) { 0 }
+    image.getRGB(0, 0, width, height, rawPixelData, 0, width)
+    val iconDataSize = iconPixelCount shl 2
+    val iconData = ByteArray(iconDataSize) { 0 }
+    // We need to swizzle the color channels from ARGB to RGBA
+    for (i in rawPixelData.indices) {
+        val pixel = rawPixelData[i]
+        val componentIndex = i shl 2
+        iconData[componentIndex] = ((pixel shr 16) and 0xFF).toByte()
+        iconData[componentIndex + 1] = ((pixel shr 8) and 0xFF).toByte()
+        iconData[componentIndex + 2] = (pixel and 0xFF).toByte()
+        iconData[componentIndex + 3] = ((pixel shr 24) and 0xFF).toByte()
+    }
+    return NotificationIcon(iconData, width, height)
+}
