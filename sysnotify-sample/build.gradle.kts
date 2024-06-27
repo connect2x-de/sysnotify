@@ -38,6 +38,19 @@ kotlin {
             }
         }
     }
+
+    js(IR) {
+        browser {
+            runTask {
+                mainOutputFileName = "Sample.js"
+            }
+            webpackTask {
+                mainOutputFileName = "Sample.js"
+            }
+        }
+        binaries.executable()
+    }
+
     androidTarget {
         @OptIn(ExperimentalKotlinGradlePluginApi::class)
         compilerOptions {
@@ -145,5 +158,8 @@ compose {
                 }
             }
         }
+    }
+    experimental {
+        web.application { }
     }
 }
