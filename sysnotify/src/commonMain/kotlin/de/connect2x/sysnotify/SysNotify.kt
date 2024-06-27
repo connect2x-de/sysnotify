@@ -44,12 +44,36 @@ data class NotificationCapabilities(
         isTitleSupported || isDescriptionSupported || isIconSupported || isActionSupported
 }
 
+enum class NotificationDismissalReason {
+    /**
+     * This action is triggered when the notification is dismissed by
+     * a user action like swiping it away.
+     */
+    USER_CANCELED,
+
+    /**
+     * This action is triggered when the notification is dismissed
+     * programmatically, like by calling [NotificationHandler.pop].
+     */
+    APPLICATION_HIDDEN,
+
+    /**
+     * This action is triggered when the notification is hidden
+     * automatically if the default amount for being visible has expired.
+     */
+    TIMED_OUT
+}
+
 data class Notification(
     val title: String? = null,
     val description: String? = null,
     val icon: ByteArray? = null,
-    val action: (() -> Unit)? = null
+    val onActivated: (() -> Unit)? = null,
+    val onDismissed: ((NotificationDismissalReason) -> Unit)? = null,
+    val onFailed: (() -> Unit)? = null,
+    val onRemoved: (() -> Unit)? = null
 ) {
+    // Begin ugly generated code
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other == null || this::class != other::class) return false
@@ -62,7 +86,10 @@ data class Notification(
             if (other.icon == null) return false
             if (!icon.contentEquals(other.icon)) return false
         } else if (other.icon != null) return false
-        if (action != other.action) return false
+        if (onActivated != other.onActivated) return false
+        if (onDismissed != other.onDismissed) return false
+        if (onFailed != other.onFailed) return false
+        if (onRemoved != other.onRemoved) return false
 
         return true
     }
@@ -71,10 +98,13 @@ data class Notification(
         var result = title?.hashCode() ?: 0
         result = 31 * result + (description?.hashCode() ?: 0)
         result = 31 * result + (icon?.contentHashCode() ?: 0)
-        result = 31 * result + (action?.hashCode() ?: 0)
+        result = 31 * result + (onActivated?.hashCode() ?: 0)
+        result = 31 * result + (onDismissed?.hashCode() ?: 0)
+        result = 31 * result + (onFailed?.hashCode() ?: 0)
+        result = 31 * result + (onRemoved?.hashCode() ?: 0)
         return result
     }
-
+    // End ugly generated code
 }
 
 /**
@@ -105,7 +135,10 @@ interface NotificationHandler : AutoCloseable {
     suspend fun push(notification: Notification): NotificationHandle?
     suspend fun pop(handle: NotificationHandle)
 
-    suspend fun update(handle: NotificationHandle, notification: Notification): NotificationHandle? {
+    suspend fun update(
+        handle: NotificationHandle,
+        notification: Notification
+    ): NotificationHandle? {
         pop(handle)
         return push(notification)
     }
@@ -131,7 +164,10 @@ object NoopNotificationHandler : NotificationHandler {
         throw UnsupportedOperationException()
     }
 
-    override suspend fun update(handle: NotificationHandle, notification: Notification): NotificationHandle? {
+    override suspend fun update(
+        handle: NotificationHandle,
+        notification: Notification
+    ): NotificationHandle? {
         throw UnsupportedOperationException()
     }
 

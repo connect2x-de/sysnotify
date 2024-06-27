@@ -32,7 +32,7 @@ cmake {
     buildStaticLibs = true
     buildSharedLibs = true
     buildConfig = 'RelWithDebInfo'
-    buildClean = true
+    buildClean = false
 }
 
 cmakeBuild {

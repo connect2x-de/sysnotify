@@ -49,12 +49,13 @@ private class WebNotificationHandler(
                 body = notification.description
             )
         ).apply {
-            notification.action?.let { action ->
-                onclick = {
-                    it.preventDefault()
-                    action()
-                }
-            }
+            //notification.action?.let { action ->
+            //    onclick = {
+            //        it.preventDefault()
+            //        action()
+            //    }
+            //}
+            // TODO: implement action(s)
         }
         return WebNotificationHandle(instance)
     }

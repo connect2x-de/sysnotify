@@ -41,10 +41,14 @@ println("Detected host architecture $architecture")
 val os: OperatingSystem = OperatingSystem.current()
 val platformPair = "${os.familyName}-${architecture}"
 println("Detected host OS ${os.familyName}")
+
 val javaHome = Path(System.getProperty("java.home")) // For JNI interop
 println("Found java home at $javaHome")
 val jniHeaders = javaHome / "include"
 val jniLibraries = javaHome / "lib"
+
+val comPath = project(":sysnotify-com").projectDir.toPath()
+val comBuildOutput = comPath / "build" / "cmake" / "RelWithDebInfo"
 
 kotlin {
     val kotlinJvmVersion = libs.versions.jvmTarget.get()
@@ -111,10 +115,12 @@ kotlin {
         binaries.sharedLib {}
     }
     mingwX64 {
-        val comPath = project(":sysnotify-com").projectDir.toPath()
         compilations["main"].cinterops {
             val sysnotifycom by creating {
-                headers("${comPath / "include" / "sysnotify-com.h"}")
+                headers(
+                    "${comPath / "include" / "sysnotify_types.h"}",
+                    "${comPath / "include" / "sysnotify.h"}"
+                )
             }
             val jni by creating {
                 compilerOpts("-I${jniHeaders / "win32"}")
@@ -124,7 +130,7 @@ kotlin {
         binaries {
             sharedLib {
                 linkerOpts(
-                    "-L${comPath / "build" / "cmake" / "RelWithDebInfo"}",
+                    "-L$comBuildOutput",
                     "-L$jniLibraries",
                     "-lsysnotify-com",
                     "-ljawt",
@@ -206,6 +212,14 @@ if (os.isWindows) {
                 mustRunAfter(*dependencies)
             }
         }
+        val cmakeConfigure = findByName(":sysnotify-com:cmakeConfigure")?.apply {
+            dependsOn(":sysnotify-com:cmakeClean")
+            mustRunAfter(":sysnotify-com:cmakeClean")
+        }
+        findByName(":sysnotify-com:cmakeBuild")?.apply {
+            dependsOn(cmakeConfigure)
+            mustRunAfter(cmakeConfigure)
+        }
     }
 }
 
@@ -216,7 +230,8 @@ val linkTask = tasks.let { taskList ->
         os.isWindows -> taskList.find { it.name == "linkReleaseSharedMingw${architecture.capitalized()}" }
         os.isMacOsX -> taskList.find { it.name == "linkReleaseSharedMacos${architecture.capitalized()}" }
         else -> throw IllegalStateException("JVM bindings are not supported on the current platform")
-    } ?: throw IllegalStateException("Could not find matching Kotlin/Native link task for building JVM bindings")
+    }
+        ?: throw IllegalStateException("Could not find matching Kotlin/Native link task for building JVM bindings")
 }
 println("Using '${linkTask.name}' as JVM bindings link task")
 
@@ -224,10 +239,10 @@ val nativesJar = task("nativesJar", Jar::class) {
     dependsOn(linkTask)
     archiveClassifier = "jvm-natives-$platformPair"
     from(linkTask.outputs) {
-        exclude("*.h")
+        exclude("*.h", "*.def")
     }
+    if (os.isWindows) from(comBuildOutput / "sysnotify-com.dll") // Make sure to ship the COM adaptor
     into("natives/$platformPair")
-    println("Configured JNI bindings JAR '${archiveBaseName.get()}'")
 }
 
 tasks {

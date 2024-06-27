@@ -23,7 +23,8 @@ private class JvmNotificationHandler(
     override val name: String
 ) : NotificationHandler {
     private val address: Long = NativeNotificationHandler.create(name)
-    override val platform: NotificationPlatform = NotificationPlatform.entries[NativeNotificationHandler.getPlatform(address)]
+    override val platform: NotificationPlatform =
+        NotificationPlatform.entries[NativeNotificationHandler.getPlatform(address)]
 
     override val capabilities: NotificationCapabilities = NotificationCapabilities(
         isTitleSupported = NativeNotificationHandler.isTitleSupported(address),
@@ -46,13 +47,20 @@ private class JvmNotificationHandler(
             handler = address,
             title = notification.title ?: "Unknown",
             description = notification.description,
-            icon = notification.icon
+            icon = notification.icon,
+            activateAction = { notification.onActivated?.invoke() },
+            dismissAction = { notification.onDismissed?.invoke(NotificationDismissalReason.entries[it]) },
+            failAction = { notification.onFailed?.invoke() },
+            removeAction = { notification.onRemoved?.invoke() }
         )
         return if (handle != 0L) JvmNotificationHandle(handle)
         else null
     }
 
-    override suspend fun update(handle: NotificationHandle, notification: Notification): NotificationHandle? {
+    override suspend fun update(
+        handle: NotificationHandle,
+        notification: Notification
+    ): NotificationHandle? {
         require(handle is JvmNotificationHandle)
         val newHandle = NativeNotificationHandler.update(
             handler = address,

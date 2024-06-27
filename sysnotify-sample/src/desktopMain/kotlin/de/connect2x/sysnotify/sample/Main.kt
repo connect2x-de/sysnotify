@@ -15,17 +15,31 @@
 
 package de.connect2x.sysnotify.sample
 
+import androidx.compose.ui.graphics.painter.BitmapPainter
+import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import de.connect2x.sysnotify.NotificationHandler
 import de.connect2x.sysnotify.create
+import org.jetbrains.skia.Image
+import org.jetbrains.skiko.toBitmap
+import javax.imageio.ImageIO
 
-fun main() = application {
-    val notificationHandler = NotificationHandler.create("sysnotify-sample")
-    Window(title = "Sysnotify Sample", onCloseRequest = {
-        notificationHandler.close()
-        exitApplication()
-    }) {
-        App(notificationHandler)
+fun main() {
+    application {
+        val icon =
+            this::class.java.getResourceAsStream("/assets/icons/app_icon.png")
+                .use { ImageIO.read(it) }
+        val iconImage = Image.makeFromBitmap(icon.toBitmap())
+        val notificationHandler = NotificationHandler.create("Sysnotify Sample")
+        Window(
+            title = "Sysnotify Sample",
+            icon = BitmapPainter(iconImage.toComposeImageBitmap()),
+            onCloseRequest = {
+                notificationHandler.close()
+                exitApplication()
+            }) {
+            App(notificationHandler)
+        }
     }
 }

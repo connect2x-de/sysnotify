@@ -19,7 +19,7 @@ import androidx.compose.ui.window.ComposeUIViewController
 import de.connect2x.sysnotify.NotificationHandler
 import de.connect2x.sysnotify.create
 
-internal val notificationHandler: NotificationHandler = NotificationHandler.create("sysnotify-sample")
+internal val notificationHandler: NotificationHandler = NotificationHandler.create("Sysnotify Sample")
 
 fun MainViewController() = ComposeUIViewController {
     App(notificationHandler)
