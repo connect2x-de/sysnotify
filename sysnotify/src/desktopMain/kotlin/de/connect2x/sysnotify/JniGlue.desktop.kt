@@ -194,7 +194,7 @@ private fun push(
                     title = title?.toKString() ?: "Unknown",
                     description = description?.toKString(),
                     icon = icon?.toByteArray(),
-                    activateAction = callback@{
+                    onActivated = callback@{
                         if (activateActionRef == null) return@callback
                         jvmEnvironment {
                             requireNotNull(pointed?.CallVoidMethodA) { "Could not access JNIEnv::CallVoidMethodA" }(
@@ -205,7 +205,7 @@ private fun push(
                             )
                         }
                     },
-                    dismissAction = callback@{ reason ->
+                    onDismissed = callback@{ reason ->
                         if (dismissActionRef == null) return@callback
                         jvmEnvironment {
                             memScoped {
@@ -222,7 +222,7 @@ private fun push(
                             }
                         }
                     },
-                    failAction = callback@{
+                    onFailed = callback@{
                         if (failActionRef == null) return@callback
                         jvmEnvironment {
                             requireNotNull(pointed?.CallVoidMethodA) { "Could not access JNIEnv::CallVoidMethodA" }(
@@ -233,7 +233,7 @@ private fun push(
                             )
                         }
                     },
-                    removeAction = callback@{
+                    onRemoved = callback@{
                         jvmEnvironment {
                             activateActionRef?.deleteGlobalRef()
                             dismissActionRef?.deleteGlobalRef()

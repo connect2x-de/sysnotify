@@ -93,10 +93,10 @@ fun App(notificationHandler: NotificationHandler) {
                             notificationHandler.push(Notification(
                                 title = title,
                                 description = description,
-                                activateAction = { println("Notification activated!") },
-                                dismissAction = { println("Notification dismissed!") },
-                                failAction = { println("Notification failed!") },
-                                removeAction = { println("Notification removed!") }
+                                onActivated = { println("Notification activated!") },
+                                onDismissed = { println("Notification dismissed!") },
+                                onFailed = { println("Notification failed!") },
+                                onRemoved = { println("Notification removed!") }
                             ))
                         }
                     },

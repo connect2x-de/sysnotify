@@ -68,10 +68,10 @@ data class Notification(
     val title: String? = null,
     val description: String? = null,
     val icon: ByteArray? = null,
-    val activateAction: (() -> Unit)? = null,
-    val dismissAction: ((NotificationDismissalReason) -> Unit)? = null,
-    val failAction: (() -> Unit)? = null,
-    val removeAction: (() -> Unit)? = null
+    val onActivated: (() -> Unit)? = null,
+    val onDismissed: ((NotificationDismissalReason) -> Unit)? = null,
+    val onFailed: (() -> Unit)? = null,
+    val onRemoved: (() -> Unit)? = null
 ) {
     // Begin ugly generated code
     override fun equals(other: Any?): Boolean {
@@ -86,10 +86,10 @@ data class Notification(
             if (other.icon == null) return false
             if (!icon.contentEquals(other.icon)) return false
         } else if (other.icon != null) return false
-        if (activateAction != other.activateAction) return false
-        if (dismissAction != other.dismissAction) return false
-        if (failAction != other.failAction) return false
-        if (removeAction != other.removeAction) return false
+        if (onActivated != other.onActivated) return false
+        if (onDismissed != other.onDismissed) return false
+        if (onFailed != other.onFailed) return false
+        if (onRemoved != other.onRemoved) return false
 
         return true
     }
@@ -98,10 +98,10 @@ data class Notification(
         var result = title?.hashCode() ?: 0
         result = 31 * result + (description?.hashCode() ?: 0)
         result = 31 * result + (icon?.contentHashCode() ?: 0)
-        result = 31 * result + (activateAction?.hashCode() ?: 0)
-        result = 31 * result + (dismissAction?.hashCode() ?: 0)
-        result = 31 * result + (failAction?.hashCode() ?: 0)
-        result = 31 * result + (removeAction?.hashCode() ?: 0)
+        result = 31 * result + (onActivated?.hashCode() ?: 0)
+        result = 31 * result + (onDismissed?.hashCode() ?: 0)
+        result = 31 * result + (onFailed?.hashCode() ?: 0)
+        result = 31 * result + (onRemoved?.hashCode() ?: 0)
         return result
     }
     // End ugly generated code

@@ -153,21 +153,21 @@ internal class WindowsNotificationHandler(
             activate_action =
                 staticCFunction { _: CPointer<sn_notification_tag>?, userData: COpaquePointer? ->
                     requireNotNull(userData).asStableRef<Notification>()
-                        .get().activateAction?.invoke()
+                        .get().onActivated?.invoke()
                 }
             dismiss_action =
                 staticCFunction { _: CPointer<sn_notification_tag>?, userData: COpaquePointer?, reason: sn_notification_dismissal_reason ->
                     requireNotNull(userData).asStableRef<Notification>()
-                        .get().dismissAction?.invoke(NotificationDismissalReason.entries[reason])
+                        .get().onDismissed?.invoke(NotificationDismissalReason.entries[reason])
                 }
             fail_action =
                 staticCFunction { _: CPointer<sn_notification_tag>?, userData: COpaquePointer? ->
-                    requireNotNull(userData).asStableRef<Notification>().get().failAction?.invoke()
+                    requireNotNull(userData).asStableRef<Notification>().get().onFailed?.invoke()
                 }
             remove_action =
                 staticCFunction { _: CPointer<sn_notification_tag>?, userData: COpaquePointer? ->
                     requireNotNull(userData).asStableRef<Notification>().apply {
-                        get().removeAction?.invoke()
+                        get().onRemoved?.invoke()
                         dispose()
                     }
                 }
