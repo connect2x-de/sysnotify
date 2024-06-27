@@ -58,6 +58,8 @@ object NativeNotificationHandler {
         title: String,
         description: String?,
         icon: ByteArray?,
+        iconWidth: Int,
+        iconHeight: Int,
         activateAction: NativeNotificationAction?,
         dismissAction: NativeDismissalAction?,
         failAction: NativeNotificationAction?,
@@ -70,7 +72,9 @@ object NativeNotificationHandler {
         notification: Long,
         title: String,
         description: String?,
-        icon: ByteArray?
+        icon: ByteArray?,
+        iconWidth: Int,
+        iconHeight: Int
     ): Long
 
     @JvmStatic

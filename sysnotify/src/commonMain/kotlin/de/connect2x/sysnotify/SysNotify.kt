@@ -68,6 +68,8 @@ data class Notification(
     val title: String? = null,
     val description: String? = null,
     val icon: ByteArray? = null,
+    val iconWidth: Int = 0,
+    val iconHeight: Int = 0,
     val onActivated: (() -> Unit)? = null,
     val onDismissed: ((NotificationDismissalReason) -> Unit)? = null,
     val onFailed: (() -> Unit)? = null,
@@ -86,6 +88,8 @@ data class Notification(
             if (other.icon == null) return false
             if (!icon.contentEquals(other.icon)) return false
         } else if (other.icon != null) return false
+        if (iconWidth != other.iconWidth) return false
+        if (iconHeight != other.iconHeight) return false
         if (onActivated != other.onActivated) return false
         if (onDismissed != other.onDismissed) return false
         if (onFailed != other.onFailed) return false
@@ -98,6 +102,8 @@ data class Notification(
         var result = title?.hashCode() ?: 0
         result = 31 * result + (description?.hashCode() ?: 0)
         result = 31 * result + (icon?.contentHashCode() ?: 0)
+        result = 31 * result + iconWidth
+        result = 31 * result + iconHeight
         result = 31 * result + (onActivated?.hashCode() ?: 0)
         result = 31 * result + (onDismissed?.hashCode() ?: 0)
         result = 31 * result + (onFailed?.hashCode() ?: 0)

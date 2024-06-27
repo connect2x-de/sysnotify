@@ -43,9 +43,6 @@ import libnotify.notify_notification_set_urgency
 import libnotify.notify_notification_show
 import libnotify.notify_notification_update
 import libnotify.notify_uninit
-import kotlin.math.abs
-import kotlin.math.floor
-import kotlin.math.sqrt
 
 @OptIn(ExperimentalForeignApi::class)
 fun <P : CPointer<GError>> P.freeAndThrow() {
@@ -86,21 +83,17 @@ internal class LinuxNotificationHandler(
     }
 
     @Suppress("NOTHING_TO_INLINE")
-    private inline fun setIcon(notification: CPointer<NotifyNotification>, icon: ByteArray?) {
-        icon?.let { array ->
+    private inline fun setIcon(nativeNotification: CPointer<NotifyNotification>, notification: Notification) {
+        notification.icon?.let { array ->
+            val width = notification.iconWidth
+            val height = notification.iconHeight
+            if (width <= 0 || height <= 0) return // Return if our size is invalid
             array.usePinned {
-                // Determine the side-length of the icon by sqrt(data.size / 4)
-                val size = sqrt((array.size shr 2).toFloat()).apply {
-                    // Check if the root was pulled with any odd decimal points, if it was, icon is not square
-                    require((this - floor(abs(this))) == 0F) { "Icon image is not square" }
-                }.toInt()
-                // Determine row stride; we have 4 bytes per pixel
-                val rowStride = size shl 2
                 val buffer = gdk_pixbuf_new_from_bytes(
                     it.addressOf(0).reinterpret(),
-                    GdkColorspace.GDK_COLORSPACE_RGB, 1, 8, size, size, rowStride
+                    GdkColorspace.GDK_COLORSPACE_RGB, 1, 8, width, height, width shl 2
                 )
-                notify_notification_set_image_from_pixbuf(notification, buffer)
+                notify_notification_set_image_from_pixbuf(nativeNotification, buffer)
                 gdk_pixbuf_unref(buffer)
             }
         }
@@ -132,7 +125,7 @@ internal class LinuxNotificationHandler(
             "sound-file",
             "/usr/share/sounds/freedesktop/stereo/message.oga"
         )
-        setIcon(notificationAddress, notification.icon)
+        setIcon(notificationAddress, notification)
         return if (show(notificationAddress)) LinuxNotificationHandle(notificationAddress) else null
     }
 
@@ -145,7 +138,7 @@ internal class LinuxNotificationHandler(
             body = notification.description,
             icon = DEFAULT_ICON
         )
-        setIcon(notificationAddress, notification.icon)
+        setIcon(notificationAddress, notification)
         return if (show(notificationAddress)) handle else null
     }
 

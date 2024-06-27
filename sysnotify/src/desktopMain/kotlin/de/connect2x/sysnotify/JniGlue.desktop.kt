@@ -94,6 +94,8 @@ internal fun registerNatives() {
             parameter(typeString)
             parameter(typeString)
             parameter(JvmBuiltinType.BYTE.array())
+            parameter(JvmBuiltinType.INT)
+            parameter(JvmBuiltinType.INT)
             parameter(typeNativeNotificationAction)
             parameter(typeNativeDismissalAction)
             parameter(typeNativeNotificationAction)
@@ -106,6 +108,8 @@ internal fun registerNatives() {
             parameter(typeString)
             parameter(typeString)
             parameter(JvmBuiltinType.BYTE.array())
+            parameter(JvmBuiltinType.INT)
+            parameter(JvmBuiltinType.INT)
             returns(JvmBuiltinType.LONG)
         }
         registerNativeFunction("pop", staticCFunction(::pop)) {
@@ -177,6 +181,8 @@ private fun push(
     title: jstring?,
     description: jstring?,
     icon: jbyteArray?,
+    iconWidth: jint,
+    iconHeight: jint,
     activateAction: jobject?,
     dismissAction: jobject?,
     failAction: jobject?,
@@ -194,6 +200,8 @@ private fun push(
                     title = title?.toKString() ?: "Unknown",
                     description = description?.toKString(),
                     icon = icon?.toByteArray(),
+                    iconWidth = iconWidth,
+                    iconHeight = iconHeight,
                     onActivated = callback@{
                         if (activateActionRef == null) return@callback
                         jvmEnvironment {
@@ -260,7 +268,9 @@ private fun update(
     notification: jlong,
     title: jstring?,
     description: jstring?,
-    icon: jbyteArray?
+    icon: jbyteArray?,
+    iconWidth: jint,
+    iconHeight: jint
 ): jlong {
     val handle =
         requireNotNull(notification.toCPointer<CPointed>()).asStableRef<NotificationHandle>()
@@ -272,7 +282,9 @@ private fun update(
                 Notification(
                     title = title?.toKString() ?: "Unknown",
                     description = description?.toKString(),
-                    icon = icon?.toByteArray()
+                    icon = icon?.toByteArray(),
+                    iconWidth = iconWidth,
+                    iconHeight = iconHeight
                 )
             )
     }?.let { StableRef.create(it).asCPointer().rawValue.toLong() } ?: 0
