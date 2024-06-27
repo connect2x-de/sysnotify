@@ -12,20 +12,14 @@
 // limitations under the License.
 
 /**
- * The ComAdaptor class implements glue code to allow
- * the Sysnotify service to forward notifications to Windows/the shell
- * via a unified COM interface.
- * This allows applications to easily send notifications without being
- * a registered Windows (UWP) app
- *
  * @author Alexander Hinze
- * @since 20/06/24
+ * @since 27/06/24
  */
 
 #pragma once
 
-#include "platform.hpp"
 #include "sysnotify_types.h"
+#include "platform.hpp"
 
 namespace sysnotify {
     // Windows runtime library (not WRT)
@@ -43,43 +37,15 @@ namespace sysnotify {
 
     using NotificationContent = sn_notification_content;
 
-    class NotificationHandler final {
-        struct NotificationTag final {
-            GUID tag;
-            std::optional<std::filesystem::path> icon_path;
-        };
-
-        wrl::ComPtr<abi::IToastNotificationManagerStatics> _manager;
-        wrl::ComPtr<abi::IToastNotificationManagerStatics2> _manager2;
-        wrl::ComPtr<abi::IToastNotifier> _notifier;          // For showing, updating and hiding toasts
-        wrl::ComPtr<abi::IToastNotificationFactory> _factory;// For creating new toast notification COM objects
-        wrl::ComPtr<abi::IToastNotificationHistory> _history;// For retrieving all active notifications belonging to our application
-        std::wstring _app_name;                              // The associated application name (name of the NotificationHandler instance)
-        std::wstring _aum_id;                                // The associated [A]pplication [U]ser [M]odel [ID]
-        phmap::parallel_flat_hash_map<GUID, NotificationTag> _tags;// Keeps track of all valid/active notifications
-        phmap::parallel_flat_hash_set<GUID>
-            _cancelled;// Keeps track of all notifications that have been cancelled at least once but are still valid
-
-        auto create_shortcut_if_needed() -> void;
-        auto set_aumid() -> void;
-        [[nodiscard]] auto create_content_document(const NotificationContent& content) -> wrl::ComPtr<abi::IXmlDocument>;
-        [[nodiscard]] auto get_notification(const GUID& tag) -> wrl::ComPtr<abi::IToastNotification>;
-        auto register_actions(wrl::ComPtr<abi::IToastNotification>& notification,
-                              const GUID& tag,
-                              const NotificationContent& content) -> void;
-
+    class NotificationHandler {
+    protected:
+        NotificationHandler() noexcept = default;
     public:
-        NotificationHandler(const std::string& app_name, const std::string& aum_id);
-        NotificationHandler(const NotificationHandler&) noexcept = delete;
-        NotificationHandler(NotificationHandler&&) noexcept = default;
-        ~NotificationHandler();
+        virtual ~NotificationHandler() noexcept = default;
 
-        auto operator=(const NotificationHandler&) noexcept -> NotificationHandler& = delete;
-        auto operator=(NotificationHandler&&) noexcept -> NotificationHandler& = default;
-
-        auto push(const NotificationContent& content) -> GUID;
-        auto update(const GUID& tag, const NotificationContent& content) -> void;
-        auto pop(const GUID& tag) -> void;
-        auto is_valid_tag(const GUID& tag) -> bool;
+        virtual auto push(const NotificationContent& content) -> GUID = 0;
+        virtual auto update(const GUID& tag, const NotificationContent& content) -> void = 0;
+        virtual auto pop(const GUID& tag) -> void = 0;
+        virtual auto is_valid_tag(const GUID& tag) -> bool = 0;
     };
-}// namespace sysnotify
+}

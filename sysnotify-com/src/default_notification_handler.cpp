@@ -16,7 +16,7 @@
  * @since 20/06/24
  */
 
-#include "notification_handler.hpp"
+#include "default_notification_handler.hpp"
 
 #include <NotificationActivationCallback.h>
 #include <propkey.h>
@@ -97,8 +97,9 @@ namespace sysnotify {
 
     // ComAdaptor implementation
 
-    NotificationHandler::NotificationHandler(const std::string& app_name, const std::string& aum_id)
-        : _app_name(kstd::unicode::convert<wchar_t>(app_name))
+    DefaultNotificationHandler::DefaultNotificationHandler(const std::string& app_name, const std::string& aum_id)
+        : NotificationHandler()
+        , _app_name(kstd::unicode::convert<wchar_t>(app_name))
         , _aum_id(kstd::unicode::convert<wchar_t>(aum_id)) {
         SYSNOTIFY_LOG_DEBUG("Initializing COM interface");
         SYSNOTIFY_REQUIRE_SUCCESS(CoInitializeEx(nullptr, COINIT::COINIT_MULTITHREADED));
@@ -138,7 +139,7 @@ namespace sysnotify {
         SYSNOTIFY_LOG_DEBUG("Created toast notification history at {}", fmt::ptr(_history.Get()));
     }
 
-    NotificationHandler::~NotificationHandler() {
+    DefaultNotificationHandler::~DefaultNotificationHandler() {
         auto& module = wrl::Module<wrl::OutOfProc>::GetModule();
         module.DecrementObjectCount();
         SYSNOTIFY_LOG_DEBUG("Unregistering COM objects");
@@ -164,7 +165,7 @@ namespace sysnotify {
 )", content.title, content.description));
     }
 
-    auto NotificationHandler::set_aumid() -> void {
+    auto DefaultNotificationHandler::set_aumid() -> void {
         PWSTR current_aum_id = nullptr;
         if(GetCurrentProcessExplicitAppUserModelID(&current_aum_id) != S_OK) {
             SYSNOTIFY_REQUIRE_SUCCESS(SetCurrentProcessExplicitAppUserModelID(_aum_id.c_str()));
@@ -188,7 +189,7 @@ namespace sysnotify {
         }
     }
 
-    auto NotificationHandler::create_shortcut_if_needed() -> void {
+    auto DefaultNotificationHandler::create_shortcut_if_needed() -> void {
         const auto executable_path = get_process_path();
 
         SYSNOTIFY_LOG_DEBUG("Looking for registered COM server shortcut");
@@ -247,7 +248,7 @@ namespace sysnotify {
         SYSNOTIFY_LOG_DEBUG("Created COM service shortcut at {}", shortcut_path.string());
     }
 
-    auto NotificationHandler::create_content_document(const NotificationContent& content) -> wrl::ComPtr<abi::IXmlDocument> {
+    auto DefaultNotificationHandler::create_content_document(const NotificationContent& content) -> wrl::ComPtr<abi::IXmlDocument> {
         wrl::ComPtr<abi::IXmlDocument> document {};
         SYSNOTIFY_REQUIRE_SUCCESS(
             wfl::ActivateInstance(wrl::HStringReference(RuntimeClass_Windows_Data_Xml_Dom_XmlDocument).Get(), &document));
@@ -289,7 +290,7 @@ namespace sysnotify {
         return std::nullopt;
     }
 
-    auto NotificationHandler::register_actions(wrl::ComPtr<abi::IToastNotification>& notification, const GUID& tag, const NotificationContent& content) -> void {
+    auto DefaultNotificationHandler::register_actions(wrl::ComPtr<abi::IToastNotification>& notification, const GUID& tag, const NotificationContent& content) -> void {
         // Set up event callbacks
         using ActivationCallback = wrt::TypedEventHandler<wrt::ToastNotification, wrt::IInspectable>;
         using DismissCallback = wrt::TypedEventHandler<wrt::ToastNotification, wrt::ToastDismissedEventArgs>;
@@ -373,7 +374,7 @@ namespace sysnotify {
         // @formatter:on
     }
 
-    auto NotificationHandler::push(const NotificationContent& content) -> GUID {
+    auto DefaultNotificationHandler::push(const NotificationContent& content) -> GUID {
         wrl::ComPtr<abi::IToastNotification> notification {};
         SYSNOTIFY_REQUIRE_SUCCESS(_factory->CreateToastNotification(create_content_document(content).Get(), &notification));
         SYSNOTIFY_REQUIRE(notification);
@@ -399,7 +400,7 @@ namespace sysnotify {
         return tag;
     }
 
-    auto NotificationHandler::get_notification(const GUID& tag) -> wrl::ComPtr<abi::IToastNotification> {
+    auto DefaultNotificationHandler::get_notification(const GUID& tag) -> wrl::ComPtr<abi::IToastNotification> {
         wrl::ComPtr<abi::IToastNotificationHistory2> history2 {};
         SYSNOTIFY_REQUIRE_SUCCESS(_history.As(&history2));
         SYSNOTIFY_REQUIRE(history2);
@@ -442,7 +443,7 @@ namespace sysnotify {
         return nullptr;
     }
 
-    auto NotificationHandler::update(const GUID& tag, const NotificationContent& content) -> void {
+    auto DefaultNotificationHandler::update(const GUID& tag, const NotificationContent& content) -> void {
         auto notification = get_notification(tag);
         wrl::ComPtr<abi::IXmlDocument> document {};
         SYSNOTIFY_REQUIRE_SUCCESS(notification->get_Content(&document));
@@ -451,11 +452,11 @@ namespace sysnotify {
         SYSNOTIFY_REQUIRE_SUCCESS(_notifier->Show(notification.Get()));
     }
 
-    auto NotificationHandler::pop(const GUID& tag) -> void {
+    auto DefaultNotificationHandler::pop(const GUID& tag) -> void {
         SYSNOTIFY_REQUIRE_SUCCESS(_notifier->Hide(get_notification(tag).Get()));
     }
 
-    auto NotificationHandler::is_valid_tag(const GUID& tag) -> bool {
+    auto DefaultNotificationHandler::is_valid_tag(const GUID& tag) -> bool {
         return _tags.contains(tag);
     }
 }// namespace sysnotify

@@ -123,6 +123,46 @@ namespace sysnotify {
 namespace sysnotify {
     constexpr size_t GUID_BUFFER_SIZE = 40;
 
+    class DynamicLibrary final {
+        HMODULE _handle;
+    public:
+        explicit DynamicLibrary(const std::string& name)
+            : _handle(LoadLibraryW(kstd::unicode::convert<wchar_t>(name).c_str()))
+        {
+            SYSNOTIFY_REQUIRE(_handle);
+        }
+
+        DynamicLibrary(const DynamicLibrary&) noexcept = delete;
+
+        DynamicLibrary(DynamicLibrary&& other) noexcept :
+            _handle(other._handle)
+        {
+            other._handle = nullptr;
+        }
+
+        ~DynamicLibrary() {
+            if(_handle == nullptr) {
+                return;
+            }
+            FreeLibrary(_handle);
+        }
+
+        auto operator =(const DynamicLibrary&) noexcept -> DynamicLibrary& = delete;
+
+        auto operator =(DynamicLibrary&& other) noexcept -> DynamicLibrary& {
+            _handle = other._handle;
+            other._handle = nullptr;
+            return *this;
+        }
+
+        template<typename F>
+        [[nodiscard]] auto get_function(const std::string& name) -> F {
+            auto* address = GetProcAddress(_handle, name.c_str());
+            SYSNOTIFY_REQUIRE(address);
+            return reinterpret_cast<F>(address);
+        }
+    };
+
     [[nodiscard]] inline auto get_process_path(HANDLE process = GetCurrentProcess()) -> std::filesystem::path {
         std::wstring executable_path(MAX_PATH, 0);
         const auto new_length = GetModuleFileNameExW(process, nullptr, executable_path.data(), MAX_PATH);
@@ -146,6 +186,20 @@ namespace sysnotify {
 
     [[nodiscard]] inline auto guid_to_string(const GUID& value) -> std::string {
         return kstd::unicode::convert<char>(guid_to_wstring(value));
+    }
+
+    /**
+     * We load the kernel binary and retrieve a pointer to the RtlGetNtVersionNumbers
+     * functions, which is guaranteed to be available with kernel 5.1 (XP/2600) and up.
+     * We do this since the aforementioned function is not exported to the userland kernel APIs,
+     * and since it is the only reliable way to tell what exact version of windows we are running..
+     *
+     * See https://www.geoffchappell.com/studies/windows/win32/ntdll/api/ldrinit/getntversionnumbers.htm
+     */
+    [[nodiscard]] inline auto get_kernel_version(DWORD* major, DWORD* minor, DWORD* patch) {
+        static DynamicLibrary module("NTDLL.DLL"); // Lives as long as the process
+        static auto* function = module.get_function<void(*)(DWORD*, DWORD*, DWORD*)>("RtlGetNtVersionNumbers");
+        function(major, minor, patch);
     }
 }// namespace sysnotify
 

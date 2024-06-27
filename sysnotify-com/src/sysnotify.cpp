@@ -17,7 +17,9 @@
  */
 
 #include "sysnotify.h"
-#include "notification_handler.hpp"
+#include "default_notification_handler.hpp"
+#include "fallback_notification_handler.hpp"
+#include "log.hpp"
 
 #define SYSNOTIFY_HANDLE_EXCEPTIONS(x)              \
     do {                                            \
@@ -49,7 +51,16 @@ SYSNOTIFY_API sn_error sysnotify_handler_create(const char* app_name,
         return SYSNOTIFY_ERR_INVALID_ARG;
     }
     SYSNOTIFY_HANDLE_EXCEPTIONS({
-        *handler = reinterpret_cast<sn_notification_handler>(new NotificationHandler(app_name, aum_id));
+        DWORD major = 0;
+        DWORD minor = 0;
+        DWORD patch = 0;
+        get_kernel_version(&major, &minor, &patch);
+        SYSNOTIFY_LOG_DEBUG("Detected Windows kernel version {}.{}.{}", major, minor, patch);
+        if(major >= 10) {
+            *handler = reinterpret_cast<sn_notification_handler>(new DefaultNotificationHandler(app_name, aum_id));
+            return SYSNOTIFY_OK;
+        }
+        *handler = reinterpret_cast<sn_notification_handler>(new FallbackNotificationHandler());
     });
     return SYSNOTIFY_OK;
 }
@@ -105,7 +116,7 @@ SYSNOTIFY_API sn_error sysnotify_handler_is_valid_tag(sn_notification_handler ha
     }
     SYSNOTIFY_HANDLE_EXCEPTIONS({
         *is_valid = static_cast<sn_bool>(
-            reinterpret_cast<sysnotify::NotificationHandler*>(handler)->is_valid_tag(*reinterpret_cast<const GUID*>(tag)));
+            reinterpret_cast<NotificationHandler*>(handler)->is_valid_tag(*reinterpret_cast<const GUID*>(tag)));
     });
     return SYSNOTIFY_OK;
 }
