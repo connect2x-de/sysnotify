@@ -39,10 +39,14 @@ import kotlinx.cinterop.COpaquePointer
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.MemScope
+import kotlinx.cinterop.Pinned
 import kotlinx.cinterop.StableRef
+import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.alloc
+import kotlinx.cinterop.allocArrayOf
 import kotlinx.cinterop.asStableRef
 import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.pin
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.staticCFunction
 import kotlinx.cinterop.toKStringFromUtf8
@@ -91,7 +95,7 @@ internal class WindowsNotificationHandler(
         val pointer = alloc<sn_notification_handlerVar>()
         sysnotify_handler_create(
             name,
-            "de.connect2x.sysnotify.$name",
+            "de.connect2x.sysnotify.${name.replace(' ', '_')}",
             pointer.ptr
         ).check()
         requireNotNull(pointer.value) { "Could not create COM adaptor instance" }
@@ -149,25 +153,33 @@ internal class WindowsNotificationHandler(
         return alloc<sn_notification_content> {
             title = allocCString(notification.title)
             description = allocCString(notification.description)
-            user_data = StableRef.create(notification).asCPointer()
+            val iconData = notification.icon?.data?.pin()?.apply {
+                icon = addressOf(0)
+            }
+            user_data = StableRef.create(Pair(notification, iconData)).asCPointer()
+            icon_width = notification.icon?.width ?: 0
+            icon_height = notification.icon?.height ?: 0
             activate_action =
                 staticCFunction { _: CPointer<sn_notification_tag>?, userData: COpaquePointer? ->
-                    requireNotNull(userData).asStableRef<Notification>()
-                        .get().onActivated?.invoke()
+                    requireNotNull(userData).asStableRef<Pair<Notification, Pinned<ByteArray>?>>()
+                        .get().first.onActivated?.invoke()
                 }
             dismiss_action =
                 staticCFunction { _: CPointer<sn_notification_tag>?, userData: COpaquePointer?, reason: sn_notification_dismissal_reason ->
-                    requireNotNull(userData).asStableRef<Notification>()
-                        .get().onDismissed?.invoke(NotificationDismissalReason.entries[reason])
+                    requireNotNull(userData).asStableRef<Pair<Notification, Pinned<ByteArray>?>>()
+                        .get().first.onDismissed?.invoke(NotificationDismissalReason.entries[reason])
                 }
             fail_action =
                 staticCFunction { _: CPointer<sn_notification_tag>?, userData: COpaquePointer? ->
-                    requireNotNull(userData).asStableRef<Notification>().get().onFailed?.invoke()
+                    requireNotNull(userData).asStableRef<Pair<Notification, Pinned<ByteArray>?>>().get().first.onFailed?.invoke()
                 }
             remove_action =
                 staticCFunction { _: CPointer<sn_notification_tag>?, userData: COpaquePointer? ->
-                    requireNotNull(userData).asStableRef<Notification>().apply {
-                        get().onRemoved?.invoke()
+                    requireNotNull(userData).asStableRef<Pair<Notification, Pinned<ByteArray>?>>().apply {
+                        get().apply {
+                            first.onRemoved?.invoke()
+                            second?.unpin()
+                        }
                         dispose()
                     }
                 }
