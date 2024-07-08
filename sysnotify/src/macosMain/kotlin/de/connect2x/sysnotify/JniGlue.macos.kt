@@ -15,6 +15,6 @@
 
 package de.connect2x.sysnotify
 
-internal actual fun createNotificationHandler(name: String): NotificationHandler {
-    return AppleNotificationHandler(name)
+internal actual fun createNotificationHandler(name: String, id: String): NotificationHandler {
+    return AppleNotificationHandler(name, id)
 }

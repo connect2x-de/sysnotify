@@ -90,12 +90,13 @@ internal data class WindowsNotificationHandle(
 
 internal class WindowsNotificationHandler(
     override val name: String,
+    override val id: String
 ) : NotificationHandler {
     internal val address: sn_notification_handler = memScoped {
         val pointer = alloc<sn_notification_handlerVar>()
         sysnotify_handler_create(
             name,
-            "de.connect2x.sysnotify.${name.replace(' ', '_')}",
+            id,
             pointer.ptr
         ).check()
         requireNotNull(pointer.value) { "Could not create COM adaptor instance" }
@@ -188,5 +189,6 @@ internal class WindowsNotificationHandler(
 }
 
 fun NotificationHandler.Companion.create(
-    name: String
-): NotificationHandler = WindowsNotificationHandler(name)
+    name: String,
+    id: String = name
+): NotificationHandler = WindowsNotificationHandler(name, id)

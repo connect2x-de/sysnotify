@@ -40,7 +40,7 @@ import kotlinx.cinterop.staticCFunction
 import kotlinx.cinterop.toCPointer
 import kotlinx.coroutines.runBlocking
 
-internal expect fun createNotificationHandler(name: String): NotificationHandler
+internal expect fun createNotificationHandler(name: String, id: String): NotificationHandler
 
 private val typeNativeNotificationHandler =
     JvmRefType("de.connect2x.sysnotify.NativeNotificationHandler")
@@ -53,6 +53,7 @@ private val typeString = JvmRefType("java.lang.String")
 internal fun registerNatives() {
     typeNativeNotificationHandler.jClass.apply {
         registerNativeFunction("create", staticCFunction(::create)) {
+            parameter(typeString)
             parameter(typeString)
             returns(JvmBuiltinType.LONG)
         }
@@ -119,8 +120,8 @@ internal fun registerNatives() {
     }
 }
 
-private fun create(env: JNIEnvVar, clazz: jclass, name: jstring): jlong {
-    return StableRef.create(createNotificationHandler(name.toKString()))
+private fun create(env: JNIEnvVar, clazz: jclass, name: jstring, id: jstring): jlong {
+    return StableRef.create(createNotificationHandler(name.toKString(), id.toKString()))
         .asCPointer().rawValue.toLong()
 }
 

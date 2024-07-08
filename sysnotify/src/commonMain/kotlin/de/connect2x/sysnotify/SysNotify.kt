@@ -121,9 +121,13 @@ interface NotificationHandle
  * of the process using it ends.
  * It is very important to invoke the provided [close] function in order to free up allocated resources,
  * otherwise a memory leak might occur based on the implementation.
+ *
+ * The [name] may be used for displaying while the [id] is a unique internal identifier for your application
+ * using this library and should not contain any whitespaces.
  */
 interface NotificationHandler : AutoCloseable {
     val name: String
+    val id: String
     val platform: NotificationPlatform
     val capabilities: NotificationCapabilities
 
@@ -147,6 +151,7 @@ interface NotificationHandler : AutoCloseable {
 
 object NoopNotificationHandler : NotificationHandler {
     override val name: String = "NOOP"
+    override val id: String = "no.op.noop"
     override val platform: NotificationPlatform
         get() = throw UnsupportedOperationException()
     override val capabilities: NotificationCapabilities = NotificationCapabilities(

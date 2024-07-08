@@ -70,6 +70,7 @@ internal class LinuxNotificationHandle(
 
 internal class LinuxNotificationHandler(
     override val name: String,
+    override val id: String
 ) : NotificationHandler {
     companion object {
         private const val DEFAULT_ICON: String = "dialog-information"
@@ -184,4 +185,5 @@ internal class LinuxNotificationHandler(
 
 fun NotificationHandler.Companion.create(
     name: String,
-): NotificationHandler = LinuxNotificationHandler(name)
+    id: String = name
+): NotificationHandler = LinuxNotificationHandler(name, id)

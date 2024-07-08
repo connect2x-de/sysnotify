@@ -22,9 +22,10 @@ private data class JvmNotificationHandle(
 ) : NotificationHandle
 
 private class JvmNotificationHandler(
-    override val name: String
+    override val name: String,
+    override val id: String
 ) : NotificationHandler {
-    private val address: Long = NativeNotificationHandler.create(name)
+    private val address: Long = NativeNotificationHandler.create(name, id)
     override val platform: NotificationPlatform =
         NotificationPlatform.entries[NativeNotificationHandler.getPlatform(address)]
 
@@ -86,8 +87,9 @@ private class JvmNotificationHandler(
 }
 
 fun NotificationHandler.Companion.create(
-    name: String
-): NotificationHandler = JvmNotificationHandler(name)
+    name: String,
+    id: String = name
+): NotificationHandler = JvmNotificationHandler(name, id)
 
 fun NotificationIcon.Companion.fromBufferedImage(image: BufferedImage): NotificationIcon {
     val width = image.width

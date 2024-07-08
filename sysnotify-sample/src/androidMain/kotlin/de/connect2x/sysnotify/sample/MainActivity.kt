@@ -26,7 +26,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        notificationHandler = NotificationHandler.create("Sysnotify Sample") { this }
+        notificationHandler = NotificationHandler.create("Sysnotify Sample", "de.connect2x.sysnotify.sample") { this }
         setContent { App(notificationHandler) }
     }
 

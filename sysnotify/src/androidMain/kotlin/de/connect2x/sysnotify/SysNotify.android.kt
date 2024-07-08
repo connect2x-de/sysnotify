@@ -37,6 +37,7 @@ private data class AndroidNotificationHandle(
 
 private class AndroidNotificationHandler(
     override val name: String,
+    override val id: String,
     private val activityGetter: () -> Activity
 ) : NotificationHandler {
     companion object {
@@ -135,5 +136,6 @@ private class AndroidNotificationHandler(
 
 fun NotificationHandler.Companion.create(
     name: String,
-    activityGetter: () -> Activity
-): NotificationHandler = AndroidNotificationHandler(name, activityGetter)
+    activityGetter: () -> Activity,
+    id: String = name
+): NotificationHandler = AndroidNotificationHandler(name, id, activityGetter)

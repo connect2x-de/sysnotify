@@ -21,13 +21,11 @@ import de.connect2x.sysnotify.NotificationHandler
 import de.connect2x.sysnotify.create
 import org.jetbrains.skiko.wasm.onWasmReady
 
-private const val appName: String = "Sysnotify Sample"
-
 @OptIn(ExperimentalComposeUiApi::class)
 suspend fun main() {
     onWasmReady {
-        CanvasBasedWindow(appName) {
-            App(NotificationHandler.create(appName))
+        CanvasBasedWindow("Sysnotify Sample") {
+            App(NotificationHandler.create("Sysnotify Sample", "de.connect2x.sysnotify.sample"))
         }
     }
 }

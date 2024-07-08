@@ -17,6 +17,7 @@ package de.connect2x.sysnotify
 
 import com.benasher44.uuid.Uuid
 import com.benasher44.uuid.uuid4
+import de.connect2x.sysnotify.NoopNotificationHandler.platform
 import platform.UserNotifications.UNAuthorizationOptionAlert
 import platform.UserNotifications.UNAuthorizationOptionBadge
 import platform.UserNotifications.UNAuthorizationOptionSound
@@ -29,7 +30,10 @@ internal data class AppleNotificationHandle(
     val uuid: Uuid = uuid4()
 ) : NotificationHandle
 
-internal class AppleNotificationHandler(override val name: String) : NotificationHandler {
+internal class AppleNotificationHandler(
+    override val name: String,
+    override val id: String
+) : NotificationHandler {
     override val platform: NotificationPlatform = NotificationPlatform.APPLE
 
     override val capabilities: NotificationCapabilities = NotificationCapabilities(
@@ -100,5 +104,6 @@ internal class AppleNotificationHandler(override val name: String) : Notificatio
 }
 
 fun NotificationHandler.Companion.create(
-    name: String
-): NotificationHandler = AppleNotificationHandler(name)
+    name: String,
+    id: String = name
+): NotificationHandler = AppleNotificationHandler(name, id)
