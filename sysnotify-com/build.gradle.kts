@@ -13,28 +13,22 @@
  * limitations under the License.
  */
 
-buildscript {
-    repositories {
-        mavenCentral()
-        google()
-        maven { url = 'https://maven.covers1624.net' }
-    }
-    dependencies {
-        //noinspection GradleDynamicVersion
-        classpath group: 'io.karma.gradlecm', name: 'gradle-cmake', version: '1.0.+', changing: true
-    }
-}
+import io.karma.gradlecm.CMakeBuildTask
 
-apply plugin: 'io.karma.gradlecm.gradle-cmake'
+plugins {
+    alias(libs.plugins.gradleCMake)
+}
 
 cmake {
     sourceFolder = projectDir
     buildStaticLibs = true
     buildSharedLibs = true
-    buildConfig = 'RelWithDebInfo'
+    buildConfig = "RelWithDebInfo"
     buildClean = false
 }
 
-cmakeBuild {
-    sourceFolder = projectDir
+tasks {
+    withType<CMakeBuildTask> {
+        sourceFolder = projectDir
+    }
 }

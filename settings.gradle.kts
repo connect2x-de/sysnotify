@@ -20,6 +20,7 @@ pluginManagement {
         google()
         mavenCentral()
         gradlePluginPortal()
+        maven("https://git.karmakrafts.dev/api/v4/projects/177/packages/maven")
     }
 }
 

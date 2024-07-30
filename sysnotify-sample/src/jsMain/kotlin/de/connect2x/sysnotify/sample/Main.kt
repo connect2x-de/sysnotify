@@ -25,7 +25,7 @@ import org.jetbrains.skiko.wasm.onWasmReady
 suspend fun main() {
     onWasmReady {
         CanvasBasedWindow("Sysnotify Sample") {
-            App(NotificationHandler.create("Sysnotify Sample", "de.connect2x.sysnotify.sample"))
+            App(NotificationHandler.create("Sysnotify Sample", "Connect2x.Sysnotify"))
         }
     }
 }

@@ -13,4 +13,4 @@
  * limitations under the License.
  */
 
-rootProject.name = 'sysnotify-com'
+rootProject.name = "sysnotify-com"

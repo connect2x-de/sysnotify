@@ -47,7 +47,6 @@ private class AndroidNotificationHandler(
     private val manager =
         activityGetter().getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
             ?: throw IllegalStateException("Could not retrieve notification manager instance")
-    private val channelId: String = uuid4().toString()
 
     override val platform: NotificationPlatform = NotificationPlatform.ANDROID
 
@@ -63,14 +62,14 @@ private class AndroidNotificationHandler(
         manager.createNotificationChannels(
             listOf(
                 NotificationChannel(
-                    channelId, name, NotificationManager.IMPORTANCE_HIGH
+                    id, name, NotificationManager.IMPORTANCE_HIGH
                 )
             )
         )
     }
 
     override fun close() {
-        manager.deleteNotificationChannel(channelId)
+        manager.deleteNotificationChannel(id)
     }
 
     override suspend fun requestPermissions() {
@@ -115,7 +114,7 @@ private class AndroidNotificationHandler(
         handle: AndroidNotificationHandle = AndroidNotificationHandle()
     ): AndroidNotificationHandle {
         with(NotificationManagerCompat.from(activityGetter())) {
-            val builder = NotificationCompat.Builder(activityGetter(), channelId)
+            val builder = NotificationCompat.Builder(activityGetter(), id)
                 .setContentTitle(notification.title ?: name)
                 .setContentText(notification.description)
                 .setLargeIcon(notification.icon?.let {

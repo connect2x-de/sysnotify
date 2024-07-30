@@ -25,14 +25,14 @@
 #include <filesystem>
 #include <functional>
 #include <iostream>
+#include <optional>
 #include <source_location>
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <utility>
 #include <vector>
-#include <optional>
-#include <unordered_map>
 
 #include <fmt/format.h>
 #include <parallel_hashmap/phmap.h>
@@ -42,10 +42,10 @@
 #define NOMINMAX           // Make sure min/max are not defined as macros by the Win32 API
 #include <windows.h>
 #undef ERROR
+#include <appmodel.h>
 #include <psapi.h>
 #include <windows.ui.notifications.h>
 #include <wrl.h>
-#include <appmodel.h>
 // @formatter:on
 
 #include "unicode.hpp"
@@ -90,27 +90,27 @@ namespace sysnotify {
 
     template<typename T>
     inline auto combined_hash(size_t hash1, const T& value) noexcept -> size_t {
-        hash1^= std::hash<T>()(value) + 0x9E3779B9 + (hash1 << 6) + (hash1 >> 2);
+        hash1 ^= std::hash<T>()(value) + 0x9E3779B9 + (hash1 << 6) + (hash1 >> 2);
         return hash1;
     }
 
     inline auto combine_hashes(size_t hash1, size_t hash2) noexcept -> size_t {
-        hash1^= hash2 + 0x9E3779B9 + (hash1 << 6) + (hash1 >> 2);
+        hash1 ^= hash2 + 0x9E3779B9 + (hash1 << 6) + (hash1 >> 2);
         return hash1;
     }
 
     namespace detail {
         template<typename T, size_t TSize, size_t TIndex = 0>
-        inline auto array_hash(const T(&array)[TSize], size_t& hash) noexcept -> void {
+        inline auto array_hash(const T (&array)[TSize], size_t& hash) noexcept -> void {
             hash = combined_hash(hash, array[TIndex]);
             if constexpr(TIndex < TSize - 1) {
                 array_hash<T, TSize, TIndex + 1>(array, hash);
             }
         }
-    }
+    }// namespace detail
 
     template<typename T, size_t TSize>
-    inline auto array_hash(const T(&array)[TSize]) noexcept -> size_t {
+    inline auto array_hash(const T (&array)[TSize]) noexcept -> size_t {
         size_t result = 0;
         detail::array_hash<T, TSize>(array, result);
         return result;
@@ -125,18 +125,17 @@ namespace sysnotify {
 
     class DynamicLibrary final {
         HMODULE _handle;
+
     public:
         explicit DynamicLibrary(const std::string& name)
-            : _handle(LoadLibraryW(kstd::unicode::convert<wchar_t>(name).c_str()))
-        {
+            : _handle(LoadLibraryW(kstd::unicode::convert<wchar_t>(name).c_str())) {
             SYSNOTIFY_REQUIRE(_handle);
         }
 
         DynamicLibrary(const DynamicLibrary&) noexcept = delete;
 
-        DynamicLibrary(DynamicLibrary&& other) noexcept :
-            _handle(other._handle)
-        {
+        DynamicLibrary(DynamicLibrary&& other) noexcept
+            : _handle(other._handle) {
             other._handle = nullptr;
         }
 
@@ -147,9 +146,9 @@ namespace sysnotify {
             FreeLibrary(_handle);
         }
 
-        auto operator =(const DynamicLibrary&) noexcept -> DynamicLibrary& = delete;
+        auto operator=(const DynamicLibrary&) noexcept -> DynamicLibrary& = delete;
 
-        auto operator =(DynamicLibrary&& other) noexcept -> DynamicLibrary& {
+        auto operator=(DynamicLibrary&& other) noexcept -> DynamicLibrary& {
             _handle = other._handle;
             other._handle = nullptr;
             return *this;
@@ -190,15 +189,16 @@ namespace sysnotify {
 
     /**
      * We load the kernel binary and retrieve a pointer to the RtlGetNtVersionNumbers
-     * functions, which is guaranteed to be available with kernel 5.1 (XP/2600) and up.
+     * functions, which is guaranteed to be available with kernel 5.1 (XP/2600) and up
+     *
      * We do this since the aforementioned function is not exported to the userland kernel APIs,
      * and since it is the only reliable way to tell what exact version of windows we are running..
      *
      * See https://www.geoffchappell.com/studies/windows/win32/ntdll/api/ldrinit/getntversionnumbers.htm
      */
     [[nodiscard]] inline auto get_kernel_version(DWORD* major, DWORD* minor, DWORD* patch) {
-        static DynamicLibrary module("NTDLL.DLL"); // Lives as long as the process
-        static auto* function = module.get_function<void(*)(DWORD*, DWORD*, DWORD*)>("RtlGetNtVersionNumbers");
+        static DynamicLibrary module("NTDLL.DLL");// Lives as long as the process
+        static auto* function = module.get_function<void (*)(DWORD*, DWORD*, DWORD*)>("RtlGetNtVersionNumbers");
         function(major, minor, patch);
     }
 }// namespace sysnotify
@@ -207,7 +207,7 @@ namespace sysnotify {
 namespace std {
     template<>
     struct hash<GUID> final {
-        inline auto operator ()(const GUID& value) noexcept -> size_t {
+        inline auto operator()(const GUID& value) noexcept -> size_t {
             auto hash = std::hash<decltype(value.Data1)>()(value.Data1);
             hash = sysnotify::combined_hash(hash, value.Data2);
             hash = sysnotify::combined_hash(hash, value.Data3);
@@ -215,4 +215,4 @@ namespace std {
             return hash;
         }
     };
-}
+}// namespace std

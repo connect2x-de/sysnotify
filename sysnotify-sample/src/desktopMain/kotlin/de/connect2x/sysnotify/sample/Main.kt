@@ -30,7 +30,7 @@ fun main() {
         val icon =
             this::class.java.getResourceAsStream("/assets/icons/app_icon.png")
                 .use { ImageIO.read(it) }
-        val notificationHandler = NotificationHandler.create("Sysnotify Sample", "de.connect2x.Sysnotify")
+        val notificationHandler = NotificationHandler.create("Sysnotify Sample", "Connect2x.Sysnotify")
 
         Window(
             title = "Sysnotify Sample",

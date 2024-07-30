@@ -116,6 +116,7 @@ namespace sysnotify {
         SYSNOTIFY_LOG_DEBUG("Registering COM objects");
         module.RegisterObjects();
         set_aumid();
+        register_com_server();
 
         // Create notifier
         SYSNOTIFY_LOG_DEBUG("Creating toast notifier instance");
@@ -155,7 +156,8 @@ namespace sysnotify {
         }
         const auto guid_string = guid_to_string(tag);
         if(is_packaged_app()) {
-            return fmt::format(R"(<image placement="appLogoOverride" src="ms-appdata:///local/{}" hint-crop="circle" />)", icon_path.value().filename().string());
+            return fmt::format(R"(<image placement="appLogoOverride" src="ms-appdata:///local/{}" hint-crop="circle" />)",
+                               icon_path.value().filename().string());
         }
         return fmt::format(R"(<image placement="appLogoOverride" src="file:///{}" hint-crop="circle" />)", icon_path.value().string());
     }
@@ -202,6 +204,19 @@ namespace sysnotify {
                       kstd::unicode::convert<char>(current_aum_id_string), kstd::unicode::convert<char>(_aum_id));
             SYSNOTIFY_REQUIRE_SUCCESS(SetCurrentProcessExplicitAppUserModelID(_aum_id.c_str()));
         }
+    }
+
+    auto DefaultNotificationHandler::register_com_server() -> void {
+        const auto clsid_string = guid_to_string(ACTIVATOR_CLSID);
+        const auto sub_key = kstd::unicode::convert<wchar_t>(fmt::format(R"(SOFTWARE\Classes\CLSID\{}\LocalServer32)", clsid_string));
+        HKEY key = nullptr;
+        if(RegOpenKeyExW(HKEY_CURRENT_USER, sub_key.c_str(), 0, KEY_READ, &key) == ERROR_SUCCESS && key != nullptr) {
+            SYSNOTIFY_LOG_DEBUG("COM server registry key already exists, skipping creation");
+            RegCloseKey(key);
+            return;
+        }
+        SYSNOTIFY_REQUIRE_SUCCESS(RegSetKeyValueW(HKEY_CURRENT_USER, sub_key.c_str(), nullptr, REG_SZ, L"", sizeof(wchar_t)));
+        SYSNOTIFY_LOG_DEBUG("Created registry key for COM server");
     }
 
     auto DefaultNotificationHandler::create_shortcut_if_needed() -> void {
@@ -291,7 +306,7 @@ namespace sysnotify {
             const auto index = i << 2;
             buffer[index] = static_cast<uint8_t>(pixel >> 16);
             buffer[index + 1] = static_cast<uint8_t>(pixel >> 8);
-            buffer[index + 2] = static_cast<uint8_t>(pixel & 0xFFU);
+            buffer[index + 2] = static_cast<uint8_t>(pixel);// Acts like & 0xFF
             buffer[index + 3] = static_cast<uint8_t>(pixel >> 24);
         }
         return buffer;
@@ -317,7 +332,7 @@ namespace sysnotify {
 
         const auto tag_string = guid_to_string(tag);
         auto file_path = std::filesystem::path(app_data_dir) / "Packages" / _aum_id / "LocalState" /
-                               fmt::format("{}.png", tag_string.substr(1, tag_string.length() - 2));
+                         fmt::format("{}.png", tag_string.substr(1, tag_string.length() - 2));
         SYSNOTIFY_LOG_DEBUG("Calculated image path {} for notification {}", file_path.string(), guid_to_string(tag));
         const auto parent_path = file_path.parent_path();
         if(!std::filesystem::exists(parent_path)) {
@@ -353,7 +368,8 @@ namespace sysnotify {
         auto format = GUID_WICPixelFormat32bppRGBA;
         SYSNOTIFY_REQUIRE_SUCCESS(frame->SetPixelFormat(&format));
         const auto swizzled_icon_data = swizzle_icon(width, height, icon_data_src);
-        SYSNOTIFY_REQUIRE_SUCCESS(frame->WritePixels(height, static_cast<uint32_t>(width) << 2, (static_cast<uint32_t>(width) * height) << 2,
+        SYSNOTIFY_REQUIRE_SUCCESS(frame->WritePixels(height, static_cast<uint32_t>(width) << 2,
+                                                     (static_cast<uint32_t>(width) * height) << 2,
                                                      const_cast<BYTE*>(reinterpret_cast<const BYTE*>(swizzled_icon_data.data()))));
         SYSNOTIFY_REQUIRE_SUCCESS(frame->Commit());
 
@@ -366,7 +382,8 @@ namespace sysnotify {
 
     auto DefaultNotificationHandler::register_actions(wrl::ComPtr<abi::IToastNotification>& notification,
                                                       const GUID& tag,
-                                                      const NotificationContent& content) -> void {
+                                                      const NotificationContent& content,
+                                                      const std::optional<std::filesystem::path>& icon_path) -> void {
         // Set up event callbacks
         using ActivationCallback = wrt::TypedEventHandler<wrt::ToastNotification, wrt::IInspectable>;
         using DismissCallback = wrt::TypedEventHandler<wrt::ToastNotification, wrt::ToastDismissedEventArgs>;
@@ -410,7 +427,7 @@ namespace sysnotify {
         if(content.dismiss_action != nullptr) {
             SYSNOTIFY_LOG_DEBUG("Injecting dismiss callback into notification {}", guid_to_string(tag));
             notification->add_Dismissed(DismissCallback(
-                [dismiss_action = content.dismiss_action, remove_action = content.remove_action, user_data = content.user_data, tag, this]
+                [dismiss_action = content.dismiss_action, remove_action = content.remove_action, user_data = content.user_data, icon_path = *icon_path, tag, this]
                 (const wrt::ToastNotification& n, const wrt::ToastDismissedEventArgs& args){
                     sn_notification_dismissal_reason reason = -1;
                     switch(args.Reason()) {
@@ -429,6 +446,9 @@ namespace sysnotify {
                         remove_action(reinterpret_cast<const sn_notification_tag*>(&tag), user_data);
                         _cancelled.erase(tag);
                         _tags.erase(tag);
+                        if(std::filesystem::exists(icon_path)) {
+                            std::filesystem::remove(icon_path);
+                        }
                         SYSNOTIFY_LOG_DEBUG("Notification {} was destroyed", guid_to_string(tag));
                         return;
                     }
@@ -441,12 +461,15 @@ namespace sysnotify {
         if(content.fail_action != nullptr) {
             SYSNOTIFY_LOG_DEBUG("Injecting fail callback into notification {}", guid_to_string(tag));
             notification->add_Failed(FailCallback(
-                [action = content.fail_action, user_data = content.user_data, tag, this]
+                [action = content.fail_action, user_data = content.user_data, icon_path = *icon_path, tag, this]
                 (const wrt::ToastNotification& n, const wrt::ToastFailedEventArgs& args){
                     SYSNOTIFY_LOG_DEBUG("Failed notification {}", guid_to_string(tag));
                     action(reinterpret_cast<const sn_notification_tag*>(&tag), user_data);
                     _tags.erase(tag); // If the toast has failed, we need to remove it too
                     _cancelled.erase(tag); // If this was cancelled, remove it
+                    if(std::filesystem::exists(icon_path)) {
+                        std::filesystem::remove(icon_path);
+                    }
                 }).as<__FITypedEventHandler_2_Windows__CUI__CNotifications__CToastNotification_Windows__CUI__CNotifications__CToastFailedEventArgs>().get(),
                     &fail_event_token);
         }
@@ -471,7 +494,7 @@ namespace sysnotify {
         notification2->put_Tag(wrl::HStringReference(tag_string.c_str()).Get());
         SYSNOTIFY_LOG_DEBUG("Updated notification tag");
 
-        register_actions(notification, tag, content);
+        register_actions(notification, tag, content, icon_path);
 
         // Add to internal map and display toast
         _tags[tag] = {tag, std::move(icon_path)};
