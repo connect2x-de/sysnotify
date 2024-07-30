@@ -113,20 +113,21 @@ private class AndroidNotificationHandler(
         notification: Notification,
         handle: AndroidNotificationHandle = AndroidNotificationHandle()
     ): AndroidNotificationHandle {
-        with(NotificationManagerCompat.from(activityGetter())) {
-            val builder = NotificationCompat.Builder(activityGetter(), id)
+        val activity = activityGetter()
+        with(NotificationManagerCompat.from(activity)) {
+            val builder = NotificationCompat.Builder(activity, id)
                 .setContentTitle(notification.title ?: name)
                 .setContentText(notification.description)
-                .setLargeIcon(notification.icon?.let {
-                    BitmapFactory.decodeByteArray(it, 0, it.size)
-                })
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                 .setAutoCancel(true) // Remove notification when user taps it
+
             val icon = notification.icon
             if (icon != null) {
-                builder.setSmallIcon(IconCompat.createWithData(icon, 0, icon.size))
-                    .setLargeIcon(BitmapFactory.decodeByteArray(icon, 0, 0))
+                val iconData = icon.data
+                builder.setSmallIcon(IconCompat.createWithData(iconData, 0, iconData.size))
+                    .setLargeIcon(BitmapFactory.decodeByteArray(iconData, 0, iconData.size))
             } else builder.setSmallIcon(R.drawable.ic_notification)
+
             notify(handle.uuid.hashCode(), builder.build())
         }
         return handle
