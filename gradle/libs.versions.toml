@@ -1,7 +1,7 @@
 [versions]
 jvmTarget = "17"
 agp = "8.2.2"
-kotlin = "1.9.24"
+kotlin = "2.0.0"
 kotlinxCoroutines = "1.8.1"
 ksp = "1.9.24-1.0.21"
 android-minSdk = "28"
@@ -13,6 +13,8 @@ androidx-activityCompose = "1.9.0"
 androidx-ui-tooling = "1.6.8"
 compose-plugin = "1.6.11"
 compose-compiler = "2.0.0"
+
+gradleCMake = "1.1.0.28"
 
 [libraries]
 kotlinx-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
@@ -33,3 +35,5 @@ androidApplication = { id = "com.android.application", version.ref = "agp" }
 composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "compose-compiler" }
 jetbrainsCompose = { id = "org.jetbrains.compose", version.ref = "compose-plugin" }
 kotlinxSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+
+gradleCMake = { id = "io.karma.gradlecm.gradle-cmake", version.ref = "gradleCMake" }

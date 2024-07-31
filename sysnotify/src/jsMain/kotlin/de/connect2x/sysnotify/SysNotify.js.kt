@@ -26,7 +26,8 @@ private class WebNotificationHandle(
 ) : NotificationHandle
 
 private class WebNotificationHandler(
-    override val name: String
+    override val name: String,
+    override val id: String
 ) : NotificationHandler {
     override val platform: NotificationPlatform = NotificationPlatform.WEB
 
@@ -72,5 +73,6 @@ private class WebNotificationHandler(
 }
 
 fun NotificationHandler.Companion.create(
-    name: String
-): NotificationHandler = WebNotificationHandler(name)
+    name: String,
+    id: String = name
+): NotificationHandler = WebNotificationHandler(name, id)

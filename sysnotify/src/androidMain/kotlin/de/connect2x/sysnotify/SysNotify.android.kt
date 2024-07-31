@@ -37,6 +37,7 @@ private data class AndroidNotificationHandle(
 
 private class AndroidNotificationHandler(
     override val name: String,
+    override val id: String,
     private val activityGetter: () -> Activity
 ) : NotificationHandler {
     companion object {
@@ -46,7 +47,6 @@ private class AndroidNotificationHandler(
     private val manager =
         activityGetter().getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
             ?: throw IllegalStateException("Could not retrieve notification manager instance")
-    private val channelId: String = uuid4().toString()
 
     override val platform: NotificationPlatform = NotificationPlatform.ANDROID
 
@@ -62,14 +62,14 @@ private class AndroidNotificationHandler(
         manager.createNotificationChannels(
             listOf(
                 NotificationChannel(
-                    channelId, name, NotificationManager.IMPORTANCE_HIGH
+                    id, name, NotificationManager.IMPORTANCE_HIGH
                 )
             )
         )
     }
 
     override fun close() {
-        manager.deleteNotificationChannel(channelId)
+        manager.deleteNotificationChannel(id)
     }
 
     override suspend fun requestPermissions() {
@@ -113,20 +113,21 @@ private class AndroidNotificationHandler(
         notification: Notification,
         handle: AndroidNotificationHandle = AndroidNotificationHandle()
     ): AndroidNotificationHandle {
-        with(NotificationManagerCompat.from(activityGetter())) {
-            val builder = NotificationCompat.Builder(activityGetter(), channelId)
+        val activity = activityGetter()
+        with(NotificationManagerCompat.from(activity)) {
+            val builder = NotificationCompat.Builder(activity, id)
                 .setContentTitle(notification.title ?: name)
                 .setContentText(notification.description)
-                .setLargeIcon(notification.icon?.let {
-                    BitmapFactory.decodeByteArray(it, 0, it.size)
-                })
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                 .setAutoCancel(true) // Remove notification when user taps it
+
             val icon = notification.icon
             if (icon != null) {
-                builder.setSmallIcon(IconCompat.createWithData(icon, 0, icon.size))
-                    .setLargeIcon(BitmapFactory.decodeByteArray(icon, 0, 0))
+                val iconData = icon.data
+                builder.setSmallIcon(IconCompat.createWithData(iconData, 0, iconData.size))
+                    .setLargeIcon(BitmapFactory.decodeByteArray(iconData, 0, iconData.size))
             } else builder.setSmallIcon(R.drawable.ic_notification)
+
             notify(handle.uuid.hashCode(), builder.build())
         }
         return handle
@@ -135,5 +136,6 @@ private class AndroidNotificationHandler(
 
 fun NotificationHandler.Companion.create(
     name: String,
-    activityGetter: () -> Activity
-): NotificationHandler = AndroidNotificationHandler(name, activityGetter)
+    activityGetter: () -> Activity,
+    id: String = name
+): NotificationHandler = AndroidNotificationHandler(name, id, activityGetter)

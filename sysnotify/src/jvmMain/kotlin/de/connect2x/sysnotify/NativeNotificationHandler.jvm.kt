@@ -29,7 +29,7 @@ object NativeNotificationHandler {
     }
 
     @JvmStatic
-    external fun create(name: String): Long
+    external fun create(name: String, id: String): Long
 
     @JvmStatic
     external fun getPlatform(handler: Long): Int

@@ -64,54 +64,45 @@ enum class NotificationDismissalReason {
     TIMED_OUT
 }
 
-data class Notification(
-    val title: String? = null,
-    val description: String? = null,
-    val icon: ByteArray? = null,
-    val iconWidth: Int = 0,
-    val iconHeight: Int = 0,
-    val onActivated: (() -> Unit)? = null,
-    val onDismissed: ((NotificationDismissalReason) -> Unit)? = null,
-    val onFailed: (() -> Unit)? = null,
-    val onRemoved: (() -> Unit)? = null
-) {
+/**
+ * A raw bitmap type for storing icon data and its width/height.
+ * Data is expected to be in RGBA8888 format. Use per-platform helpers for creating instances.
+ */
+data class NotificationIcon(val data: ByteArray, val width: Int, val height: Int) {
+    companion object {}
+
     // Begin ugly generated code
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other == null || this::class != other::class) return false
 
-        other as Notification
+        other as NotificationIcon
 
-        if (title != other.title) return false
-        if (description != other.description) return false
-        if (icon != null) {
-            if (other.icon == null) return false
-            if (!icon.contentEquals(other.icon)) return false
-        } else if (other.icon != null) return false
-        if (iconWidth != other.iconWidth) return false
-        if (iconHeight != other.iconHeight) return false
-        if (onActivated != other.onActivated) return false
-        if (onDismissed != other.onDismissed) return false
-        if (onFailed != other.onFailed) return false
-        if (onRemoved != other.onRemoved) return false
+        if (!data.contentEquals(other.data)) return false
+        if (width != other.width) return false
+        if (height != other.height) return false
 
         return true
     }
 
     override fun hashCode(): Int {
-        var result = title?.hashCode() ?: 0
-        result = 31 * result + (description?.hashCode() ?: 0)
-        result = 31 * result + (icon?.contentHashCode() ?: 0)
-        result = 31 * result + iconWidth
-        result = 31 * result + iconHeight
-        result = 31 * result + (onActivated?.hashCode() ?: 0)
-        result = 31 * result + (onDismissed?.hashCode() ?: 0)
-        result = 31 * result + (onFailed?.hashCode() ?: 0)
-        result = 31 * result + (onRemoved?.hashCode() ?: 0)
+        var result = data.contentHashCode()
+        result = 31 * result + width
+        result = 31 * result + height
         return result
     }
     // End ugly generated code
 }
+
+data class Notification(
+    val title: String? = null,
+    val description: String? = null,
+    val icon: NotificationIcon? = null,
+    val onActivated: (() -> Unit)? = null,
+    val onDismissed: ((NotificationDismissalReason) -> Unit)? = null,
+    val onFailed: (() -> Unit)? = null,
+    val onRemoved: (() -> Unit)? = null
+)
 
 /**
  * This interface describes a notification that was created by an [NotificationHandler] instance
@@ -130,9 +121,13 @@ interface NotificationHandle
  * of the process using it ends.
  * It is very important to invoke the provided [close] function in order to free up allocated resources,
  * otherwise a memory leak might occur based on the implementation.
+ *
+ * The [name] may be used for displaying while the [id] is a unique internal identifier for your application
+ * using this library and should not contain any whitespaces.
  */
 interface NotificationHandler : AutoCloseable {
     val name: String
+    val id: String
     val platform: NotificationPlatform
     val capabilities: NotificationCapabilities
 
@@ -156,6 +151,7 @@ interface NotificationHandler : AutoCloseable {
 
 object NoopNotificationHandler : NotificationHandler {
     override val name: String = "NOOP"
+    override val id: String = "no.op.noop"
     override val platform: NotificationPlatform
         get() = throw UnsupportedOperationException()
     override val capabilities: NotificationCapabilities = NotificationCapabilities(

@@ -40,7 +40,7 @@ import kotlinx.cinterop.staticCFunction
 import kotlinx.cinterop.toCPointer
 import kotlinx.coroutines.runBlocking
 
-internal expect fun createNotificationHandler(name: String): NotificationHandler
+internal expect fun createNotificationHandler(name: String, id: String): NotificationHandler
 
 private val typeNativeNotificationHandler =
     JvmRefType("de.connect2x.sysnotify.NativeNotificationHandler")
@@ -53,6 +53,7 @@ private val typeString = JvmRefType("java.lang.String")
 internal fun registerNatives() {
     typeNativeNotificationHandler.jClass.apply {
         registerNativeFunction("create", staticCFunction(::create)) {
+            parameter(typeString)
             parameter(typeString)
             returns(JvmBuiltinType.LONG)
         }
@@ -119,8 +120,8 @@ internal fun registerNatives() {
     }
 }
 
-private fun create(env: JNIEnvVar, clazz: jclass, name: jstring): jlong {
-    return StableRef.create(createNotificationHandler(name.toKString()))
+private fun create(env: JNIEnvVar, clazz: jclass, name: jstring, id: jstring): jlong {
+    return StableRef.create(createNotificationHandler(name.toKString(), id.toKString()))
         .asCPointer().rawValue.toLong()
 }
 
@@ -188,10 +189,10 @@ private fun push(
     failAction: jobject?,
     removeAction: jobject?
 ): jlong {
-    val activateActionRef = activateAction?.newGlobalRef()
-    val dismissActionRef = dismissAction?.newGlobalRef()
-    val failActionRef = failAction?.newGlobalRef()
-    val removeActionRef = removeAction?.newGlobalRef()
+    var activateActionRef = activateAction?.newGlobalRef()
+    var dismissActionRef = dismissAction?.newGlobalRef()
+    var failActionRef = failAction?.newGlobalRef()
+    var removeActionRef = removeAction?.newGlobalRef()
     return runBlocking {
         requireNotNull(handler.toCPointer<CPointed>())
             .asStableRef<NotificationHandler>()
@@ -199,9 +200,7 @@ private fun push(
                 Notification(
                     title = title?.toKString() ?: "Unknown",
                     description = description?.toKString(),
-                    icon = icon?.toByteArray(),
-                    iconWidth = iconWidth,
-                    iconHeight = iconHeight,
+                    icon = icon?.let { NotificationIcon(it.toByteArray(), iconWidth, iconHeight) },
                     onActivated = callback@{
                         if (activateActionRef == null) return@callback
                         jvmEnvironment {
@@ -244,8 +243,11 @@ private fun push(
                     onRemoved = callback@{
                         jvmEnvironment {
                             activateActionRef?.deleteGlobalRef()
+                            activateActionRef = null
                             dismissActionRef?.deleteGlobalRef()
+                            dismissActionRef = null
                             failActionRef?.deleteGlobalRef()
+                            failActionRef = null
                             if (removeActionRef == null) return@callback
                             requireNotNull(pointed?.CallVoidMethodA) { "Could not access JNIEnv::CallVoidMethodA" }(
                                 this@jvmEnvironment.ptr,
@@ -253,7 +255,8 @@ private fun push(
                                 typeNativeNotificationAction.jClass.getMethod("invoke") {},
                                 null
                             )
-                            removeActionRef.deleteGlobalRef()
+                            removeActionRef!!.deleteGlobalRef()
+                            removeActionRef = null
                         }
                     }
                 )
@@ -282,9 +285,7 @@ private fun update(
                 Notification(
                     title = title?.toKString() ?: "Unknown",
                     description = description?.toKString(),
-                    icon = icon?.toByteArray(),
-                    iconWidth = iconWidth,
-                    iconHeight = iconHeight
+                    icon = icon?.let { NotificationIcon(it.toByteArray(), iconWidth, iconHeight) },
                 )
             )
     }?.let { StableRef.create(it).asCPointer().rawValue.toLong() } ?: 0

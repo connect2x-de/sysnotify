@@ -43,9 +43,7 @@ namespace sysnotify {
 
 extern "C" {
 
-SYSNOTIFY_API sn_error sysnotify_handler_create(const char* app_name,
-                                                const char* aum_id,
-                                                sn_notification_handler* handler) {
+SYSNOTIFY_API sn_error sysnotify_handler_create(const char* app_name, const char* aum_id, sn_notification_handler* handler) {
     using namespace sysnotify;
     if(app_name == nullptr || aum_id == nullptr || handler == nullptr) {
         return SYSNOTIFY_ERR_INVALID_ARG;
@@ -115,8 +113,8 @@ SYSNOTIFY_API sn_error sysnotify_handler_is_valid_tag(sn_notification_handler ha
         return SYSNOTIFY_ERR_INVALID_ARG;
     }
     SYSNOTIFY_HANDLE_EXCEPTIONS({
-        *is_valid = static_cast<sn_bool>(
-            reinterpret_cast<NotificationHandler*>(handler)->is_valid_tag(*reinterpret_cast<const GUID*>(tag)));
+        *is_valid =
+            static_cast<sn_bool>(reinterpret_cast<NotificationHandler*>(handler)->is_valid_tag(*reinterpret_cast<const GUID*>(tag)));
     });
     return SYSNOTIFY_OK;
 }

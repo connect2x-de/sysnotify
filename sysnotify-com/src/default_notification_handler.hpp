@@ -46,11 +46,21 @@ namespace sysnotify {
 
         auto create_shortcut_if_needed() -> void;
         auto set_aumid() -> void;
-        [[nodiscard]] auto create_content_document(const NotificationContent& content) -> wrl::ComPtr<abi::IXmlDocument>;
+        auto register_com_server() -> void;
+        [[nodiscard]] auto create_content_document(const GUID& tag,
+                                                   const NotificationContent& content,
+                                                   const std::optional<std::filesystem::path>& icon_path) -> wrl::ComPtr<abi::IXmlDocument>;
         [[nodiscard]] auto get_notification(const GUID& tag) -> wrl::ComPtr<abi::IToastNotification>;
         auto register_actions(wrl::ComPtr<abi::IToastNotification>& notification,
                               const GUID& tag,
-                              const NotificationContent& content) -> void;
+                              const NotificationContent& content,
+                              const std::optional<std::filesystem::path>& icon_path) -> void;
+        [[nodiscard]] auto format_content(const GUID& tag,
+                                          const NotificationContent& content,
+                                          const std::optional<std::filesystem::path>& icon_path) -> std::wstring;
+        [[nodiscard]] auto format_image(const GUID& tag, const std::optional<std::filesystem::path>& icon_path) -> std::string;
+        [[nodiscard]] auto make_icon_if_present(const NotificationContent& content,
+                                                const GUID& tag) -> std::optional<std::filesystem::path>;
 
     public:
         DefaultNotificationHandler(const std::string& app_name, const std::string& aum_id);

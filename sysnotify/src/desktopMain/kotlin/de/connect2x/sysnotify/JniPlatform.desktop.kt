@@ -140,25 +140,24 @@ internal inline fun jstring.toKString(): String {
 
 internal inline fun jbyteArray.toByteArray(): ByteArray {
     return jvmEnvironment {
-        ByteArray(
-            requireNotNull(pointed?.GetArrayLength)(
-                ptr,
-                this@toByteArray
-            )
-        ).apply {
+        val size = requireNotNull(pointed?.GetArrayLength)(
+            ptr,
+            this@toByteArray
+        )
+        ByteArray(size).apply {
             usePinned { pinnedArray ->
                 val data =
                     requireNotNull(
-                        requireNotNull(pointed?.GetPrimitiveArrayCritical) { "Could not access JNI:GetPrimitiveArrayCritical function" }(
+                        requireNotNull(pointed?.GetByteArrayElements) { "Could not access JNI:GetPrimitiveArrayCritical function" }(
                             this@jvmEnvironment.ptr,
-                            reinterpret(),
+                            this@toByteArray.reinterpret(),
                             null
                         )
                     ) { "Could not retrieve array base address" }
-                memcpy(pinnedArray.addressOf(0), data, size.convert())
-                requireNotNull(pointed?.ReleasePrimitiveArrayCritical) { "Could not access JNI:ReleasePrimitiveArrayCritical function" }(
+                memcpy(pinnedArray.addressOf(0), data, size.toULong())
+                requireNotNull(pointed?.ReleaseByteArrayElements) { "Could not access JNI:ReleasePrimitiveArrayCritical function" }(
                     this@jvmEnvironment.ptr,
-                    reinterpret(),
+                    this@toByteArray.reinterpret(),
                     data,
                     0
                 )

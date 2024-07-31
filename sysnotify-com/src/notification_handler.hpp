@@ -18,8 +18,8 @@
 
 #pragma once
 
-#include "sysnotify_types.h"
 #include "platform.hpp"
+#include "sysnotify_types.h"
 
 namespace sysnotify {
     // Windows runtime library (not WRT)
@@ -40,6 +40,7 @@ namespace sysnotify {
     class NotificationHandler {
     protected:
         NotificationHandler() noexcept = default;
+
     public:
         virtual ~NotificationHandler() noexcept = default;
 
@@ -48,4 +49,4 @@ namespace sysnotify {
         virtual auto pop(const GUID& tag) -> void = 0;
         virtual auto is_valid_tag(const GUID& tag) -> bool = 0;
     };
-}
+}// namespace sysnotify

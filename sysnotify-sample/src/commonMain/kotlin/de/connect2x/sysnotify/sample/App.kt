@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import de.connect2x.sysnotify.Notification
 import de.connect2x.sysnotify.NotificationHandler
+import de.connect2x.sysnotify.NotificationIcon
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -40,7 +41,7 @@ import kotlinx.coroutines.launch
 internal val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.Default)
 
 @Composable
-fun App(notificationHandler: NotificationHandler) {
+fun App(notificationHandler: NotificationHandler, icon: NotificationIcon? = null) {
     coroutineScope.launch {
         notificationHandler.requestPermissions() // Request permissions in-place because we are lazy here
     }
@@ -85,7 +86,6 @@ fun App(notificationHandler: NotificationHandler) {
                     modifier = Modifier.weight(1F).padding(vertical = 10.dp)
                 )
             }
-            // TODO: implement icon
             Row {
                 Button(
                     onClick = {
@@ -93,6 +93,7 @@ fun App(notificationHandler: NotificationHandler) {
                             notificationHandler.push(Notification(
                                 title = title,
                                 description = description,
+                                icon = icon,
                                 onActivated = { println("Notification activated!") },
                                 onDismissed = { println("Notification dismissed!") },
                                 onFailed = { println("Notification failed!") },

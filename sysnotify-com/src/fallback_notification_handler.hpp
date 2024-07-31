@@ -27,12 +27,12 @@ namespace sysnotify {
         FallbackNotificationHandler(FallbackNotificationHandler&&) noexcept = default;
         ~FallbackNotificationHandler() noexcept = default;
 
-        auto operator =(const FallbackNotificationHandler&) noexcept -> FallbackNotificationHandler& = default;
-        auto operator =(FallbackNotificationHandler&&) noexcept -> FallbackNotificationHandler& = default;
+        auto operator=(const FallbackNotificationHandler&) noexcept -> FallbackNotificationHandler& = default;
+        auto operator=(FallbackNotificationHandler&&) noexcept -> FallbackNotificationHandler& = default;
 
         auto push(const NotificationContent& content) -> GUID;
         auto update(const GUID& tag, const NotificationContent& content) -> void;
         auto pop(const GUID& tag) -> void;
         auto is_valid_tag(const GUID& tag) -> bool;
     };
-}
+}// namespace sysnotify

@@ -20,11 +20,11 @@
 
 namespace sysnotify {
     FallbackNotificationHandler::FallbackNotificationHandler() noexcept
-        : NotificationHandler()
-    {}
+        : NotificationHandler() {
+    }
 
     GUID FallbackNotificationHandler::push(const NotificationContent& content) {
-        GUID tag{};
+        GUID tag {};
         SYSNOTIFY_REQUIRE_SUCCESS(CoCreateGuid(&tag));
         return tag;
     }
@@ -38,4 +38,4 @@ namespace sysnotify {
     bool FallbackNotificationHandler::is_valid_tag(const GUID& tag) {
         return true;
     }
-}
+}// namespace sysnotify
