@@ -44,26 +44,6 @@ data class NotificationCapabilities(
         isTitleSupported || isDescriptionSupported || isIconSupported || isActionSupported
 }
 
-enum class NotificationDismissalReason {
-    /**
-     * This action is triggered when the notification is dismissed by
-     * a user action like swiping it away.
-     */
-    USER_CANCELED,
-
-    /**
-     * This action is triggered when the notification is dismissed
-     * programmatically, like by calling [NotificationHandler.pop].
-     */
-    APPLICATION_HIDDEN,
-
-    /**
-     * This action is triggered when the notification is hidden
-     * automatically if the default amount for being visible has expired.
-     */
-    TIMED_OUT
-}
-
 /**
  * A raw bitmap type for storing icon data and its width/height.
  * Data is expected to be in RGBA8888 format. Use per-platform helpers for creating instances.
@@ -97,11 +77,7 @@ data class NotificationIcon(val data: ByteArray, val width: Int, val height: Int
 data class Notification(
     val title: String? = null,
     val description: String? = null,
-    val icon: NotificationIcon? = null,
-    val onActivated: (() -> Unit)? = null,
-    val onDismissed: ((NotificationDismissalReason) -> Unit)? = null,
-    val onFailed: (() -> Unit)? = null,
-    val onRemoved: (() -> Unit)? = null
+    val icon: NotificationIcon? = null
 )
 
 /**
