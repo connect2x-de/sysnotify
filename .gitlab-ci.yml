@@ -10,7 +10,7 @@ stages:
   - build
   # - test
   - security
-  # - publish
+  - publish
 
 variables:
   GRADLE_OPTS: -Dorg.gradle.daemon=false
@@ -262,28 +262,41 @@ security:dependencies:
     - trivy repo ./ --exit-code 0 --format template --template "@/contrib/gitlab.tpl" --output report.json
     - trivy repo ./ --exit-code 1 --severity CRITICAL
 
-# publish:mac:
-#   stage: publish
-#   tags: [ "connect2x-mac" ]
-#   cache:
-#     - *pull-cache-mac
-#   rules:
-#     - *if-main
-#     - *if-release
-#   script:
-#     - ./gradlew
-#       publish{IosArm64,IosSimulatorArm64,IosX64}PublicationToGitlabRepository
-#       --stacktrace
+publish:mac:
+  stage: publish
+  tags: [ "connect2x-mac" ]
+  cache:
+    - *pull-cache-mac
+  rules:
+    - *if-main
+    - *if-release
+  script:
+    - ./gradlew
+      publish{IosArm64,IosSimulatorArm64,IosX64}PublicationToGitlabRepository
+      --stacktrace
 
-# publish:linux:
-#   stage: publish
-#   tags: [ "saas-linux-small-amd64" ]
-#   cache:
-#     - *pull-cache-linux
-#   rules:
-#     - *if-main
-#     - *if-release
-#   script:
-#     - ./gradlew
-#       publish{KotlinMultiplatform,Jvm,Js,AndroidRelease}PublicationToGitlabRepository
-#       --stacktrace
+publish:linux:
+  stage: publish
+  tags: [ "saas-linux-small-amd64" ]
+  cache:
+    - *pull-cache-linux
+  rules:
+    - *if-main
+    - *if-release
+  script:
+    - ./gradlew
+      publish{KotlinMultiplatform,Jvm,Js,AndroidRelease}PublicationToGitlabRepository
+      --stacktrace
+
+publish:windows:
+  stage: publish
+  tags: [ "saas-windows-medium-amd64" ]
+  cache:
+    - *pull-cache-windows
+  rules:
+    - *if-main
+    - *if-release
+  script:
+    - gradlew
+      publish{KotlinMultiplatform,Jvm}PublicationToGitlabRepository
+      --stacktrace
