@@ -33,15 +33,43 @@ enum class NotificationPlatform {
  * Each flag indicates whether a feature is supported.
  * The [isSupported] flag indicates if notifications are supported on the current platform at all.
  */
-data class NotificationCapabilities(
-    val isTitleSupported: Boolean,
-    val isDescriptionSupported: Boolean,
-    val isIconSupported: Boolean,
-    val isActionSupported: Boolean,
-    val isPopSupported: Boolean
-) {
+data class NotificationCapabilities(val mask: UInt) {
+    companion object {
+        const val IS_TITLE_SUPPORTED: UInt = 1U
+        const val IS_DESCRIPTION_SUPPORTED: UInt = 2U
+        const val IS_ICON_SUPPORTED: UInt = 4U
+        const val IS_ACTION_SUPPORTED: UInt = 8U
+        const val IS_POP_SUPPORTED: UInt = 16U
+    }
+
+    constructor(
+        isTitleSupported: Boolean,
+        isDescriptionSupported: Boolean,
+        isIconSupported: Boolean,
+        isActionSupported: Boolean,
+        isPopSupported: Boolean
+    ) : this(
+        if (isTitleSupported) IS_TITLE_SUPPORTED else 0U
+                or if (isDescriptionSupported) IS_DESCRIPTION_SUPPORTED else 0U
+                or if (isIconSupported) IS_ICON_SUPPORTED else 0U
+                or if (isActionSupported) IS_ACTION_SUPPORTED else 0U
+                or if (isPopSupported) IS_POP_SUPPORTED else 0U
+    )
+
+    val isTitleSupported: Boolean = (mask and IS_TITLE_SUPPORTED) == IS_TITLE_SUPPORTED
+    val isDescriptionSupported: Boolean = (mask and IS_DESCRIPTION_SUPPORTED) == IS_DESCRIPTION_SUPPORTED
+    val isIconSupported: Boolean = (mask and IS_ICON_SUPPORTED) == IS_ICON_SUPPORTED
+    val isActionSupported: Boolean = (mask and IS_ACTION_SUPPORTED) == IS_ACTION_SUPPORTED
+    val isPopSupported: Boolean = (mask and IS_POP_SUPPORTED) == IS_POP_SUPPORTED
+
+    /**
+     * If true, the underlying implementation supports at least
+     * one of three ways to display a basic notification. That is,
+     * either using a title, description or icon, or any combination
+     * of the aforementioned components.
+     */
     val isSupported: Boolean =
-        isTitleSupported || isDescriptionSupported || isIconSupported || isActionSupported
+        isTitleSupported || isDescriptionSupported || isIconSupported
 }
 
 /**
