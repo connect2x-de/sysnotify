@@ -25,6 +25,9 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.os.Build
+import android.os.Parcel
+import android.os.Parcelable
+import android.os.Parcelable.Creator
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -40,7 +43,7 @@ private class AndroidNotificationHandler(
     override val name: String,
     override val id: String,
     private val activityGetter: () -> Activity,
-    private val activationIntent: ((Activity, Uuid) -> SysNotifyIntent)?
+    private val activationIntent: ((Activity, Notification) -> SysNotifyIntent)?
 ) : NotificationHandler {
     companion object {
         private const val PERMISSION_REQUEST_CODE: Int = 1337
@@ -131,7 +134,7 @@ private class AndroidNotificationHandler(
             } else builder.setSmallIcon(R.drawable.ic_notification)
 
             activationIntent?.let {
-                val intent = it(activity, handle.uuid)
+                val intent = it(activity, notification)
                 val pendingIntent = PendingIntent.getActivity(
                     activity,
                     0,
@@ -151,11 +154,11 @@ fun NotificationHandler.Companion.create(
     name: String,
     activityGetter: () -> Activity,
     id: String = name,
-    activationIntent: ((Activity, Uuid) -> SysNotifyIntent)? = { activity, uuid ->
+    activationIntent: ((Activity, Notification) -> SysNotifyIntent)? = { activity, notification ->
         SysNotifyIntent(
             activity,
             activity::class.java,
-            uuid
+            notification
         )
     }
 ): NotificationHandler = AndroidNotificationHandler(name, id, activityGetter, activationIntent)

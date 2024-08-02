@@ -18,24 +18,22 @@ package de.connect2x.sysnotify
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import com.benasher44.uuid.Uuid
 
 open class SysNotifyIntent(
     packageContext: Context,
     clazz: Class<out Activity>,
-    uuid: Uuid
+    notification: Notification
 ) : Intent(packageContext, clazz) {
     companion object {
         const val EXTRA_LAUNCH_NOTIFICATION: String = "launch_notification"
     }
 
     init {
-        this.putExtra(EXTRA_LAUNCH_NOTIFICATION, longArrayOf(uuid.mostSignificantBits, uuid.leastSignificantBits))
+        this.putExtra(EXTRA_LAUNCH_NOTIFICATION, ParcelableNotification(notification))
     }
 }
 
-fun Activity.getLaunchNotification(): Uuid {
+fun Activity.getLaunchNotification(): Notification {
     require(intent.hasExtra(SysNotifyIntent.EXTRA_LAUNCH_NOTIFICATION))
-    val halves = requireNotNull(intent.getLongArrayExtra(SysNotifyIntent.EXTRA_LAUNCH_NOTIFICATION))
-    return Uuid(halves[0], halves[1])
+    return requireNotNull(intent.getParcelableExtra<ParcelableNotification>(SysNotifyIntent.EXTRA_LAUNCH_NOTIFICATION)?.notification)
 }
