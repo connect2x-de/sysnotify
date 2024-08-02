@@ -15,6 +15,10 @@
 
 package de.connect2x.sysnotify
 
-internal actual fun createNotificationHandler(name: String, id: String): NotificationHandler {
-    return WindowsNotificationHandler(name, id)
+internal actual fun createNotificationHandler(
+    name: String,
+    id: String,
+    activationCallback: (Notification) -> Unit
+): NotificationHandler {
+    return WindowsNotificationHandler(name, id, activationCallback)
 }

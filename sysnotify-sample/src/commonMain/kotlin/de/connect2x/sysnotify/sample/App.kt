@@ -94,10 +94,10 @@ fun App(notificationHandler: NotificationHandler, icon: NotificationIcon? = null
                                 title = title,
                                 description = description,
                                 icon = icon,
-                                onActivated = { println("Notification activated!") },
-                                onDismissed = { println("Notification dismissed!") },
-                                onFailed = { println("Notification failed!") },
-                                onRemoved = { println("Notification removed!") }
+                                //onActivated = { println("Notification activated!") },
+                                //onDismissed = { println("Notification dismissed!") },
+                                //onFailed = { println("Notification failed!") },
+                                //onRemoved = { println("Notification removed!") }
                             ))
                         }
                     },

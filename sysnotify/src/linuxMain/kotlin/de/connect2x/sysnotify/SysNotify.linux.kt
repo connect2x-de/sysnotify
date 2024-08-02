@@ -70,7 +70,8 @@ internal class LinuxNotificationHandle(
 
 internal class LinuxNotificationHandler(
     override val name: String,
-    override val id: String
+    override val id: String,
+    private val activationCallback: (Notification) -> Unit
 ) : NotificationHandler {
     companion object {
         private const val DEFAULT_ICON: String = "dialog-information"
@@ -134,18 +135,18 @@ internal class LinuxNotificationHandler(
         notify_notification_set_timeout(notificationAddress, 5000) // 5 seconds by default
         notify_notification_set_urgency(notificationAddress, NotifyUrgency.NOTIFY_URGENCY_NORMAL)
 
-        notify_notification_add_action(notificationAddress, ACTION_ACTIVATE, name,
-            staticCFunction { _: CPointer<NotifyNotification>?, action: CPointer<ByteVar>?, userData: gpointer? ->
-                requireNotNull(userData).asStableRef<Notification>().apply {
-                    get().onActivated?.invoke()
-                }
-                Unit
-            }, StableRef.create(notification).asCPointer(),
-            staticCFunction { userData: gpointer? ->
-                userData?.asStableRef<Notification>()?.dispose()
-                Unit
-            }
-        )
+        //notify_notification_add_action(notificationAddress, ACTION_ACTIVATE, name,
+        //    staticCFunction { _: CPointer<NotifyNotification>?, action: CPointer<ByteVar>?, userData: gpointer? ->
+        //        requireNotNull(userData).asStableRef<Notification>().apply {
+        //            get().onActivated?.invoke()
+        //        }
+        //        Unit
+        //    }, StableRef.create(notification).asCPointer(),
+        //    staticCFunction { userData: gpointer? ->
+        //        userData?.asStableRef<Notification>()?.dispose()
+        //        Unit
+        //    }
+        //)
 
         // On supported FreeDesktop based platforms like GNOME and KDE this will play the default notification sound
         notify_notification_set_hint_string(
@@ -185,5 +186,6 @@ internal class LinuxNotificationHandler(
 
 fun NotificationHandler.Companion.create(
     name: String,
-    id: String = name
-): NotificationHandler = LinuxNotificationHandler(name, id)
+    id: String = name,
+    activationCallback: (Notification) -> Unit = {}
+): NotificationHandler = LinuxNotificationHandler(name, id, activationCallback)

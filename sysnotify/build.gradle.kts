@@ -261,7 +261,7 @@ artifacts {
 }
 
 publishing {
-    publications.configureEach {
+    publications {
         if (this is MavenPublication) {
             artifact(nativesJar) {
                 classifier = "jvm-natives-$platformPair"
