@@ -105,7 +105,8 @@ data class NotificationIcon(val data: ByteArray, val width: Int, val height: Int
 data class Notification(
     val title: String? = null,
     val description: String? = null,
-    val icon: NotificationIcon? = null
+    val icon: NotificationIcon? = null,
+    val userData: HashMap<String, Any?> = HashMap()
 )
 
 /**
