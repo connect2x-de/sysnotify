@@ -99,18 +99,18 @@ private inline fun <reified T : Any?> Parcel.writeAny(value: T?) {
 
 @Suppress("DEPRECATION")
 private inline fun <reified T : Any?> Parcel.readAny(): T? {
-    return when (readTypeTag()) {
-        TypeTag.BYTE -> readNullable { readByte() }
-        TypeTag.SHORT -> readNullable { readInt().toShort() }
-        TypeTag.INT -> readNullable { readInt() }
-        TypeTag.LONG -> readNullable { readLong() }
-        TypeTag.FLOAT -> readNullable { readFloat() }
-        TypeTag.DOUBLE -> readNullable { readDouble() }
-        TypeTag.BOOLEAN -> readNullable { readInt() == 1 }
-        TypeTag.STRING -> readNullable { readString() }
-        TypeTag.PARCELABLE -> readNullable<T?> { readParcelable(ClassLoader.getSystemClassLoader()) }
-        else -> null
-    } as? T?
+    return when (readTypeTag()) { // @formatter:off
+        TypeTag.BYTE        -> readByte()
+        TypeTag.SHORT       -> readInt().toShort()
+        TypeTag.INT         -> readInt()
+        TypeTag.LONG        -> readLong()
+        TypeTag.FLOAT       -> readFloat()
+        TypeTag.DOUBLE      -> readDouble()
+        TypeTag.BOOLEAN     -> readInt() == 1
+        TypeTag.STRING      -> readString()
+        TypeTag.PARCELABLE  -> readParcelable(ClassLoader.getSystemClassLoader())
+        else                -> null
+    } as? T? // @formatter:on
 }
 
 private inline fun <K, V> Parcel.writeMap(
