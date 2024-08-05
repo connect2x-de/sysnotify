@@ -56,7 +56,7 @@ private class AndroidNotificationHandler(
         isTitleSupported = true,
         isDescriptionSupported = true,
         isIconSupported = true,
-        isActionSupported = false, // TODO: implement this
+        isActionSupported = true,
         isPopSupported = true
     )
 
