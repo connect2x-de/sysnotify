@@ -25,9 +25,6 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.os.Build
-import android.os.Parcel
-import android.os.Parcelable
-import android.os.Parcelable.Creator
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
