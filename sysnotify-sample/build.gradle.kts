@@ -146,7 +146,7 @@ compose {
                 targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
                 appResourcesRootDir.set(layout.buildDirectory) // @see https://github.com/JetBrains/compose-jb/tree/master/tutorials/Native_distributions_and_local_execution#jvm-resource-loading
                 packageName = "Sysnotify Sample"
-                packageVersion = "1.0.0"
+                packageVersion = "1.1.0"
 
                 windows {
                     menu = true
