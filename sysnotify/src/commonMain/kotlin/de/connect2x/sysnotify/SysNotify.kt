@@ -106,7 +106,7 @@ data class Notification(
     val title: String? = null,
     val description: String? = null,
     val icon: NotificationIcon? = null,
-    val userData: HashMap<String, Any?> = HashMap()
+    val userData: Map<String, Any?> = HashMap()
 )
 
 /**

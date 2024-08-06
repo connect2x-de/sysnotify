@@ -33,7 +33,7 @@ open class SysNotifyIntent(
     }
 }
 
-fun Activity.getLaunchNotification(): Notification {
-    require(intent.hasExtra(SysNotifyIntent.EXTRA_LAUNCH_NOTIFICATION))
+fun Activity.getLaunchNotification(): Notification? {
+    if(!intent.hasExtra(SysNotifyIntent.EXTRA_LAUNCH_NOTIFICATION)) return null
     return requireNotNull(intent.getParcelableExtra<ParcelableNotification>(SysNotifyIntent.EXTRA_LAUNCH_NOTIFICATION)?.notification)
 }
