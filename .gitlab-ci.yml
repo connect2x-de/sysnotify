@@ -272,7 +272,7 @@ publish:mac:
     - *if-release
   script:
     - ./gradlew
-      publish{IosArm64,IosSimulatorArm64,IosX64}PublicationToGitlabRepository
+      publish{MacosX64,MacosArm64,IosArm64,IosSimulatorArm64,IosX64,NativesJar}PublicationToGitlabRepository
       --stacktrace
 
 publish:linux:
@@ -298,5 +298,5 @@ publish:windows:
     - *if-release
   script:
     - gradlew
-      publish{KotlinMultiplatform,Jvm}PublicationToGitlabRepository
+      publish{MingwX64,NativesJar}PublicationToGitlabRepository
       --stacktrace
