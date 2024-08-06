@@ -161,30 +161,6 @@ internal class WindowsNotificationHandler(
             user_data = StableRef.create(Pair(notification, iconData)).asCPointer()
             icon_width = notification.icon?.width ?: 0
             icon_height = notification.icon?.height ?: 0
-            activate_action =
-                staticCFunction { _: CPointer<sn_notification_tag>?, userData: COpaquePointer? ->
-                    requireNotNull(userData).asStableRef<Pair<Notification, Pinned<ByteArray>?>>()
-                        .get().first.onActivated?.invoke()
-                }
-            dismiss_action =
-                staticCFunction { _: CPointer<sn_notification_tag>?, userData: COpaquePointer?, reason: sn_notification_dismissal_reason ->
-                    requireNotNull(userData).asStableRef<Pair<Notification, Pinned<ByteArray>?>>()
-                        .get().first.onDismissed?.invoke(NotificationDismissalReason.entries[reason])
-                }
-            fail_action =
-                staticCFunction { _: CPointer<sn_notification_tag>?, userData: COpaquePointer? ->
-                    requireNotNull(userData).asStableRef<Pair<Notification, Pinned<ByteArray>?>>().get().first.onFailed?.invoke()
-                }
-            remove_action =
-                staticCFunction { _: CPointer<sn_notification_tag>?, userData: COpaquePointer? ->
-                    requireNotNull(userData).asStableRef<Pair<Notification, Pinned<ByteArray>?>>().apply {
-                        get().apply {
-                            first.onRemoved?.invoke()
-                            second?.unpin()
-                        }
-                        dispose()
-                    }
-                }
         }
     }
 }
