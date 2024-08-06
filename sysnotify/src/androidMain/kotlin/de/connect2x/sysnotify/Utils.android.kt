@@ -33,113 +33,6 @@ private inline fun <T> Parcel.readNullable(reader: Parcel.() -> T): T? {
     else reader(this)
 }
 
-private enum class TypeTag(val value: UByte) {
-    // @formatter:off
-    NULL        (0x0U),
-    BYTE        (0x1U),
-    SHORT       (0x2U),
-    INT         (0x3U),
-    LONG        (0x4U),
-    FLOAT       (0x5U),
-    DOUBLE      (0x6U),
-    BOOLEAN     (0x7U),
-    STRING      (0x8U),
-    PARCELABLE  (0x9U)
-    // @formatter:on
-}
-
-@Suppress("NOTHING_TO_INLINE")
-private inline fun Parcel.writeTypeTag(tag: TypeTag) = writeByte(tag.value.toByte())
-
-@Suppress("NOTHING_TO_INLINE")
-private inline fun Parcel.readTypeTag(): TypeTag = TypeTag.entries[readByte().toInt()]
-
-private inline fun <reified T : Any?> Parcel.writeAny(value: T?) {
-    when (value) { // @formatter:off
-        null -> writeTypeTag(TypeTag.NULL)
-        is Byte -> {
-            writeTypeTag(TypeTag.BYTE)
-            writeByte(value)
-        }
-        is Short -> {
-            writeTypeTag(TypeTag.SHORT)
-            writeInt(value.toInt())
-        }
-        is Int -> {
-            writeTypeTag(TypeTag.INT)
-            writeInt(value)
-        }
-        is Long -> {
-            writeTypeTag(TypeTag.LONG)
-            writeLong(value)
-        }
-        is Float -> {
-            writeTypeTag(TypeTag.FLOAT)
-            writeFloat(value)
-        }
-        is Double -> {
-            writeTypeTag(TypeTag.DOUBLE)
-            writeDouble(value)
-        }
-        is Boolean -> {
-            writeTypeTag(TypeTag.BOOLEAN)
-            writeInt(if (value) 1 else 0)
-        }
-        is String -> {
-            writeTypeTag(TypeTag.STRING)
-            writeString(value)
-        }
-        is Parcelable -> {
-            writeTypeTag(TypeTag.PARCELABLE)
-            writeParcelable(value, 0)
-        }
-        else -> throw UnsupportedOperationException("Unsupported data type")
-    } // @formatter:on
-}
-
-@Suppress("DEPRECATION")
-private inline fun <reified T : Any?> Parcel.readAny(): T? {
-    return when (readTypeTag()) { // @formatter:off
-        TypeTag.BYTE        -> readByte()
-        TypeTag.SHORT       -> readInt().toShort()
-        TypeTag.INT         -> readInt()
-        TypeTag.LONG        -> readLong()
-        TypeTag.FLOAT       -> readFloat()
-        TypeTag.DOUBLE      -> readDouble()
-        TypeTag.BOOLEAN     -> readInt() == 1
-        TypeTag.STRING      -> readString()
-        TypeTag.PARCELABLE  -> readParcelable(ClassLoader.getSystemClassLoader())
-        else                -> null
-    } as? T? // @formatter:on
-}
-
-private inline fun <K, V> Parcel.writeMap(
-    map: Map<K, V>,
-    keyWriter: Parcel.(K) -> Unit,
-    valueWriter: Parcel.(V) -> Unit
-) {
-    writeInt(map.size)
-    for ((key, value) in map) {
-        keyWriter(this, key)
-        valueWriter(this, value)
-    }
-}
-
-private inline fun <K, V> Parcel.readMap(
-    keyReader: Parcel.() -> K?,
-    valueReader: Parcel.() -> V?
-): HashMap<K, V> {
-    return HashMap<K, V>().apply {
-        val size = readInt()
-        for (i in 0..<size) {
-            put(
-                keyReader(this@readMap) ?: throw IllegalStateException("Could not read map key"),
-                valueReader(this@readMap) ?: throw IllegalStateException("Could not read map value")
-            )
-        }
-    }
-}
-
 @JvmInline
 internal value class ParcelableNotification(val notification: Notification) : Parcelable {
     override fun describeContents(): Int = 0
@@ -153,7 +46,7 @@ internal value class ParcelableNotification(val notification: Notification) : Pa
             writeInt(it.width)
             writeInt(it.height)
         }
-        parcel.writeMap(notification.userData, Parcel::writeString, Parcel::writeAny)
+        parcel.writeNullable(notification.userData, Parcel::writeString)
     }
 
     companion object CREATOR : Creator<ParcelableNotification> {
@@ -173,7 +66,7 @@ internal value class ParcelableNotification(val notification: Notification) : Pa
                             height = readInt()
                         )
                     },
-                    userData = parcel.readMap(Parcel::readString, Parcel::readAny)
+                    userData = parcel.readNullable(Parcel::readString)
                 )
             )
         }

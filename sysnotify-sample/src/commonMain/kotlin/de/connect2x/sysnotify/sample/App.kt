@@ -30,7 +30,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import de.connect2x.sysnotify.Notification
 import de.connect2x.sysnotify.NotificationHandler
@@ -100,7 +99,7 @@ fun App(
                 )
                 Text(
                     modifier = Modifier.padding(vertical = 5.dp),
-                    text = "Value: ${it.userData["test_value"]}"
+                    text = "User Data: ${it.userData}"
                 )
             }
 
@@ -113,9 +112,7 @@ fun App(
                                     title = title,
                                     description = description,
                                     icon = icon,
-                                    userData = mapOf(
-                                        "test_value" to "This is a test value passed through the user data of the notification"
-                                    )
+                                    userData = "This is a test value passed through the user data of the notification"
                                 )
                             )
                         }
