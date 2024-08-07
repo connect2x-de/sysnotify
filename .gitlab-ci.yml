@@ -283,6 +283,41 @@ publish:linux:
   rules:
     - *if-main
     - *if-release
+  before_script:
+    - apt -qq update
+    - apt -qqy --no-install-recommends install
+      apt-utils
+      build-essential
+      openjdk-17-jdk
+      software-properties-common
+      libssl-dev
+      libffi-dev
+      pkg-config
+      libstdc++6
+      libglu1-mesa
+      zip
+      unzip
+      curl
+      gcc-multilib
+      libnotify-bin
+      libnotify-dev
+    - export ANDROID_HOME="/opt/android-sdk-linux"
+    - export ANDROID_SDK_ROOT=$ANDROID_HOME
+    - export PATH=$PATH:$ANDROID_HOME/cmdline-tools:$ANDROID_HOME/cmdline-tools/bin:$ANDROID_HOME/platform-tools
+    - curl -s https://dl.google.com/android/repository/commandlinetools-linux-${ANDROID_SDK_TOOLS_VERSION}_latest.zip > ./tools.zip
+      && echo "$ANDROID_SDK_TOOLS_CHECKSUM ./tools.zip" | sha256sum -c
+      && unzip -qq ./tools.zip -d $ANDROID_HOME
+      && rm -v ./tools.zip
+    - set +o pipefail
+    - mkdir -p $ANDROID_HOME/licenses/
+      && echo "8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb78af6dfcb131a6481e\n24333f8a63b6825ea9c5514f83c2829b004d1fee" > $ANDROID_HOME/licenses/android-sdk-license
+      && echo "84831b9409646a918e30573bab4c9c91346d8abd\n504667f4c0de7af1a06de9f4b1727b84351f2910" > $ANDROID_HOME/licenses/android-sdk-preview-license --licenses
+      && yes | $ANDROID_HOME/cmdline-tools/bin/sdkmanager --licenses --sdk_root=${ANDROID_SDK_ROOT}
+    - set -o pipefail
+    - mkdir -p /home/user/.android
+      && mkdir -p /home/user/app
+      && touch /home/user/.android/repositories.cfg
+    - export HOME=/home/user
   script:
     - ./gradlew
       publish{KotlinMultiplatform,Jvm,Js,AndroidRelease}PublicationToGitlabRepository

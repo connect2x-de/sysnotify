@@ -279,29 +279,31 @@ publishing {
         }
     }
     publications {
-        if (this is MavenPublication) {
-            artifact(nativesJar) {
-                classifier = "jvm-natives-$platformPair"
-            }
-            pom {
-                name.set(project.name)
-                description.set("Cross-platform system notifications for Kotlin Multiplatform")
-                url.set("https://gitlab.com/connect2x/sysnotify")
-                licenses {
-                    license {
-                        name.set("Apache License 2.0")
-                        url.set("https://www.apache.org/licenses/LICENSE-2.0")
-                    }
-                }
-                developers {
-                    developer {
-                        id.set("michael.thiele")
-                        id.set("benkuly")
-                        id.set("KitsuneAlex")
-                    }
-                }
-                scm {
+        create<MavenPublication>("nativesJar") {
+            artifact(nativesJar)
+        }
+        configureEach {
+            if (this is MavenPublication) {
+                pom {
+                    name.set(project.name)
+                    description.set("Cross-platform system notifications for Kotlin Multiplatform")
                     url.set("https://gitlab.com/connect2x/sysnotify")
+                    licenses {
+                        license {
+                            name.set("Apache License 2.0")
+                            url.set("https://www.apache.org/licenses/LICENSE-2.0")
+                        }
+                    }
+                    developers {
+                        developer {
+                            id.set("michael.thiele")
+                            id.set("benkuly")
+                            id.set("KitsuneAlex")
+                        }
+                    }
+                    scm {
+                        url.set("https://gitlab.com/connect2x/sysnotify")
+                    }
                 }
             }
         }
