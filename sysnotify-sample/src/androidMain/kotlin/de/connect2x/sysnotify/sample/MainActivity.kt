@@ -18,20 +18,29 @@ package de.connect2x.sysnotify.sample
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import de.connect2x.sysnotify.Notification
 import de.connect2x.sysnotify.NotificationHandler
 import de.connect2x.sysnotify.create
+import de.connect2x.sysnotify.getLaunchNotification
 
 class MainActivity : ComponentActivity() {
     private lateinit var notificationHandler: NotificationHandler
+    private var launchNotification: Notification? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        launchNotification = getLaunchNotification()
         notificationHandler = NotificationHandler.create(
             name = "Sysnotify Sample",
             activityGetter = { this },
             id = "Connect2x.Sysnotify"
         )
-        setContent { App(notificationHandler) }
+        setContent {
+            App(
+                notificationHandler = notificationHandler,
+                launchNotification = launchNotification
+            )
+        }
     }
 
     override fun onDestroy() {

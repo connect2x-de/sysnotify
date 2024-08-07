@@ -41,7 +41,11 @@ import kotlinx.coroutines.launch
 internal val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.Default)
 
 @Composable
-fun App(notificationHandler: NotificationHandler, icon: NotificationIcon? = null) {
+fun App(
+    notificationHandler: NotificationHandler,
+    icon: NotificationIcon? = null,
+    launchNotification: Notification? = null
+) {
     coroutineScope.launch {
         notificationHandler.requestPermissions() // Request permissions in-place because we are lazy here
     }
@@ -86,19 +90,31 @@ fun App(notificationHandler: NotificationHandler, icon: NotificationIcon? = null
                     modifier = Modifier.weight(1F).padding(vertical = 10.dp)
                 )
             }
+            // Launch Notification
+            launchNotification?.let {
+                Text(
+                    text = "Launch Notification",
+                    modifier = Modifier.padding(vertical = 5.dp),
+                    style = MaterialTheme.typography.h5,
+                )
+                Text(
+                    modifier = Modifier.padding(vertical = 5.dp),
+                    text = "User Data: ${it.userData}"
+                )
+            }
+
             Row {
                 Button(
                     onClick = {
                         coroutineScope.launch {
-                            notificationHandler.push(Notification(
-                                title = title,
-                                description = description,
-                                icon = icon,
-                                onActivated = { println("Notification activated!") },
-                                onDismissed = { println("Notification dismissed!") },
-                                onFailed = { println("Notification failed!") },
-                                onRemoved = { println("Notification removed!") }
-                            ))
+                            notificationHandler.push(
+                                Notification(
+                                    title = title,
+                                    description = description,
+                                    icon = icon,
+                                    userData = "This is a test value passed through the user data of the notification"
+                                )
+                            )
                         }
                     },
                     modifier = Modifier.weight(1F)

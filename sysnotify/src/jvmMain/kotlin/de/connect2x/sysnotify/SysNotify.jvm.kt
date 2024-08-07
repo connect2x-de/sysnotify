@@ -23,18 +23,17 @@ private data class JvmNotificationHandle(
 
 private class JvmNotificationHandler(
     override val name: String,
-    override val id: String
+    override val id: String,
+    private val activationCallback: (Notification) -> Unit
 ) : NotificationHandler {
-    private val address: Long = NativeNotificationHandler.create(name, id)
+    private val address: Long = NativeNotificationHandler.create(name, id) {
+        activationCallback(it) // Delegate the call to the closure
+    }
     override val platform: NotificationPlatform =
         NotificationPlatform.entries[NativeNotificationHandler.getPlatform(address)]
 
     override val capabilities: NotificationCapabilities = NotificationCapabilities(
-        isTitleSupported = NativeNotificationHandler.isTitleSupported(address),
-        isDescriptionSupported = NativeNotificationHandler.isDescriptionSupported(address),
-        isIconSupported = NativeNotificationHandler.isIconSupported(address),
-        isActionSupported = NativeNotificationHandler.isActionSupported(address),
-        isPopSupported = NativeNotificationHandler.isPopSupported(address)
+        NativeNotificationHandler.getCapabilities(address).toUInt()
     )
 
     override fun close() {
@@ -52,11 +51,7 @@ private class JvmNotificationHandler(
             description = notification.description,
             icon = notification.icon?.data,
             iconWidth = notification.icon?.width ?: 0,
-            iconHeight = notification.icon?.height ?: 0,
-            activateAction = { notification.onActivated?.invoke() },
-            dismissAction = { notification.onDismissed?.invoke(NotificationDismissalReason.entries[it]) },
-            failAction = { notification.onFailed?.invoke() },
-            removeAction = { notification.onRemoved?.invoke() }
+            iconHeight = notification.icon?.height ?: 0
         )
         return if (handle != 0L) JvmNotificationHandle(handle)
         else null
@@ -88,8 +83,9 @@ private class JvmNotificationHandler(
 
 fun NotificationHandler.Companion.create(
     name: String,
-    id: String = name
-): NotificationHandler = JvmNotificationHandler(name, id)
+    id: String = name,
+    activationCallback: (Notification) -> Unit = {}
+): NotificationHandler = JvmNotificationHandler(name, id, activationCallback)
 
 fun NotificationIcon.Companion.fromBufferedImage(image: BufferedImage): NotificationIcon {
     val width = image.width

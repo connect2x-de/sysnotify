@@ -15,12 +15,12 @@
 
 package de.connect2x.sysnotify
 
-fun interface NativeNotificationAction {
-    fun invoke()
-}
+fun interface NativeActivationCallback {
+    fun invoke(notification: Long) {
+        // TODO: delegate invoke call to typed function
+    }
 
-fun interface NativeDismissalAction {
-    fun invoke(reason: Int)
+    fun invoke(notification: Notification)
 }
 
 object NativeNotificationHandler {
@@ -29,25 +29,13 @@ object NativeNotificationHandler {
     }
 
     @JvmStatic
-    external fun create(name: String, id: String): Long
+    external fun create(name: String, id: String, activationCallback: NativeActivationCallback): Long
 
     @JvmStatic
     external fun getPlatform(handler: Long): Int
 
     @JvmStatic
-    external fun isTitleSupported(handler: Long): Boolean
-
-    @JvmStatic
-    external fun isDescriptionSupported(handler: Long): Boolean
-
-    @JvmStatic
-    external fun isIconSupported(handler: Long): Boolean
-
-    @JvmStatic
-    external fun isActionSupported(handler: Long): Boolean
-
-    @JvmStatic
-    external fun isPopSupported(handler: Long): Boolean
+    external fun getCapabilities(handler: Long): Int
 
     @JvmStatic
     external fun requestPermissions(handler: Long)
@@ -59,11 +47,7 @@ object NativeNotificationHandler {
         description: String?,
         icon: ByteArray?,
         iconWidth: Int,
-        iconHeight: Int,
-        activateAction: NativeNotificationAction?,
-        dismissAction: NativeDismissalAction?,
-        failAction: NativeNotificationAction?,
-        removeAction: NativeNotificationAction?
+        iconHeight: Int
     ): Long
 
     @JvmStatic

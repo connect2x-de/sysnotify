@@ -32,7 +32,8 @@ internal data class AppleNotificationHandle(
 
 internal class AppleNotificationHandler(
     override val name: String,
-    override val id: String
+    override val id: String,
+    private val activationCallback: (Notification) -> Unit
 ) : NotificationHandler {
     override val platform: NotificationPlatform = NotificationPlatform.APPLE
 
@@ -105,5 +106,6 @@ internal class AppleNotificationHandler(
 
 fun NotificationHandler.Companion.create(
     name: String,
-    id: String = name
-): NotificationHandler = AppleNotificationHandler(name, id)
+    id: String = name,
+    activationCallback: (Notification) -> Unit = {}
+): NotificationHandler = AppleNotificationHandler(name, id, activationCallback)

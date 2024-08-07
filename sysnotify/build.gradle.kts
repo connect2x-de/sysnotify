@@ -261,7 +261,24 @@ artifacts {
 }
 
 publishing {
-    publications.configureEach {
+    repositories {
+        repositories {
+            System.getenv("CI_API_V4_URL")?.let { apiUrl ->
+                maven {
+                    url = uri("$apiUrl/projects/58749664/packages/maven")
+                    name = "GitLab"
+                    credentials(HttpHeaderCredentials::class) {
+                        name = "Job-Token"
+                        value = System.getenv("CI_JOB_TOKEN")
+                    }
+                    authentication {
+                        create("header", HttpHeaderAuthentication::class)
+                    }
+                }
+            }
+        }
+    }
+    publications {
         if (this is MavenPublication) {
             artifact(nativesJar) {
                 classifier = "jvm-natives-$platformPair"

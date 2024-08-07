@@ -20,6 +20,7 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
@@ -38,7 +39,8 @@ private data class AndroidNotificationHandle(
 private class AndroidNotificationHandler(
     override val name: String,
     override val id: String,
-    private val activityGetter: () -> Activity
+    private val activityGetter: () -> Activity,
+    private val activationIntent: ((Activity, Notification) -> SysNotifyIntent)?
 ) : NotificationHandler {
     companion object {
         private const val PERMISSION_REQUEST_CODE: Int = 1337
@@ -54,7 +56,7 @@ private class AndroidNotificationHandler(
         isTitleSupported = true,
         isDescriptionSupported = true,
         isIconSupported = true,
-        isActionSupported = false, // TODO: implement this
+        isActionSupported = true,
         isPopSupported = true
     )
 
@@ -128,6 +130,17 @@ private class AndroidNotificationHandler(
                     .setLargeIcon(BitmapFactory.decodeByteArray(iconData, 0, iconData.size))
             } else builder.setSmallIcon(R.drawable.ic_notification)
 
+            activationIntent?.let {
+                val intent = it(activity, notification)
+                val pendingIntent = PendingIntent.getActivity(
+                    activity,
+                    0,
+                    intent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                builder.setContentIntent(pendingIntent)
+            }
+
             notify(handle.uuid.hashCode(), builder.build())
         }
         return handle
@@ -137,5 +150,12 @@ private class AndroidNotificationHandler(
 fun NotificationHandler.Companion.create(
     name: String,
     activityGetter: () -> Activity,
-    id: String = name
-): NotificationHandler = AndroidNotificationHandler(name, id, activityGetter)
+    id: String = name,
+    activationIntent: ((Activity, Notification) -> SysNotifyIntent)? = { activity, notification ->
+        SysNotifyIntent(
+            activity,
+            activity::class.java,
+            notification
+        )
+    }
+): NotificationHandler = AndroidNotificationHandler(name, id, activityGetter, activationIntent)

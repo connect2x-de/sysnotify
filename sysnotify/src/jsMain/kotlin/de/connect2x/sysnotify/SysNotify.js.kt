@@ -50,18 +50,18 @@ private class WebNotificationHandler(
                 body = notification.description
             )
         ).apply {
-            notification.onActivated?.let { action ->
-                onclick = {
-                    it.preventDefault()
-                    action()
-                }
-            }
-            notification.onFailed?.let { action ->
-                onerror = {
-                    it.preventDefault()
-                    action()
-                }
-            }
+            //notification.onActivated?.let { action ->
+            //    onclick = {
+            //        it.preventDefault()
+            //        action()
+            //    }
+            //}
+            //notification.onFailed?.let { action ->
+            //    onerror = {
+            //        it.preventDefault()
+            //        action()
+            //    }
+            //}
         }
         return WebNotificationHandle(instance)
     }
