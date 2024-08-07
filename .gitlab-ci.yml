@@ -142,7 +142,7 @@ build:linux:
     - *if-merge-request-or-main
   script:
     - apt update -y
-    - apt install keyboard-configuration < .keyboard-config
+    - DEBIAN_FRONTEND=noninteractive apt install keyboard-configuration
     - apt install libnotify-bin libnotify-dev -y
     - ./gradlew
       compileKotlin{Jvm,LinuxX64}
@@ -205,7 +205,7 @@ publish:linux:
     - *if-release
   script:
     - apt update -y
-    - apt install keyboard-configuration < .keyboard-config
+    - DEBIAN_FRONTEND=noninteractive apt install keyboard-configuration
     - apt install libnotify-bin libnotify-dev -y
     - ./gradlew
       publish{KotlinMultiplatform,Jvm,Js,AndroidRelease}PublicationToGitlabRepository
