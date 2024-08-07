@@ -140,11 +140,10 @@ build:linux:
     - *cache-linux
   rules:
     - *if-merge-request-or-main
-  before_script:
-    - apt update -y
-    - apt install keyboard-configuration -y <.keyboard-config
-    - apt install libnotify-bin libnotify-dev -y
   script:
+    - apt update -y
+    - apt install keyboard-configuration < .keyboard-config
+    - apt install libnotify-bin libnotify-dev -y
     - ./gradlew
       compileKotlin{Jvm,LinuxX64}
       compileReleaseKotlinAndroid
@@ -204,11 +203,10 @@ publish:linux:
   rules:
     - *if-main
     - *if-release
-  before_script:
-    - apt update -y
-    - apt install keyboard-configuration -y <.keyboard-config
-    - apt install libnotify-bin libnotify-dev -y
   script:
+    - apt update -y
+    - apt install keyboard-configuration < .keyboard-config
+    - apt install libnotify-bin libnotify-dev -y
     - ./gradlew
       publish{KotlinMultiplatform,Jvm,Js,AndroidRelease}PublicationToGitlabRepository
       --stacktrace
