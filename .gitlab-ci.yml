@@ -140,11 +140,11 @@ build:linux:
     - *cache-linux
   rules:
     - *if-merge-request-or-main
-  script:
+  before_script:
     - export DEBIAN_FRONTEND=noninteractive
     - apt update -y
-    - apt install keyboard-configuration -y
-    - apt install libnotify-bin libnotify-dev -y
+    - apt install keyboard-configuration gcc-multilib libnotify-bin libnotify-dev -y
+  script:
     - ./gradlew
       compileKotlin{Jvm,LinuxX64}
       compileReleaseKotlinAndroid
@@ -204,11 +204,11 @@ publish:linux:
   rules:
     - *if-main
     - *if-release
-  script:
+  before_script:
     - export DEBIAN_FRONTEND=noninteractive
     - apt update -y
-    - apt install keyboard-configuration -y
-    - apt install libnotify-bin libnotify-dev -y
+    - apt install keyboard-configuration gcc-multilib libnotify-bin libnotify-dev -y
+  script:
     - ./gradlew
       publish{KotlinMultiplatform,Jvm,NativesJar,Js,AndroidRelease}PublicationToGitlabRepository
       --stacktrace
