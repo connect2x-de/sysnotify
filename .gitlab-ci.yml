@@ -222,7 +222,7 @@ publish:windows:
     - *if-main
     - *if-release
   script:
-    - gradlew
+    - ./gradlew
       publishMingwX64PublicationToGitlabRepository
       publishNativesJarPublicationToGitlabRepository
       --stacktrace
