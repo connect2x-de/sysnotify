@@ -210,7 +210,7 @@ publish:linux:
     - apt install keyboard-configuration -y
     - apt install libnotify-bin libnotify-dev -y
     - ./gradlew
-      publish{KotlinMultiplatform,Jvm,Js,AndroidRelease}PublicationToGitlabRepository
+      publish{KotlinMultiplatform,Jvm,NativesJar,Js,AndroidRelease}PublicationToGitlabRepository
       --stacktrace
 
 publish:windows:
@@ -223,5 +223,6 @@ publish:windows:
     - *if-release
   script:
     - gradlew
-      publish{MingwX64,NativesJar}PublicationToGitlabRepository
+      publishMingwX64PublicationToGitlabRepository
+      publishNativesJarPublicationToGitlabRepository
       --stacktrace

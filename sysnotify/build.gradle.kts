@@ -29,7 +29,7 @@ plugins {
 }
 
 // Remap host architecture to some consistent aliases (mostly used for native packaging)
-val architecture: String = when (System.getProperty("os.arch")) {
+val architecture = when (System.getProperty("os.arch")) {
     "i386", "i486", "i586", "i686", "x86", "x32" -> "x86"
     "x64", "amd64", "x86_64", "x86-64" -> "x64"
     "aarch64", "arm64" -> "arm64"
@@ -38,9 +38,10 @@ val architecture: String = when (System.getProperty("os.arch")) {
 }
 println("Detected host architecture $architecture")
 
-val os: OperatingSystem = OperatingSystem.current()
-val platformPair = "${os.familyName}-${architecture}"
-println("Detected host OS ${os.familyName}")
+val os = OperatingSystem.current()
+val platform = os.familyName.replace("os x", "macos") // Fix this mistake..
+val platformPair = "$platform-$architecture"
+println("Detected host OS $platform")
 
 val javaHome = Path(System.getProperty("java.home")) // For JNI interop
 println("Found java home at $javaHome")
