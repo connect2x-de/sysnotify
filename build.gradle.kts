@@ -25,7 +25,7 @@ plugins {
 
 allprojects {
     group = "de.connect2x"
-    version = "1.1.0"
+    version = "1.1.0.${System.getenv("CI_PIPELINE_IID") ?: "0"}"
 
     dependencyLocking {
         lockMode = LockMode.LENIENT
