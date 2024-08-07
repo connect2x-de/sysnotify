@@ -142,6 +142,7 @@ build:linux:
     - *if-merge-request-or-main
   before_script:
     - apt update -y
+    - apt install keyboard-configuration -y <.keyboard-config
     - apt install libnotify-bin libnotify-dev -y
   script:
     - ./gradlew
@@ -205,6 +206,7 @@ publish:linux:
     - *if-release
   before_script:
     - apt update -y
+    - apt install keyboard-configuration -y <.keyboard-config
     - apt install libnotify-bin libnotify-dev -y
   script:
     - ./gradlew
