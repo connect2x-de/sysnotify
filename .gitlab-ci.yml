@@ -141,8 +141,9 @@ build:linux:
   rules:
     - *if-merge-request-or-main
   script:
+    - export DEBIAN_FRONTEND=noninteractive
     - apt update -y
-    - DEBIAN_FRONTEND=noninteractive apt install keyboard-configuration
+    - apt install keyboard-configuration -y
     - apt install libnotify-bin libnotify-dev -y
     - ./gradlew
       compileKotlin{Jvm,LinuxX64}
@@ -204,8 +205,9 @@ publish:linux:
     - *if-main
     - *if-release
   script:
+    - export DEBIAN_FRONTEND=noninteractive
     - apt update -y
-    - DEBIAN_FRONTEND=noninteractive apt install keyboard-configuration
+    - apt install keyboard-configuration -y
     - apt install libnotify-bin libnotify-dev -y
     - ./gradlew
       publish{KotlinMultiplatform,Jvm,Js,AndroidRelease}PublicationToGitlabRepository
