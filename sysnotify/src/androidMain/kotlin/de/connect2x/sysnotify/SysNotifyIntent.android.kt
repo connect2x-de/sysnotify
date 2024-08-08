@@ -32,8 +32,3 @@ open class SysNotifyIntent(
         this.putExtra(EXTRA_LAUNCH_NOTIFICATION, ParcelableNotification(notification))
     }
 }
-
-fun Activity.getLaunchNotification(): Notification? {
-    if(!intent.hasExtra(SysNotifyIntent.EXTRA_LAUNCH_NOTIFICATION)) return null
-    return requireNotNull(intent.getParcelableExtra<ParcelableNotification>(SysNotifyIntent.EXTRA_LAUNCH_NOTIFICATION)?.notification)
-}

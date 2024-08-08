@@ -18,27 +18,35 @@ package de.connect2x.sysnotify.sample
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import de.connect2x.sysnotify.Notification
 import de.connect2x.sysnotify.NotificationHandler
 import de.connect2x.sysnotify.create
 import de.connect2x.sysnotify.getLaunchNotification
+import kotlinx.coroutines.runBlocking
 
 class MainActivity : ComponentActivity() {
     private lateinit var notificationHandler: NotificationHandler
-    private var launchNotification: Notification? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        launchNotification = getLaunchNotification()
         notificationHandler = NotificationHandler.create(
             name = "Sysnotify Sample",
             activityGetter = { this },
             id = "Connect2x.Sysnotify"
         )
+        runBlocking {
+            if (!notificationHandler.hasPermissions) {
+                notificationHandler.requestPermissions()
+                if (!notificationHandler.hasPermissions) {
+                    // Close app, you can present a message to the user here
+                    finishAffinity()
+                }
+            }
+            notificationHandler.clearAll()
+        }
         setContent {
             App(
                 notificationHandler = notificationHandler,
-                launchNotification = launchNotification
+                launchNotification = notificationHandler.getLaunchNotification()
             )
         }
     }

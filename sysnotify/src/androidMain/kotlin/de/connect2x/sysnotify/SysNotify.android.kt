@@ -39,7 +39,7 @@ private data class AndroidNotificationHandle(
 private class AndroidNotificationHandler(
     override val name: String,
     override val id: String,
-    private val activityGetter: () -> Activity,
+    internal val activityGetter: () -> Activity,
     private val activationIntent: ((Activity, Notification) -> SysNotifyIntent)?
 ) : NotificationHandler {
     companion object {
@@ -51,6 +51,7 @@ private class AndroidNotificationHandler(
             ?: throw IllegalStateException("Could not retrieve notification manager instance")
 
     override val platform: NotificationPlatform = NotificationPlatform.ANDROID
+    override var hasPermissions: Boolean = false
 
     override val capabilities: NotificationCapabilities = NotificationCapabilities(
         isTitleSupported = true,
@@ -145,6 +146,18 @@ private class AndroidNotificationHandler(
         }
         return handle
     }
+}
+
+fun NotificationHandler.handlePermissionRequest(code: Int) {
+    require(this is AndroidNotificationHandler)
+}
+
+@Suppress("DEPRECATION")
+fun NotificationHandler.getLaunchNotification(): Notification? {
+    require(this is AndroidNotificationHandler)
+    val intent = activityGetter().intent
+    if (!intent.hasExtra(SysNotifyIntent.EXTRA_LAUNCH_NOTIFICATION)) return null
+    return requireNotNull(intent.getParcelableExtra<ParcelableNotification>(SysNotifyIntent.EXTRA_LAUNCH_NOTIFICATION)?.notification)
 }
 
 fun NotificationHandler.Companion.create(
