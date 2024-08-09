@@ -55,7 +55,16 @@ internal class AndroidNotificationHandler(
 
     override val platform: NotificationPlatform = NotificationPlatform.ANDROID
 
-    internal val atomicHasPermissions: AtomicBoolean = AtomicBoolean(false)
+    internal val atomicHasPermissions: AtomicBoolean = AtomicBoolean(true).apply {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            set(
+                ActivityCompat.checkSelfPermission(
+                    activityGetter(),
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED
+            )
+        }
+    }
     override val hasPermissions: Boolean
         get() = atomicHasPermissions.get()
 
@@ -82,19 +91,14 @@ internal class AndroidNotificationHandler(
     }
 
     override suspend fun requestPermissions() {
+        if (hasPermissions) return
         // If we are API level T or above, request permission to push notifications
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ActivityCompat.checkSelfPermission(
-                    activityGetter(),
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                ActivityCompat.requestPermissions(
-                    activityGetter(),
-                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-                    PERMISSION_REQUEST_CODE
-                )
-            }
+            ActivityCompat.requestPermissions(
+                activityGetter(),
+                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                PERMISSION_REQUEST_CODE
+            )
         }
     }
 
