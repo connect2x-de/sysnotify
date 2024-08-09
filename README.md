@@ -10,27 +10,35 @@ The API is also completely thread-safe and works nicely with coroutines.
 ```kotlin
 import de.connect2x.sysnotify.Notification
 import de.connect2x.sysnotify.NotificationHandler
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 // Android usage example
 class MyApplication : Application {
-    internal val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.Default)
     internal lateinit var notificationHandler: NotificationHandler
 
     override fun onCreate() {
         super.onCreate()
-        notificationHandler = NotificationHandler.create("MyApp", this)
+        notificationHandler = NotificationHandler.create(
+            name = "MyApp", 
+            id = "com.example.MyApp",
+            activityGetter = { this },
+            permissionCallback = { if(!it) finishAffinity() }
+        )
+        runBlocking { notificationHandler.requestPermissions() }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        notificationHandler.close()
     }
 
     internal fun onMessageReceived(message: Message) {
         // Process the message..
-        coroutineScope.launch {
+        runBlocking {
             notificationHandler.push(
                 Notification(
                     title = message.sender.name,
-                    description = message.content
+                    description = message.content,
+                    userData = "Custom data passed to the newly started activity"
                 )
             )
         }
