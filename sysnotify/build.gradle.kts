@@ -23,7 +23,7 @@ import kotlin.io.path.Path
 import kotlin.io.path.div
 
 plugins {
-    alias(libs.plugins.kotlinMultiplatform)
+    alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.androidLibrary)
     id("maven-publish")
 }

@@ -103,6 +103,7 @@ internal class WindowsNotificationHandler(
         requireNotNull(pointer.value) { "Could not create COM adaptor instance" }
     }
     override val platform: NotificationPlatform = NotificationPlatform.WINDOWS
+    override val hasPermissions: Boolean = false // TODO: Implement hasPermissions flag
 
     override val capabilities: NotificationCapabilities = NotificationCapabilities(
         isTitleSupported = true,

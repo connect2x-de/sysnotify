@@ -30,6 +30,7 @@ private class WebNotificationHandler(
     override val id: String
 ) : NotificationHandler {
     override val platform: NotificationPlatform = NotificationPlatform.WEB
+    override val hasPermissions: Boolean = false // TODO: Implement hasPermissions flag
 
     override val capabilities: NotificationCapabilities = NotificationCapabilities(
         isTitleSupported = true,

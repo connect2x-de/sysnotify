@@ -79,6 +79,7 @@ internal class LinuxNotificationHandler(
     }
 
     override val platform: NotificationPlatform = NotificationPlatform.LINUX
+    override val hasPermissions: Boolean = false // TODO: Implement hasPermissions flag
 
     override val capabilities: NotificationCapabilities = NotificationCapabilities(
         isTitleSupported = true,

@@ -36,6 +36,7 @@ internal class AppleNotificationHandler(
     private val activationCallback: (Notification) -> Unit
 ) : NotificationHandler {
     override val platform: NotificationPlatform = NotificationPlatform.APPLE
+    override val hasPermissions: Boolean = false // TODO: Implement hasPermissions flag
 
     override val capabilities: NotificationCapabilities = NotificationCapabilities(
         isTitleSupported = true,
