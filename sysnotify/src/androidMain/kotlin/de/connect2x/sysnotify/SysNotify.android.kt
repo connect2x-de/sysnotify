@@ -36,14 +36,14 @@ private data class AndroidNotificationHandle(
     val uuid: Uuid = uuid4()
 ) : NotificationHandle
 
-private class AndroidNotificationHandler(
+internal class AndroidNotificationHandler(
     override val name: String,
     override val id: String,
     internal val activityGetter: () -> Activity,
     private val activationIntent: ((Activity, Notification) -> SysNotifyIntent)?
 ) : NotificationHandler {
     companion object {
-        private const val PERMISSION_REQUEST_CODE: Int = 1337
+        const val PERMISSION_REQUEST_CODE: Int = 1337
     }
 
     private val manager =
@@ -65,7 +65,7 @@ private class AndroidNotificationHandler(
         manager.createNotificationChannels(
             listOf(
                 NotificationChannel(
-                    id, name, NotificationManager.IMPORTANCE_HIGH
+                    id, name, NotificationManager.IMPORTANCE_DEFAULT
                 )
             )
         )
@@ -148,16 +148,20 @@ private class AndroidNotificationHandler(
     }
 }
 
-fun NotificationHandler.handlePermissionRequest(code: Int) {
+fun NotificationHandler.handlePermissionRequest(requestCode: Int, grantResults: IntArray) {
+    if (requestCode != AndroidNotificationHandler.PERMISSION_REQUEST_CODE) return
     require(this is AndroidNotificationHandler)
+    if (grantResults.first() != PackageManager.PERMISSION_GRANTED) return
+    hasPermissions = true
 }
 
 @Suppress("DEPRECATION")
 fun NotificationHandler.getLaunchNotification(): Notification? {
     require(this is AndroidNotificationHandler)
-    val intent = activityGetter().intent
-    if (!intent.hasExtra(SysNotifyIntent.EXTRA_LAUNCH_NOTIFICATION)) return null
-    return requireNotNull(intent.getParcelableExtra<ParcelableNotification>(SysNotifyIntent.EXTRA_LAUNCH_NOTIFICATION)?.notification)
+    return activityGetter().intent.let {
+        return@let if (!it.hasExtra(SysNotifyIntent.EXTRA_LAUNCH_NOTIFICATION)) null
+        else requireNotNull(it.getParcelableExtra<ParcelableNotification>(SysNotifyIntent.EXTRA_LAUNCH_NOTIFICATION)?.notification)
+    }
 }
 
 fun NotificationHandler.Companion.create(

@@ -21,6 +21,7 @@ import androidx.activity.compose.setContent
 import de.connect2x.sysnotify.NotificationHandler
 import de.connect2x.sysnotify.create
 import de.connect2x.sysnotify.getLaunchNotification
+import de.connect2x.sysnotify.handlePermissionRequest
 import kotlinx.coroutines.runBlocking
 
 class MainActivity : ComponentActivity() {
@@ -49,6 +50,12 @@ class MainActivity : ComponentActivity() {
                 launchNotification = notificationHandler.getLaunchNotification()
             )
         }
+    }
+
+    @Suppress("DEPRECATION")
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        notificationHandler.handlePermissionRequest(requestCode, grantResults)
     }
 
     override fun onDestroy() {
