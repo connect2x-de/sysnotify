@@ -31,6 +31,7 @@ private class JvmNotificationHandler(
     }
     override val platform: NotificationPlatform =
         NotificationPlatform.entries[NativeNotificationHandler.getPlatform(address)]
+    override val hasPermissions: Boolean = false // TODO: Implement hasPermissions flag
 
     override val capabilities: NotificationCapabilities = NotificationCapabilities(
         NativeNotificationHandler.getCapabilities(address).toUInt()

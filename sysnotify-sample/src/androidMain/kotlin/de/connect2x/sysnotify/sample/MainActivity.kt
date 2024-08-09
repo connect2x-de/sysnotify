@@ -32,18 +32,10 @@ class MainActivity : ComponentActivity() {
         notificationHandler = NotificationHandler.create(
             name = "Sysnotify Sample",
             activityGetter = { this },
-            id = "Connect2x.Sysnotify"
+            id = "Connect2x.Sysnotify",
+            permissionCallback = { if (!it) finishAffinity() }
         )
-        runBlocking {
-            if (!notificationHandler.hasPermissions) {
-                notificationHandler.requestPermissions()
-                if (!notificationHandler.hasPermissions) {
-                    // Close app, you can present a message to the user here
-                    finishAffinity()
-                }
-            }
-            notificationHandler.clearAll()
-        }
+        runBlocking { notificationHandler.requestPermissions() }
         setContent {
             App(
                 notificationHandler = notificationHandler,

@@ -31,6 +31,8 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.graphics.drawable.IconCompat
 import com.benasher44.uuid.Uuid
 import com.benasher44.uuid.uuid4
+import kotlinx.coroutines.runBlocking
+import java.util.concurrent.atomic.AtomicBoolean
 
 private data class AndroidNotificationHandle(
     val uuid: Uuid = uuid4()
@@ -40,10 +42,11 @@ internal class AndroidNotificationHandler(
     override val name: String,
     override val id: String,
     internal val activityGetter: () -> Activity,
-    private val activationIntent: ((Activity, Notification) -> SysNotifyIntent)?
+    private val activationIntent: suspend (Activity, Notification) -> SysNotifyIntent,
+    internal val permissionCallback: suspend (Boolean) -> Unit
 ) : NotificationHandler {
     companion object {
-        const val PERMISSION_REQUEST_CODE: Int = 1337
+        const val PERMISSION_REQUEST_CODE: Int = 0xBEEF
     }
 
     private val manager =
@@ -51,7 +54,10 @@ internal class AndroidNotificationHandler(
             ?: throw IllegalStateException("Could not retrieve notification manager instance")
 
     override val platform: NotificationPlatform = NotificationPlatform.ANDROID
-    override var hasPermissions: Boolean = false
+
+    internal val atomicHasPermissions: AtomicBoolean = AtomicBoolean(false)
+    override val hasPermissions: Boolean
+        get() = atomicHasPermissions.get()
 
     override val capabilities: NotificationCapabilities = NotificationCapabilities(
         isTitleSupported = true,
@@ -93,6 +99,7 @@ internal class AndroidNotificationHandler(
     }
 
     override suspend fun push(notification: Notification): NotificationHandle {
+        if (!hasPermissions) return AndroidNotificationHandle()
         return pushImpl(notification)
     }
 
@@ -100,11 +107,13 @@ internal class AndroidNotificationHandler(
         handle: NotificationHandle,
         notification: Notification
     ): NotificationHandle {
+        if (!hasPermissions) return handle
         if (handle !is AndroidNotificationHandle) throw IllegalArgumentException("Handle is not an android notification handle")
         return pushImpl(notification, handle)
     }
 
     override suspend fun pop(handle: NotificationHandle) {
+        if (!hasPermissions) return
         if (handle !is AndroidNotificationHandle) throw IllegalArgumentException("Handle is not an android notification handle")
         with(NotificationManagerCompat.from(activityGetter())) {
             cancel(handle.uuid.hashCode())
@@ -112,7 +121,7 @@ internal class AndroidNotificationHandler(
     }
 
     @SuppressLint("MissingPermission") // It is the callers responsibility to make sure perms are defined
-    private fun pushImpl(
+    private suspend fun pushImpl(
         notification: Notification,
         handle: AndroidNotificationHandle = AndroidNotificationHandle()
     ): AndroidNotificationHandle {
@@ -131,7 +140,7 @@ internal class AndroidNotificationHandler(
                     .setLargeIcon(BitmapFactory.decodeByteArray(iconData, 0, iconData.size))
             } else builder.setSmallIcon(R.drawable.ic_notification)
 
-            activationIntent?.let {
+            activationIntent.let {
                 val intent = it(activity, notification)
                 val pendingIntent = PendingIntent.getActivity(
                     activity,
@@ -149,10 +158,15 @@ internal class AndroidNotificationHandler(
 }
 
 fun NotificationHandler.handlePermissionRequest(requestCode: Int, grantResults: IntArray) {
-    if (requestCode != AndroidNotificationHandler.PERMISSION_REQUEST_CODE) return
+    if (requestCode != AndroidNotificationHandler.PERMISSION_REQUEST_CODE || grantResults.isEmpty()) return
     require(this is AndroidNotificationHandler)
-    if (grantResults.first() != PackageManager.PERMISSION_GRANTED) return
-    hasPermissions = true
+    if (grantResults.first() == PackageManager.PERMISSION_DENIED) {
+        atomicHasPermissions.set(false)
+        runBlocking { permissionCallback(false) }
+        return
+    }
+    atomicHasPermissions.set(true)
+    runBlocking { permissionCallback(true) }
 }
 
 @Suppress("DEPRECATION")
@@ -168,11 +182,12 @@ fun NotificationHandler.Companion.create(
     name: String,
     activityGetter: () -> Activity,
     id: String = name,
-    activationIntent: ((Activity, Notification) -> SysNotifyIntent)? = { activity, notification ->
+    activationIntent: suspend (Activity, Notification) -> SysNotifyIntent = { activity, notification ->
         SysNotifyIntent(
             activity,
             activity::class.java,
             notification
         )
-    }
-): NotificationHandler = AndroidNotificationHandler(name, id, activityGetter, activationIntent)
+    },
+    permissionCallback: suspend (Boolean) -> Unit = {}
+): NotificationHandler = AndroidNotificationHandler(name, id, activityGetter, activationIntent, permissionCallback)
