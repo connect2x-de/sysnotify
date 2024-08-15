@@ -31,7 +31,6 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.graphics.drawable.IconCompat
 import com.benasher44.uuid.Uuid
 import com.benasher44.uuid.uuid4
-import java.util.concurrent.atomic.AtomicBoolean
 
 private data class AndroidNotificationHandle(
     val uuid: Uuid = uuid4()
@@ -51,18 +50,13 @@ internal class AndroidNotificationHandler(
 
     override val platform: NotificationPlatform = NotificationPlatform.ANDROID
 
-    internal val atomicHasPermissions: AtomicBoolean = AtomicBoolean(true).apply {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            set(
-                ActivityCompat.checkSelfPermission(
-                    contextGetter(),
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) == PackageManager.PERMISSION_GRANTED
-            )
-        }
-    }
     override val hasPermissions: Boolean
-        get() = atomicHasPermissions.get()
+        get() = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ActivityCompat.checkSelfPermission(
+                contextGetter(),
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+        } else true
 
     override val capabilities: NotificationCapabilities = NotificationCapabilities(
         isTitleSupported = true,
@@ -161,11 +155,9 @@ fun NotificationHandler.handlePermissionRequest(requestCode: Int, grantResults: 
     if (requestCode != AndroidNotificationHandler.PERMISSION_REQUEST_CODE || grantResults.isEmpty()) return
     require(this is AndroidNotificationHandler)
     if (grantResults.first() == PackageManager.PERMISSION_DENIED) {
-        atomicHasPermissions.set(false)
         permissionCallback(false)
         return
     }
-    atomicHasPermissions.set(true)
     permissionCallback(true)
 }
 
