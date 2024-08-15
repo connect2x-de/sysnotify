@@ -21,7 +21,6 @@ import android.app.Activity
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
-import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.os.Build
@@ -49,10 +48,6 @@ internal class AndroidNotificationHandler(
         const val PERMISSION_REQUEST_CODE: Int = 0xBEEF
     }
 
-    private val manager =
-        activityGetter().getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
-            ?: throw IllegalStateException("Could not retrieve notification manager instance")
-
     override val platform: NotificationPlatform = NotificationPlatform.ANDROID
 
     internal val atomicHasPermissions: AtomicBoolean = AtomicBoolean(true).apply {
@@ -75,6 +70,9 @@ internal class AndroidNotificationHandler(
         isActionSupported = true,
         isPopSupported = true
     )
+
+    private val manager: NotificationManagerCompat
+        get() = NotificationManagerCompat.from(activityGetter())
 
     init {
         manager.createNotificationChannels(
@@ -119,9 +117,7 @@ internal class AndroidNotificationHandler(
     override suspend fun pop(handle: NotificationHandle) {
         if (!hasPermissions) return
         if (handle !is AndroidNotificationHandle) throw IllegalArgumentException("Handle is not an android notification handle")
-        with(NotificationManagerCompat.from(activityGetter())) {
-            cancel(handle.uuid.hashCode())
-        }
+        manager.cancel(handle.uuid.hashCode())
     }
 
     @SuppressLint("MissingPermission") // It is the callers responsibility to make sure perms are defined
@@ -130,33 +126,31 @@ internal class AndroidNotificationHandler(
         handle: AndroidNotificationHandle = AndroidNotificationHandle()
     ): AndroidNotificationHandle {
         val activity = activityGetter()
-        with(NotificationManagerCompat.from(activity)) {
-            val builder = NotificationCompat.Builder(activity, id)
-                .setContentTitle(notification.title ?: name)
-                .setContentText(notification.description)
-                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-                .setAutoCancel(true) // Remove notification when user taps it
+        val builder = NotificationCompat.Builder(activity, id)
+            .setContentTitle(notification.title ?: name)
+            .setContentText(notification.description)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true) // Remove notification when user taps it
 
-            val icon = notification.icon
-            if (icon != null) {
-                val iconData = icon.data
-                builder.setSmallIcon(IconCompat.createWithData(iconData, 0, iconData.size))
-                    .setLargeIcon(BitmapFactory.decodeByteArray(iconData, 0, iconData.size))
-            } else builder.setSmallIcon(R.drawable.ic_notification)
+        val icon = notification.icon
+        if (icon != null) {
+            val iconData = icon.data
+            builder.setSmallIcon(IconCompat.createWithData(iconData, 0, iconData.size))
+                .setLargeIcon(BitmapFactory.decodeByteArray(iconData, 0, iconData.size))
+        } else builder.setSmallIcon(R.drawable.ic_notification)
 
-            activationIntent.let {
-                val intent = it(activity, notification)
-                val pendingIntent = PendingIntent.getActivity(
-                    activity,
-                    0,
-                    intent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-                builder.setContentIntent(pendingIntent)
-            }
-
-            notify(handle.uuid.hashCode(), builder.build())
+        activationIntent.let {
+            val intent = it(activity, notification)
+            val pendingIntent = PendingIntent.getActivity(
+                activity,
+                0,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            builder.setContentIntent(pendingIntent)
         }
+
+        manager.notify(handle.uuid.hashCode(), builder.build())
         return handle
     }
 }
