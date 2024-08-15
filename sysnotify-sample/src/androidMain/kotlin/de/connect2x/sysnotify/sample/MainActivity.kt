@@ -19,6 +19,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import de.connect2x.sysnotify.NotificationHandler
+import de.connect2x.sysnotify.SysNotifyIntent
 import de.connect2x.sysnotify.create
 import de.connect2x.sysnotify.getLaunchNotification
 import de.connect2x.sysnotify.handlePermissionRequest
@@ -31,8 +32,15 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         notificationHandler = NotificationHandler.create(
             name = "Sysnotify Sample",
-            activityGetter = { this },
             id = "Connect2x.Sysnotify",
+            contextGetter = { this },
+            activationIntent = { context, notification ->
+                SysNotifyIntent(
+                    context,
+                    MainActivity::class.java,
+                    notification
+                )
+            },
             permissionCallback = { if (!it) finishAffinity() }
         )
         runBlocking { notificationHandler.requestPermissions() }
