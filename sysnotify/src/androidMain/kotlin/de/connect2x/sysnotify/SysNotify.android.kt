@@ -21,6 +21,7 @@ import android.app.Activity
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.os.Build
@@ -30,8 +31,6 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.graphics.drawable.IconCompat
 import com.benasher44.uuid.Uuid
 import com.benasher44.uuid.uuid4
-import kotlinx.coroutines.runBlocking
-import java.util.concurrent.atomic.AtomicBoolean
 
 private data class AndroidNotificationHandle(
     val uuid: Uuid = uuid4()
@@ -40,9 +39,10 @@ private data class AndroidNotificationHandle(
 internal class AndroidNotificationHandler(
     override val name: String,
     override val id: String,
-    internal val activityGetter: () -> Activity,
-    private val activationIntent: suspend (Activity, Notification) -> SysNotifyIntent,
-    internal val permissionCallback: suspend (Boolean) -> Unit
+    internal val contextGetter: () -> Context,
+    internal val activityGetter: () -> Activity?,
+    private val activationIntent: (Context, Notification) -> SysNotifyIntent,
+    internal val permissionCallback: (Boolean) -> Unit
 ) : NotificationHandler {
     companion object {
         const val PERMISSION_REQUEST_CODE: Int = 0xBEEF
@@ -50,18 +50,13 @@ internal class AndroidNotificationHandler(
 
     override val platform: NotificationPlatform = NotificationPlatform.ANDROID
 
-    internal val atomicHasPermissions: AtomicBoolean = AtomicBoolean(true).apply {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            set(
-                ActivityCompat.checkSelfPermission(
-                    activityGetter(),
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) == PackageManager.PERMISSION_GRANTED
-            )
-        }
-    }
     override val hasPermissions: Boolean
-        get() = atomicHasPermissions.get()
+        get() = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ActivityCompat.checkSelfPermission(
+                contextGetter(),
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+        } else true
 
     override val capabilities: NotificationCapabilities = NotificationCapabilities(
         isTitleSupported = true,
@@ -72,7 +67,7 @@ internal class AndroidNotificationHandler(
     )
 
     private val manager: NotificationManagerCompat
-        get() = NotificationManagerCompat.from(activityGetter())
+        get() = NotificationManagerCompat.from(contextGetter())
 
     init {
         manager.createNotificationChannels(
@@ -90,10 +85,11 @@ internal class AndroidNotificationHandler(
 
     override suspend fun requestPermissions() {
         if (hasPermissions) return
+        val activity = activityGetter() ?: return // Ignore call if activity is null
         // If we are API level T or above, request permission to push notifications
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             ActivityCompat.requestPermissions(
-                activityGetter(),
+                activity,
                 arrayOf(Manifest.permission.POST_NOTIFICATIONS),
                 PERMISSION_REQUEST_CODE
             )
@@ -125,8 +121,8 @@ internal class AndroidNotificationHandler(
         notification: Notification,
         handle: AndroidNotificationHandle = AndroidNotificationHandle()
     ): AndroidNotificationHandle {
-        val activity = activityGetter()
-        val builder = NotificationCompat.Builder(activity, id)
+        val context = contextGetter()
+        val builder = NotificationCompat.Builder(context, id)
             .setContentTitle(notification.title ?: name)
             .setContentText(notification.description)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
@@ -140,9 +136,9 @@ internal class AndroidNotificationHandler(
         } else builder.setSmallIcon(R.drawable.ic_notification)
 
         activationIntent.let {
-            val intent = it(activity, notification)
+            val intent = it(context, notification)
             val pendingIntent = PendingIntent.getActivity(
-                activity,
+                context,
                 0,
                 intent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
@@ -159,18 +155,16 @@ fun NotificationHandler.handlePermissionRequest(requestCode: Int, grantResults: 
     if (requestCode != AndroidNotificationHandler.PERMISSION_REQUEST_CODE || grantResults.isEmpty()) return
     require(this is AndroidNotificationHandler)
     if (grantResults.first() == PackageManager.PERMISSION_DENIED) {
-        atomicHasPermissions.set(false)
-        runBlocking { permissionCallback(false) }
+        permissionCallback(false)
         return
     }
-    atomicHasPermissions.set(true)
-    runBlocking { permissionCallback(true) }
+    permissionCallback(true)
 }
 
 @Suppress("DEPRECATION")
 fun NotificationHandler.getLaunchNotification(): Notification? {
     require(this is AndroidNotificationHandler)
-    return activityGetter().intent.let {
+    return activityGetter()?.intent?.let {
         return@let if (!it.hasExtra(SysNotifyIntent.EXTRA_LAUNCH_NOTIFICATION)) null
         else requireNotNull(it.getParcelableExtra<ParcelableNotification>(SysNotifyIntent.EXTRA_LAUNCH_NOTIFICATION)?.notification)
     }
@@ -178,14 +172,10 @@ fun NotificationHandler.getLaunchNotification(): Notification? {
 
 fun NotificationHandler.Companion.create(
     name: String,
-    activityGetter: () -> Activity,
     id: String = name,
-    activationIntent: suspend (Activity, Notification) -> SysNotifyIntent = { activity, notification ->
-        SysNotifyIntent(
-            activity,
-            activity::class.java,
-            notification
-        )
-    },
-    permissionCallback: suspend (Boolean) -> Unit = {}
-): NotificationHandler = AndroidNotificationHandler(name, id, activityGetter, activationIntent, permissionCallback)
+    contextGetter: () -> Context,
+    activityGetter: () -> Activity? = { contextGetter() as? Activity },
+    activationIntent: (Context, Notification) -> SysNotifyIntent,
+    permissionCallback: (Boolean) -> Unit = {}
+): NotificationHandler =
+    AndroidNotificationHandler(name, id, contextGetter, activityGetter, activationIntent, permissionCallback)

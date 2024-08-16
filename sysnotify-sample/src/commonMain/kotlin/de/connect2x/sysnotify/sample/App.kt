@@ -52,6 +52,7 @@ fun App(
 
     var title by remember { mutableStateOf("Hello") }
     var description by remember { mutableStateOf("World!") }
+    var userData by remember { mutableStateOf("This is some user data to attach to the notification") }
 
     Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Column {
@@ -90,6 +91,19 @@ fun App(
                     modifier = Modifier.weight(1F).padding(vertical = 10.dp)
                 )
             }
+            // User Data
+            Text(
+                text = "User Data",
+                modifier = Modifier.padding(vertical = 5.dp),
+                style = MaterialTheme.typography.h5,
+            )
+            Row {
+                TextField(
+                    value = userData,
+                    onValueChange = { userData = it },
+                    modifier = Modifier.weight(1F).padding(vertical = 10.dp)
+                )
+            }
             // Launch Notification
             launchNotification?.let {
                 Text(
@@ -112,7 +126,7 @@ fun App(
                                     title = title,
                                     description = description,
                                     icon = icon,
-                                    userData = "This is a test value passed through the user data of the notification"
+                                    userData = userData
                                 )
                             )
                         }
