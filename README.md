@@ -8,27 +8,37 @@ Using Sysnotify is as easy as creating a `NotificationHandler` and calling the `
 The API is also completely thread-safe and works nicely with coroutines.
 
 ```kotlin
+import android.os.Bundle
+import androidx.activity.ComponentActivity
 import de.connect2x.sysnotify.Notification
 import de.connect2x.sysnotify.NotificationHandler
 
-// Android usage example
-class MyApplication : Application {
+// Android activity usage example
+class MyApplication : ComponentActivity() {
     internal lateinit var notificationHandler: NotificationHandler
 
-    override fun onCreate() {
-        super.onCreate()
+    override fun onCreate(savedInstance: Bundle?) {
+        super.onCreate(savedInstance)
         notificationHandler = NotificationHandler.create(
             name = "MyApp", 
             id = "com.example.MyApp",
-            activityGetter = { this },
+            // Specifying an activity for the context will automatically provide an activityGetter for you
+            contextGetter = { this },
             permissionCallback = { if(!it) finishAffinity() }
         )
         runBlocking { notificationHandler.requestPermissions() }
+        // ...
     }
 
     override fun onDestroy() {
         super.onDestroy()
         notificationHandler.close()
+        // ...
+    }
+    
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        notificationHandler.handlePermissionRequest(requestCode, grantResults)
     }
 
     internal fun onMessageReceived(message: Message) {
@@ -64,5 +74,5 @@ Windows is supported starting with Windows 10.
 
 ### Linux
 Linux is supported if your distribution/desktop environment supports [libnotify](https://github.com/GNOME/libnotify).  
-This includes desktop environments which use Qt or GTK like [GNOME](https://www.gnome.org) and [KDE](https://kde.org).  
-Note that you need to have `glib-2.0` and `gdk-pixbuf-2.0` installed on a GNOME systems.  
+This includes desktop environments which use Qt or GTK like [GNOME](https://www.gnome.org) or [KDE](https://kde.org).  
+Note that you need to have `glib-2.0` and `gdk-pixbuf-2.0` installed on a GNOME system.  

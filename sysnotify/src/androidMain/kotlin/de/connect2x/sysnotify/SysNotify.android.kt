@@ -40,7 +40,7 @@ internal class AndroidNotificationHandler(
     override val name: String,
     override val id: String,
     internal val contextGetter: () -> Context,
-    internal val activityGetter: () -> Activity?,
+    internal var activityGetter: () -> Activity?,
     private val activationIntent: (Context, Notification) -> SysNotifyIntent,
     internal val permissionCallback: (Boolean) -> Unit
 ) : NotificationHandler {
@@ -151,6 +151,14 @@ internal class AndroidNotificationHandler(
     }
 }
 
+/**
+ * Call this in the [Activity.onRequestPermissionsResult] of your main activity
+ * to automatically handle notification permission requests initiated by [NotificationHandler.requestPermissions].
+ * This will invoke the `permissionCallback` specified when creating the notification handler instance.
+ *
+ * @param requestCode The unique code of the permission request. `0xBEEF` for SysNotify requests.
+ * @param grantResults An array of all grant results for each requested permission.
+ */
 fun NotificationHandler.handlePermissionRequest(requestCode: Int, grantResults: IntArray) {
     if (requestCode != AndroidNotificationHandler.PERMISSION_REQUEST_CODE || grantResults.isEmpty()) return
     require(this is AndroidNotificationHandler)
@@ -161,6 +169,26 @@ fun NotificationHandler.handlePermissionRequest(requestCode: Int, grantResults: 
     permissionCallback(true)
 }
 
+/**
+ * Overrides the getter function which provides the current activity instance.
+ * If the [NotificationHandler] instance was created by a service instead of an activity,
+ * this function must be called before using either [NotificationHandler.requestPermissions] or [getLaunchNotification].
+ *
+ * @param activity The current activity instance.
+ * @return This notification handler instance.
+ */
+fun NotificationHandler.withActivity(activity: Activity): NotificationHandler {
+    require(this is AndroidNotificationHandler)
+    activityGetter = { activity }
+    return this
+}
+
+/**
+ * Retrieves the [Notification] instance the current activity was started from,
+ * including the specified user data.
+ *
+ * @return The [Notification] instance the current activity was started from.
+ */
 @Suppress("DEPRECATION")
 fun NotificationHandler.getLaunchNotification(): Notification? {
     require(this is AndroidNotificationHandler)
@@ -170,6 +198,22 @@ fun NotificationHandler.getLaunchNotification(): Notification? {
     }
 }
 
+/**
+ * Creates a new Android notification handler instance with the given name and ID.
+ * The internal ID of the handler should ideally match the app's package group.
+ *
+ * @param name The display name of the notification handler. May appear in notifications.
+ * @param id The internal ID of the notification handler.
+ * @param contextGetter A getter closure which provides the context associated with your app. This may be an
+ *  application context, a service or an activity.
+ * @param activityGetter A getter closure which provides the current activity of your app.
+ *  This is required for requesting permissions and retrieving the launch notification.
+ * @param activationIntent A factory closure which creates a new [SysNotifyIntent] or any subtype of it.
+ *  For each pushed notification, this closure will be invoked to create an associated launch intent,
+ *  which will be activated when the user taps on one of the notifications pushed by SysNotify.
+ * @param permissionCallback An optional callback closure which is called when the permission grant results are processed.
+ *  The parameter will be true if the permission was granted, false otherwise.
+ */
 fun NotificationHandler.Companion.create(
     name: String,
     id: String = name,
