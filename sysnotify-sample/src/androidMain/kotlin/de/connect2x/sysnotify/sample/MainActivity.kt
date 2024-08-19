@@ -41,7 +41,7 @@ class MainActivity : ComponentActivity() {
                     notification
                 )
             },
-            permissionCallback = { if (!it) finishAffinity() }
+            permissionCallback = { _, granted -> if (!granted) finishAffinity() }
         )
         runBlocking { notificationHandler.requestPermissions() }
         setContent {
