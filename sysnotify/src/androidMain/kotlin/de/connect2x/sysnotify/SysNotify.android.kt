@@ -42,7 +42,7 @@ internal class AndroidNotificationHandler(
     internal val contextGetter: () -> Context,
     internal var activityGetter: () -> Activity?,
     private val activationIntent: (Context, Notification) -> SysNotifyIntent,
-    internal val permissionCallback: (Boolean) -> Unit
+    internal val permissionCallback: (Activity, Boolean) -> Unit
 ) : NotificationHandler {
     companion object {
         const val PERMISSION_REQUEST_CODE: Int = 0xBEEF
@@ -85,7 +85,7 @@ internal class AndroidNotificationHandler(
 
     override suspend fun requestPermissions() {
         if (hasPermissions) return
-        val activity = activityGetter() ?: return // Ignore call if activity is null
+        val activity = requireNotNull(activityGetter()) { "No current activity set" }
         // If we are API level T or above, request permission to push notifications
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             ActivityCompat.requestPermissions(
@@ -117,7 +117,7 @@ internal class AndroidNotificationHandler(
     }
 
     @SuppressLint("MissingPermission") // It is the callers responsibility to make sure perms are defined
-    private suspend fun pushImpl(
+    private fun pushImpl(
         notification: Notification,
         handle: AndroidNotificationHandle = AndroidNotificationHandle()
     ): AndroidNotificationHandle {
@@ -163,10 +163,10 @@ fun NotificationHandler.handlePermissionRequest(requestCode: Int, grantResults: 
     if (requestCode != AndroidNotificationHandler.PERMISSION_REQUEST_CODE || grantResults.isEmpty()) return
     require(this is AndroidNotificationHandler)
     if (grantResults.first() == PackageManager.PERMISSION_DENIED) {
-        permissionCallback(false)
+        permissionCallback(requireNotNull(activityGetter()) { "No current activity set" }, false)
         return
     }
-    permissionCallback(true)
+    permissionCallback(requireNotNull(activityGetter()) { "No current activity set" }, true)
 }
 
 /**
@@ -192,7 +192,7 @@ fun NotificationHandler.withActivity(activity: Activity): NotificationHandler {
 @Suppress("DEPRECATION")
 fun NotificationHandler.getLaunchNotification(): Notification? {
     require(this is AndroidNotificationHandler)
-    return activityGetter()?.intent?.let {
+    return requireNotNull(activityGetter()) { "No current activity set" }.intent?.let {
         return@let if (!it.hasExtra(SysNotifyIntent.EXTRA_LAUNCH_NOTIFICATION)) null
         else requireNotNull(it.getParcelableExtra<ParcelableNotification>(SysNotifyIntent.EXTRA_LAUNCH_NOTIFICATION)?.notification)
     }
@@ -212,7 +212,7 @@ fun NotificationHandler.getLaunchNotification(): Notification? {
  *  For each pushed notification, this closure will be invoked to create an associated launch intent,
  *  which will be activated when the user taps on one of the notifications pushed by SysNotify.
  * @param permissionCallback An optional callback closure which is called when the permission grant results are processed.
- *  The parameter will be true if the permission was granted, false otherwise.
+ *  The boolean parameter will be true if the permission was granted, false otherwise.
  */
 fun NotificationHandler.Companion.create(
     name: String,
@@ -220,6 +220,6 @@ fun NotificationHandler.Companion.create(
     contextGetter: () -> Context,
     activityGetter: () -> Activity? = { contextGetter() as? Activity },
     activationIntent: (Context, Notification) -> SysNotifyIntent,
-    permissionCallback: (Boolean) -> Unit = {}
+    permissionCallback: (Activity, Boolean) -> Unit = { _, _ -> }
 ): NotificationHandler =
     AndroidNotificationHandler(name, id, contextGetter, activityGetter, activationIntent, permissionCallback)
