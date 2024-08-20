@@ -24,11 +24,12 @@ private data class JvmNotificationHandle(
 private class JvmNotificationHandler(
     override val name: String,
     override val id: String,
+    override val priority: NotificationPriority,
     private val activationCallback: (Notification) -> Unit
 ) : NotificationHandler {
-    private val address: Long = NativeNotificationHandler.create(name, id) {
+    private val address: Long = NativeNotificationHandler.create(name, id, {
         activationCallback(it) // Delegate the call to the closure
-    }
+    }, priority.ordinal)
     override val platform: NotificationPlatform =
         NotificationPlatform.entries[NativeNotificationHandler.getPlatform(address)]
     override val hasPermissions: Boolean = false // TODO: Implement hasPermissions flag
@@ -85,8 +86,9 @@ private class JvmNotificationHandler(
 fun NotificationHandler.Companion.create(
     name: String,
     id: String = name,
-    activationCallback: (Notification) -> Unit = {}
-): NotificationHandler = JvmNotificationHandler(name, id, activationCallback)
+    activationCallback: (Notification) -> Unit = {},
+    priority: NotificationPriority = NotificationPriority.DEFAULT
+): NotificationHandler = JvmNotificationHandler(name, id, priority, activationCallback)
 
 fun NotificationIcon.Companion.fromBufferedImage(image: BufferedImage): NotificationIcon {
     val width = image.width

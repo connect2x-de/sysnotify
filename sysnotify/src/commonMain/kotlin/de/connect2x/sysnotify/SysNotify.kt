@@ -124,8 +124,7 @@ data class Notification(
     val title: String? = null,
     val description: String? = null,
     val icon: NotificationIcon? = null,
-    val userData: String? = null,
-    val priority: NotificationPriority = NotificationPriority.DEFAULT
+    val userData: String? = null
 )
 
 /**
@@ -161,6 +160,7 @@ interface NotificationHandler : AutoCloseable {
     val platform: NotificationPlatform
     val capabilities: NotificationCapabilities
     val hasPermissions: Boolean
+    val priority: NotificationPriority
 
     suspend fun requestPermissions() {}
     suspend fun clearAll() {}
@@ -186,6 +186,7 @@ object NoopNotificationHandler : NotificationHandler {
     override val platform: NotificationPlatform = NotificationPlatform.UNKNOWN
     override val hasPermissions: Boolean = false
     override val capabilities: NotificationCapabilities = NotificationCapabilities(0U)
+    override val priority: NotificationPriority = NotificationPriority.DEFAULT
 
     override suspend fun push(notification: Notification): NotificationHandle = InvalidNotificationHandle
 
