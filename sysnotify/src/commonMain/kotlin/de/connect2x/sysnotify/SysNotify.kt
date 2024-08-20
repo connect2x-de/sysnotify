@@ -21,6 +21,7 @@ package de.connect2x.sysnotify
  * via the [NotificationHandler.platform] property.
  */
 enum class NotificationPlatform {
+    UNKNOWN,
     ANDROID,
     APPLE, // This includes iOS and macOS
     LINUX,
@@ -116,6 +117,12 @@ data class Notification(
 interface NotificationHandle
 
 /**
+ * This object is used to represent handles which are non-null but not valid for use with any
+ * other functions that accept them as their parameters.
+ */
+object InvalidNotificationHandle : NotificationHandle
+
+/**
  * This interface provides platform-agnostic functions to interact with the OSs notifications.
  * It allows pushing, updating and popping notifications based on the supported platform feature set.
  * A single application may create multiple notification handlers to act as different notification "channels",
@@ -139,7 +146,6 @@ interface NotificationHandler : AutoCloseable {
 
     suspend fun requestPermissions() {}
     suspend fun clearAll() {}
-
     suspend fun push(notification: Notification): NotificationHandle?
     suspend fun pop(handle: NotificationHandle)
 
@@ -159,24 +165,16 @@ interface NotificationHandler : AutoCloseable {
 object NoopNotificationHandler : NotificationHandler {
     override val name: String = "NOOP"
     override val id: String = "no.op.noop"
-    override val platform: NotificationPlatform
-        get() = throw UnsupportedOperationException()
+    override val platform: NotificationPlatform = NotificationPlatform.UNKNOWN
     override val hasPermissions: Boolean = false
-
     override val capabilities: NotificationCapabilities = NotificationCapabilities(0U)
 
-    override suspend fun push(notification: Notification): NotificationHandle? {
-        throw UnsupportedOperationException()
-    }
+    override suspend fun push(notification: Notification): NotificationHandle = InvalidNotificationHandle
 
     override suspend fun update(
         handle: NotificationHandle,
         notification: Notification
-    ): NotificationHandle? {
-        throw UnsupportedOperationException()
-    }
+    ): NotificationHandle = InvalidNotificationHandle
 
-    override suspend fun pop(handle: NotificationHandle) {
-        throw UnsupportedOperationException()
-    }
+    override suspend fun pop(handle: NotificationHandle) {}
 }
