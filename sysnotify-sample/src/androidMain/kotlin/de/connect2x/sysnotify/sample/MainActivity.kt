@@ -52,7 +52,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    @Suppress("DEPRECATION")
+    @Deprecated("For direct handling of permission results, use permission result callbacks")
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         notificationHandler.handlePermissionRequest(requestCode, grantResults)

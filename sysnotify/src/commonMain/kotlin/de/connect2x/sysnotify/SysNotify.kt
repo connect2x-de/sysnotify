@@ -30,6 +30,18 @@ enum class NotificationPlatform {
 }
 
 /**
+ * Describes the priority of a given notification.
+ * This usually impacts the order in which notifications
+ * are shown by the underlying platform when presenting
+ * them to the user.
+ */
+enum class NotificationPriority {
+    LOW,
+    DEFAULT,
+    HIGH
+}
+
+/**
  * A data class describing the capabilities of a given [NotificationHandler] instance.
  * Each flag indicates whether a feature is supported.
  * The [isSupported] flag indicates if notifications are supported on the current platform at all.
@@ -103,6 +115,11 @@ data class NotificationIcon(val data: ByteArray, val width: Int, val height: Int
     // End ugly generated code
 }
 
+/**
+ * Describes a notification including its title, description, icon and priority.
+ * User data which is passed to the app when it is launched through
+ * one of the notifications created by this library.
+ */
 data class Notification(
     val title: String? = null,
     val description: String? = null,
@@ -143,6 +160,7 @@ interface NotificationHandler : AutoCloseable {
     val platform: NotificationPlatform
     val capabilities: NotificationCapabilities
     val hasPermissions: Boolean
+    val priority: NotificationPriority
 
     suspend fun requestPermissions() {}
     suspend fun clearAll() {}
@@ -168,6 +186,7 @@ object NoopNotificationHandler : NotificationHandler {
     override val platform: NotificationPlatform = NotificationPlatform.UNKNOWN
     override val hasPermissions: Boolean = false
     override val capabilities: NotificationCapabilities = NotificationCapabilities(0U)
+    override val priority: NotificationPriority = NotificationPriority.DEFAULT
 
     override suspend fun push(notification: Notification): NotificationHandle = InvalidNotificationHandle
 

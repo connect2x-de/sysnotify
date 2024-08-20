@@ -18,7 +18,6 @@ package de.connect2x.sysnotify
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
-import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.pm.PackageManager
@@ -41,6 +40,7 @@ private data class AndroidNotificationHandle(
 internal class AndroidNotificationHandler(
     override val name: String,
     override val id: String,
+    override val priority: NotificationPriority,
     internal val contextGetter: () -> Context,
     internal var activityGetter: () -> Activity?,
     private val activationIntent: (Context, Notification) -> SysNotifyIntent,
@@ -72,7 +72,7 @@ internal class AndroidNotificationHandler(
         get() = NotificationManagerCompat.from(contextGetter())
 
     internal val channel: AndroidNotificationChannel = AndroidNotificationChannel(
-        id, name, NotificationManager.IMPORTANCE_DEFAULT
+        id, name, priority.nativePriority
     ).apply { manager.createNotificationChannel(this) }
 
     override fun close() {
@@ -219,6 +219,16 @@ val NotificationHandle.nativeNotification: AndroidNotification
     }
 
 /**
+ * The native notification importance associated with this priority enum.
+ */
+val NotificationPriority.nativePriority: Int
+    get() = when (this) {
+        NotificationPriority.LOW -> NotificationManagerCompat.IMPORTANCE_LOW
+        NotificationPriority.HIGH -> NotificationManagerCompat.IMPORTANCE_HIGH
+        else -> NotificationManagerCompat.IMPORTANCE_DEFAULT
+    }
+
+/**
  * Creates a new Android notification handler instance with the given name and ID.
  * The internal ID of the handler should ideally match the app's package group.
  *
@@ -240,6 +250,7 @@ fun NotificationHandler.Companion.create(
     contextGetter: () -> Context,
     activityGetter: () -> Activity? = { contextGetter() as? Activity },
     activationIntent: (Context, Notification) -> SysNotifyIntent,
-    permissionCallback: (Activity, Boolean) -> Unit = { _, _ -> }
+    permissionCallback: (Activity, Boolean) -> Unit = { _, _ -> },
+    priority: NotificationPriority = NotificationPriority.DEFAULT
 ): NotificationHandler =
-    AndroidNotificationHandler(name, id, contextGetter, activityGetter, activationIntent, permissionCallback)
+    AndroidNotificationHandler(name, id, priority, contextGetter, activityGetter, activationIntent, permissionCallback)

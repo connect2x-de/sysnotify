@@ -36,7 +36,8 @@ import kotlinx.coroutines.runBlocking
 internal expect fun createNotificationHandler(
     name: String,
     id: String,
-    activationCallback: (Notification) -> Unit
+    activationCallback: (Notification) -> Unit,
+    priority: NotificationPriority
 ): NotificationHandler
 
 private val typeNativeNotificationHandler =
@@ -93,10 +94,10 @@ internal fun registerNatives() {
     }
 }
 
-private fun create(env: JNIEnvVar, clazz: jclass, name: jstring, id: jstring, activationCallback: jobject): jlong {
-    return StableRef.create(createNotificationHandler(name.toKString(), id.toKString()) {
+private fun create(env: JNIEnvVar, clazz: jclass, name: jstring, id: jstring, activationCallback: jobject, priority: jint): jlong {
+    return StableRef.create(createNotificationHandler(name.toKString(), id.toKString(), {
         // TODO: implement this
-    }).asCPointer().rawValue.toLong()
+    }, NotificationPriority.entries[priority])).asCPointer().rawValue.toLong()
 }
 
 private fun destroy(env: JNIEnvVar, clazz: jclass, handler: jlong) {

@@ -91,6 +91,7 @@ internal data class WindowsNotificationHandle(
 internal class WindowsNotificationHandler(
     override val name: String,
     override val id: String,
+    override val priority: NotificationPriority,
     private val activationCallback: (Notification) -> Unit
 ) : NotificationHandler {
     internal val address: sn_notification_handler = memScoped {
@@ -169,5 +170,6 @@ internal class WindowsNotificationHandler(
 fun NotificationHandler.Companion.create(
     name: String,
     id: String = name,
-    activationCallback: (Notification) -> Unit = {}
-): NotificationHandler = WindowsNotificationHandler(name, id, activationCallback)
+    activationCallback: (Notification) -> Unit = {},
+    priority: NotificationPriority = NotificationPriority.DEFAULT
+): NotificationHandler = WindowsNotificationHandler(name, id, priority, activationCallback)

@@ -18,7 +18,8 @@ package de.connect2x.sysnotify
 internal actual fun createNotificationHandler(
     name: String,
     id: String,
-    activationCallback: (Notification) -> Unit
+    activationCallback: (Notification) -> Unit,
+    priority: NotificationPriority
 ): NotificationHandler {
-    return LinuxNotificationHandler(name, id, activationCallback)
+    return LinuxNotificationHandler(name, id, priority, activationCallback)
 }

@@ -71,6 +71,7 @@ internal class LinuxNotificationHandle(
 internal class LinuxNotificationHandler(
     override val name: String,
     override val id: String,
+    override val priority: NotificationPriority,
     private val activationCallback: (Notification) -> Unit
 ) : NotificationHandler {
     companion object {
@@ -188,5 +189,6 @@ internal class LinuxNotificationHandler(
 fun NotificationHandler.Companion.create(
     name: String,
     id: String = name,
-    activationCallback: (Notification) -> Unit = {}
-): NotificationHandler = LinuxNotificationHandler(name, id, activationCallback)
+    activationCallback: (Notification) -> Unit = {},
+    priority: NotificationPriority = NotificationPriority.DEFAULT
+): NotificationHandler = LinuxNotificationHandler(name, id, priority, activationCallback)
