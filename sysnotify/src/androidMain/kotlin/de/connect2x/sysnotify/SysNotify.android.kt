@@ -18,7 +18,6 @@ package de.connect2x.sysnotify
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
-import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
@@ -31,9 +30,12 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.graphics.drawable.IconCompat
 import com.benasher44.uuid.Uuid
 import com.benasher44.uuid.uuid4
+import android.app.Notification as AndroidNotification
+import android.app.NotificationChannel as AndroidNotificationChannel
 
 private data class AndroidNotificationHandle(
-    val uuid: Uuid = uuid4()
+    val uuid: Uuid = uuid4(),
+    var value: AndroidNotification? = null
 ) : NotificationHandle
 
 internal class AndroidNotificationHandler(
@@ -42,7 +44,7 @@ internal class AndroidNotificationHandler(
     internal val contextGetter: () -> Context,
     internal var activityGetter: () -> Activity?,
     private val activationIntent: (Context, Notification) -> SysNotifyIntent,
-    internal val permissionCallback: (Activity, Boolean) -> Unit
+    internal var permissionCallback: (Activity, Boolean) -> Unit
 ) : NotificationHandler {
     companion object {
         const val PERMISSION_REQUEST_CODE: Int = 0xBEEF
@@ -69,15 +71,9 @@ internal class AndroidNotificationHandler(
     private val manager: NotificationManagerCompat
         get() = NotificationManagerCompat.from(contextGetter())
 
-    init {
-        manager.createNotificationChannels(
-            listOf(
-                NotificationChannel(
-                    id, name, NotificationManager.IMPORTANCE_DEFAULT
-                )
-            )
-        )
-    }
+    internal val channel: AndroidNotificationChannel = AndroidNotificationChannel(
+        id, name, NotificationManager.IMPORTANCE_DEFAULT
+    ).apply { manager.createNotificationChannel(this) }
 
     override fun close() {
         manager.deleteNotificationChannel(id)
@@ -106,13 +102,13 @@ internal class AndroidNotificationHandler(
         notification: Notification
     ): NotificationHandle {
         if (!hasPermissions) return handle
-        if (handle !is AndroidNotificationHandle) throw IllegalArgumentException("Handle is not an android notification handle")
+        require(handle is AndroidNotificationHandle) { "Handle is not an android notification handle" }
         return pushImpl(notification, handle)
     }
 
     override suspend fun pop(handle: NotificationHandle) {
         if (!hasPermissions) return
-        if (handle !is AndroidNotificationHandle) throw IllegalArgumentException("Handle is not an android notification handle")
+        require(handle is AndroidNotificationHandle) { "Handle is not an android notification handle" }
         manager.cancel(handle.uuid.hashCode())
     }
 
@@ -122,17 +118,20 @@ internal class AndroidNotificationHandler(
         handle: AndroidNotificationHandle = AndroidNotificationHandle()
     ): AndroidNotificationHandle {
         val context = contextGetter()
-        val builder = NotificationCompat.Builder(context, id)
-            .setContentTitle(notification.title ?: name)
-            .setContentText(notification.description)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .setAutoCancel(true) // Remove notification when user taps it
+        val builder = NotificationCompat.Builder(context, id).apply {
+            setContentTitle(notification.title ?: name)
+            setContentText(notification.description)
+            setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            setAutoCancel(true) // Remove notification when user taps it
+        }
 
         val icon = notification.icon
         if (icon != null) {
             val iconData = icon.data
-            builder.setSmallIcon(IconCompat.createWithData(iconData, 0, iconData.size))
-                .setLargeIcon(BitmapFactory.decodeByteArray(iconData, 0, iconData.size))
+            builder.apply {
+                setSmallIcon(IconCompat.createWithData(iconData, 0, iconData.size))
+                setLargeIcon(BitmapFactory.decodeByteArray(iconData, 0, iconData.size))
+            }
         } else builder.setSmallIcon(R.drawable.ic_notification)
 
         activationIntent.let {
@@ -146,7 +145,10 @@ internal class AndroidNotificationHandler(
             builder.setContentIntent(pendingIntent)
         }
 
-        manager.notify(handle.uuid.hashCode(), builder.build())
+        builder.build().apply {
+            manager.notify(handle.uuid.hashCode(), this)
+            handle.value = this // Make sure the handle knows about the underlying system notification instance
+        }
         return handle
     }
 }
@@ -197,6 +199,24 @@ fun NotificationHandler.getLaunchNotification(): Notification? {
         else requireNotNull(it.getParcelableExtra<ParcelableNotification>(SysNotifyIntent.EXTRA_LAUNCH_NOTIFICATION)?.notification)
     }
 }
+
+/**
+ * The native [AndroidNotificationChannel] instance associated with this notification handler.
+ */
+val NotificationHandler.nativeChannel: AndroidNotificationChannel
+    get() {
+        require(this is AndroidNotificationHandler) { "Handle is not an Android notification handler" }
+        return channel
+    }
+
+/**
+ * The native [AndroidNotification] instance associated with this notification handle.
+ */
+val NotificationHandle.nativeNotification: AndroidNotification
+    get() {
+        require(this is AndroidNotificationHandle) { "Handle is not an Android notification handle" }
+        return requireNotNull(value) { "Handle does not contain a valid Android Notification reference" }
+    }
 
 /**
  * Creates a new Android notification handler instance with the given name and ID.
