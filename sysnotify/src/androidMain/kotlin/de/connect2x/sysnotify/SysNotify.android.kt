@@ -32,10 +32,17 @@ import com.benasher44.uuid.uuid4
 import android.app.Notification as AndroidNotification
 import android.app.NotificationChannel as AndroidNotificationChannel
 
-private data class AndroidNotificationHandle(
+private class AndroidNotificationHandle(
     val uuid: Uuid = uuid4(),
     var value: AndroidNotification? = null
-) : NotificationHandle
+) : NotificationHandle {
+    override fun equals(other: Any?): Boolean {
+        return if(other !is AndroidNotificationHandle) false
+        else other.uuid == uuid
+    }
+    override fun hashCode(): Int = uuid.hashCode()
+    override fun toString(): String = uuid.toString()
+}
 
 internal class AndroidNotificationHandler(
     override val name: String,
