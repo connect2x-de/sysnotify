@@ -126,6 +126,8 @@ internal class LinuxNotificationHandler(
         return true
     }
 
+    override fun create(notification: Notification): NotificationHandle = InvalidNotificationHandle // TODO: implement this
+
     override suspend fun push(notification: Notification): NotificationHandle? {
         val notificationAddress = notify_notification_new(
             summary = notification.title,

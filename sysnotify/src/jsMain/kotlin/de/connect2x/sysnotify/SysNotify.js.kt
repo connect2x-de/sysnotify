@@ -46,6 +46,8 @@ private class WebNotificationHandler(
         JsNotification.requestPermission().await()
     }
 
+    override fun create(notification: Notification): NotificationHandle = InvalidNotificationHandle // TODO: implement this
+
     override suspend fun push(notification: Notification): NotificationHandle {
         val instance = JsNotification(
             notification.title ?: "Undefined", NotificationOptions(
