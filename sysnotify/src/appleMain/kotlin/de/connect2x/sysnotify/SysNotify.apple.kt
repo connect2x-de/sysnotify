@@ -60,6 +60,8 @@ internal class AppleNotificationHandler(
             }
     }
 
+    override fun create(notification: Notification): NotificationHandle = InvalidNotificationHandle // TODO: implement this
+
     override suspend fun push(notification: Notification): NotificationHandle {
         val handle = AppleNotificationHandle()
         val content = UNMutableNotificationContent().apply {

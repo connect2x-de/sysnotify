@@ -50,30 +50,16 @@ internal class AndroidNotificationHandler(
         const val PERMISSION_REQUEST_CODE: Int = 0xBEEF
     }
 
-    override val platform: NotificationPlatform = NotificationPlatform.ANDROID
-
-    override val hasPermissions: Boolean
-        get() = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            ActivityCompat.checkSelfPermission(
-                contextGetter(),
-                Manifest.permission.POST_NOTIFICATIONS
-            ) == PackageManager.PERMISSION_GRANTED
-        } else true
-
-    override val capabilities: NotificationCapabilities = NotificationCapabilities(
-        isTitleSupported = true,
-        isDescriptionSupported = true,
-        isIconSupported = true,
-        isActionSupported = true,
-        isPopSupported = true
-    )
-
+    internal val channel: AndroidNotificationChannel = AndroidNotificationChannel(
+        id, name, priority.nativeImportance
+    ).apply { manager.createNotificationChannel(this) }
     private val manager: NotificationManagerCompat
         get() = NotificationManagerCompat.from(contextGetter())
 
-    internal val channel: AndroidNotificationChannel = AndroidNotificationChannel(
-        id, name, priority.nativePriority
-    ).apply { manager.createNotificationChannel(this) }
+    override val platform: NotificationPlatform = NotificationPlatform.ANDROID
+    override val capabilities: NotificationCapabilities = NotificationCapabilities(NotificationCapabilities.ALL)
+    override val hasPermissions: Boolean
+        get() = hasNotificationPermissions(contextGetter())
 
     override fun close() {
         manager.deleteNotificationChannel(id)
@@ -92,64 +78,64 @@ internal class AndroidNotificationHandler(
         }
     }
 
-    override suspend fun push(notification: Notification): NotificationHandle {
-        if (!hasPermissions) return AndroidNotificationHandle()
-        return pushImpl(notification)
+    private fun createImpl(
+        notification: Notification,
+        handle: AndroidNotificationHandle = AndroidNotificationHandle()
+    ): AndroidNotificationHandle {
+        return handle.apply {
+            val context = contextGetter()
+            value = NotificationCompat.Builder(context, id).apply {
+                setContentTitle(notification.title ?: name)
+                setContentText(notification.description)
+                setPriority(notification.priority.nativePriority)
+                setOngoing(!notification.dismissible)
+                setAutoCancel(true) // Remove notification when user taps it
+                // Setup icon, fallback to default icon if none was specified
+                val icon = notification.icon
+                if (icon != null) {
+                    val iconData = icon.data
+                    setSmallIcon(IconCompat.createWithData(iconData, 0, iconData.size))
+                    setLargeIcon(BitmapFactory.decodeByteArray(iconData, 0, iconData.size))
+                } else setSmallIcon(R.drawable.ic_notification)
+                // Setup activation intent if present
+                setContentIntent(
+                    PendingIntent.getActivity(
+                        context,
+                        0,
+                        activationIntent(context, notification),
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                    )
+                )
+            }.build()
+        }
     }
 
+    override fun create(notification: Notification): NotificationHandle = createImpl(notification)
+
+    @SuppressLint("MissingPermission") // It is the callers responsibility to make sure perms are defined
+    override suspend fun push(notification: Notification): NotificationHandle {
+        if (!hasPermissions) return AndroidNotificationHandle()
+        return createImpl(notification).apply {
+            manager.notify(uuid.hashCode(), requireNotNull(value) { "Invalid notification handle" })
+        }
+    }
+
+    @SuppressLint("MissingPermission") // It is the callers responsibility to make sure perms are defined
     override suspend fun update(
         handle: NotificationHandle,
         notification: Notification
     ): NotificationHandle {
         if (!hasPermissions) return handle
         require(handle is AndroidNotificationHandle) { "Handle is not an android notification handle" }
-        return pushImpl(notification, handle)
+        return createImpl(notification, handle).apply {
+            manager.notify(uuid.hashCode(), requireNotNull(value) { "Invalid notification handle" })
+        }
     }
 
     override suspend fun pop(handle: NotificationHandle) {
         if (!hasPermissions) return
         require(handle is AndroidNotificationHandle) { "Handle is not an android notification handle" }
         manager.cancel(handle.uuid.hashCode())
-    }
-
-    @SuppressLint("MissingPermission") // It is the callers responsibility to make sure perms are defined
-    private fun pushImpl(
-        notification: Notification,
-        handle: AndroidNotificationHandle = AndroidNotificationHandle()
-    ): AndroidNotificationHandle {
-        val context = contextGetter()
-        val builder = NotificationCompat.Builder(context, id).apply {
-            setContentTitle(notification.title ?: name)
-            setContentText(notification.description)
-            setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            setAutoCancel(true) // Remove notification when user taps it
-        }
-
-        val icon = notification.icon
-        if (icon != null) {
-            val iconData = icon.data
-            builder.apply {
-                setSmallIcon(IconCompat.createWithData(iconData, 0, iconData.size))
-                setLargeIcon(BitmapFactory.decodeByteArray(iconData, 0, iconData.size))
-            }
-        } else builder.setSmallIcon(R.drawable.ic_notification)
-
-        activationIntent.let {
-            val intent = it(context, notification)
-            val pendingIntent = PendingIntent.getActivity(
-                context,
-                0,
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-            builder.setContentIntent(pendingIntent)
-        }
-
-        builder.build().apply {
-            manager.notify(handle.uuid.hashCode(), this)
-            handle.value = this // Make sure the handle knows about the underlying system notification instance
-        }
-        return handle
     }
 }
 
@@ -221,11 +207,21 @@ val NotificationHandle.nativeNotification: AndroidNotification
 /**
  * The native notification importance associated with this priority enum.
  */
-val NotificationPriority.nativePriority: Int
+val NotificationPriority.nativeImportance: Int
     get() = when (this) {
         NotificationPriority.LOW -> NotificationManagerCompat.IMPORTANCE_LOW
         NotificationPriority.HIGH -> NotificationManagerCompat.IMPORTANCE_HIGH
         else -> NotificationManagerCompat.IMPORTANCE_DEFAULT
+    }
+
+/**
+ * The native notification priority associated with this priority enum.
+ */
+val NotificationPriority.nativePriority: Int
+    get() = when (this) {
+        NotificationPriority.LOW -> NotificationCompat.PRIORITY_LOW
+        NotificationPriority.HIGH -> NotificationCompat.PRIORITY_HIGH
+        else -> NotificationCompat.PRIORITY_DEFAULT
     }
 
 /**
@@ -243,6 +239,7 @@ val NotificationPriority.nativePriority: Int
  *  which will be activated when the user taps on one of the notifications pushed by SysNotify.
  * @param permissionCallback An optional callback closure which is called when the permission grant results are processed.
  *  The boolean parameter will be true if the permission was granted, false otherwise.
+ * @return A new notification handler with the given properties.
  */
 fun NotificationHandler.Companion.create(
     name: String,

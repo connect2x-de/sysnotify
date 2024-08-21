@@ -46,6 +46,8 @@ private class JvmNotificationHandler(
         NativeNotificationHandler.requestPermissions(address)
     }
 
+    override fun create(notification: Notification): NotificationHandle = InvalidNotificationHandle // TODO: implement this
+
     override suspend fun push(notification: Notification): NotificationHandle? {
         val handle = NativeNotificationHandler.push(
             handler = address,

@@ -53,6 +53,11 @@ data class NotificationCapabilities(val mask: UInt) {
         const val IS_ICON_SUPPORTED: UInt = 4U
         const val IS_ACTION_SUPPORTED: UInt = 8U
         const val IS_POP_SUPPORTED: UInt = 16U
+        val ALL: UInt = IS_TITLE_SUPPORTED or
+                IS_DESCRIPTION_SUPPORTED or
+                IS_ICON_SUPPORTED or
+                IS_ACTION_SUPPORTED or
+                IS_POP_SUPPORTED
     }
 
     constructor(
@@ -116,15 +121,24 @@ data class NotificationIcon(val data: ByteArray, val width: Int, val height: Int
 }
 
 /**
- * Describes a notification including its title, description, icon and priority.
- * User data which is passed to the app when it is launched through
- * one of the notifications created by this library.
+ * Describes a notification including its title, description and icon among other things.
+ *
+ * @param title The title of the notification, should be short.
+ * @param description The description or "content" of a notification.
+ * @param icon The icon shown as part of the notification. This can be the application icon or an avatar.
+ * @param userData A string that is passed to the application when it is started from activating a notification.
+ * @param dismissible Determines whether this notification can be "swiped away" by the user. False means the
+ *  notification will remain persistent until explicitly popped.
+ * @param priority The priority of this notification within the same notification handler context.
+ *  This usually affects how notifications within the same group are sorted.
  */
 data class Notification(
     val title: String? = null,
     val description: String? = null,
     val icon: NotificationIcon? = null,
-    val userData: String? = null
+    val userData: String? = null,
+    val dismissible: Boolean = true,
+    val priority: NotificationPriority = NotificationPriority.DEFAULT
 )
 
 /**
@@ -155,18 +169,90 @@ object InvalidNotificationHandle : NotificationHandle
  * using this library and should not contain any whitespaces.
  */
 interface NotificationHandler : AutoCloseable {
+    /**
+     * The display name of the notification handler.
+     */
     val name: String
+
+    /**
+     * The internal ID of the notification handler.
+     * This usually follows the underlying platform's naming conventions;
+     * Package group on JVM and Android, AUMID on Windows etc.
+     */
     val id: String
+
+    /**
+     * The platform on which the current notification handler is implemented.
+     * See [NotificationPlatform] for all possible values.
+     */
     val platform: NotificationPlatform
+
+    /**
+     * The capabilities of this notification handler.
+     * This allows querying which features are supported exactly
+     * by this notification handler instance.
+     * See [NotificationCapabilities] for all possible feature flags.
+     */
     val capabilities: NotificationCapabilities
+
+    /**
+     * Determines whether this notification handler has been granted
+     * permission to display notifications by the underlying platform.
+     * If the underlying platform has no concept of permissions for this
+     * application, the value of this property will be `true`.
+     */
     val hasPermissions: Boolean
+
+    /**
+     * Determines the general priority of all notifications pushed
+     * by this notification handler instance.
+     */
     val priority: NotificationPriority
 
+    /**
+     * Creates a new notification which has a valid associated system notification,
+     * but is not pushed to be displayed. This can be useful on certain systems like
+     * Android to create Notification instances without explicitly pushing them.
+     *
+     * @param notification The notification contents to create the new notification from.
+     * @return A new notification with the given content.
+     */
+    fun create(notification: Notification): NotificationHandle
+
+    /**
+     * Requests the permissions to show notifications from the underlying platform
+     * when possible. Otherwise this function returns without any side effects.
+     */
     suspend fun requestPermissions() {}
+
+    /**
+     * Clears all notifications that were created by this notification handler instance.
+     */
     suspend fun clearAll() {}
+
+    /**
+     * Creates a new notification with the given content and pushes it to
+     * be displayed by the underlying platform.
+     *
+     * @param notification The notification contents to create the new notification from.
+     * @return A new notification with the given content which has been shown by the system
+     *  when successful, null otherwise.
+     */
     suspend fun push(notification: Notification): NotificationHandle?
+
+    /**
+     * Hides and removes the given notification if it is valid and if it exists.
+     *
+     * @param handle A handle to the notification to hide and remove.
+     */
     suspend fun pop(handle: NotificationHandle)
 
+    /**
+     * Updates the given existing notification with the given content if it is valid.
+     *
+     * @param handle A handle to the notification to update the contents of.
+     * @return The same handle that was passed in when successful, null otherwise.
+     */
     suspend fun update(
         handle: NotificationHandle,
         notification: Notification
@@ -175,6 +261,11 @@ interface NotificationHandler : AutoCloseable {
         return push(notification)
     }
 
+    /**
+     * Frees all underlying resources allocated by this notification handler if any
+     * and returns them to the underlying operating system.
+     * **Always call this when you're done using the notification handler!**
+     */
     override fun close() {}
 
     companion object // Used for create implementations
@@ -188,6 +279,7 @@ object NoopNotificationHandler : NotificationHandler {
     override val capabilities: NotificationCapabilities = NotificationCapabilities(0U)
     override val priority: NotificationPriority = NotificationPriority.DEFAULT
 
+    override fun create(notification: Notification): NotificationHandle = InvalidNotificationHandle
     override suspend fun push(notification: Notification): NotificationHandle = InvalidNotificationHandle
 
     override suspend fun update(
