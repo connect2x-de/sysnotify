@@ -22,6 +22,7 @@ import de.connect2x.sysnotify.NotificationHandler
 import de.connect2x.sysnotify.SysNotifyIntent
 import de.connect2x.sysnotify.create
 import de.connect2x.sysnotify.getLaunchNotification
+import de.connect2x.sysnotify.getNotificationIcon
 import de.connect2x.sysnotify.handlePermissionRequest
 import kotlinx.coroutines.runBlocking
 
@@ -32,7 +33,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         notificationHandler = NotificationHandler.create(
             name = "Sysnotify Sample",
-            id = "Connect2x.Sysnotify",
+            id = "de.connect2x.sysnotify",
             contextGetter = { this },
             activationIntent = { context, notification ->
                 SysNotifyIntent(
@@ -47,7 +48,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             App(
                 notificationHandler = notificationHandler,
-                launchNotification = notificationHandler.getLaunchNotification()
+                launchUserData = notificationHandler.getLaunchNotification()?.userData,
+                icon = resources.getNotificationIcon(R.drawable.ic_android)
             )
         }
     }

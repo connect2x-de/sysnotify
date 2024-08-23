@@ -21,7 +21,9 @@ import android.app.Activity
 import android.app.PendingIntent
 import android.content.Context
 import android.content.pm.PackageManager
-import android.graphics.BitmapFactory
+import android.content.res.Resources
+import android.graphics.Bitmap
+import android.graphics.drawable.Drawable
 import android.os.Build
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
@@ -37,9 +39,10 @@ private class AndroidNotificationHandle(
     var value: AndroidNotification? = null
 ) : NotificationHandle {
     override fun equals(other: Any?): Boolean {
-        return if(other !is AndroidNotificationHandle) false
+        return if (other !is AndroidNotificationHandle) false
         else other.uuid == uuid
     }
+
     override fun hashCode(): Int = uuid.hashCode()
     override fun toString(): String = uuid.toString()
 }
@@ -100,9 +103,10 @@ internal class AndroidNotificationHandler(
                 // Setup icon, fallback to default icon if none was specified
                 val icon = notification.icon
                 if (icon != null) {
-                    val iconData = icon.data
-                    setSmallIcon(IconCompat.createWithData(iconData, 0, iconData.size))
-                    setLargeIcon(BitmapFactory.decodeByteArray(iconData, 0, iconData.size))
+                    icon.toBitmap().apply {
+                        setSmallIcon(IconCompat.createWithBitmap(this))
+                        setLargeIcon(this)
+                    }
                 } else setSmallIcon(R.drawable.ic_notification)
                 // Setup activation intent if present
                 setContentIntent(
@@ -185,11 +189,11 @@ fun NotificationHandler.withActivity(activity: Activity): NotificationHandler {
  * @return The [Notification] instance the current activity was started from.
  */
 @Suppress("DEPRECATION")
-fun NotificationHandler.getLaunchNotification(): Notification? {
+fun NotificationHandler.getLaunchNotification(): ParcelableNotification? {
     require(this is AndroidNotificationHandler)
-    return requireNotNull(activityGetter()) { "No current activity set" }.intent?.let {
+    return activityGetter()?.intent?.let {
         return@let if (!it.hasExtra(SysNotifyIntent.EXTRA_LAUNCH_NOTIFICATION)) null
-        else requireNotNull(it.getParcelableExtra<ParcelableNotification>(SysNotifyIntent.EXTRA_LAUNCH_NOTIFICATION)?.notification)
+        else it.getParcelableExtra<ParcelableNotification>(SysNotifyIntent.EXTRA_LAUNCH_NOTIFICATION)
     }
 }
 
@@ -198,7 +202,7 @@ fun NotificationHandler.getLaunchNotification(): Notification? {
  */
 val NotificationHandler.nativeChannel: AndroidNotificationChannel
     get() {
-        require(this is AndroidNotificationHandler) { "Handle is not an Android notification handler" }
+        require(this is AndroidNotificationHandler) { "Handler is not an Android notification handler" }
         return channel
     }
 
@@ -230,6 +234,90 @@ val NotificationPriority.nativePriority: Int
         NotificationPriority.HIGH -> NotificationCompat.PRIORITY_HIGH
         else -> NotificationCompat.PRIORITY_DEFAULT
     }
+
+/**
+ * Create a new [NotificationIcon] instance from the given [Bitmap].
+ * The bitmap must have the [Bitmap.Config.ARGB_8888] format.
+ *
+ * @param bitmap The bitmap to create a new [NotificationIcon] from.
+ * @return A new [NotificationIcon] instance containing the pixel data
+ *  of the given [Bitmap].
+ */
+fun NotificationIcon.Companion.fromBitmap(bitmap: Bitmap): NotificationIcon {
+    require(bitmap.config == Bitmap.Config.ARGB_8888) { "Bitmap must be in ARGB_8888 format" }
+    val width = bitmap.width
+    val height = bitmap.height
+    val data = ByteArray((width * height) shl 2)
+    for (y in 0..<height) {
+        for (x in 0..<width) {
+            val index = (y * width + x) shl 2
+            val color = PackedColor(bitmap.getPixel(x, y).toUInt()).swizzle(
+                ColorChannel.G,
+                ColorChannel.B,
+                ColorChannel.A,
+                ColorChannel.R
+            )
+            data[index] = color.r.toByte()
+            data[index + 1] = color.g.toByte()
+            data[index + 2] = color.b.toByte()
+            data[index + 3] = color.a.toByte()
+        }
+    }
+    return NotificationIcon(data, width, height)
+}
+
+/**
+ * Creates a new [NotificationIcon] instance from the given [Drawable].
+ *
+ * @param drawable The drawable to create a new [NotificationIcon] from.
+ *  The [Drawable] will be rasterized as is and must provide an intrinsic size.
+ * @return A new [NotificationIcon] instance containing the pixel data
+ *  of the rasterized [Drawable].
+ */
+fun NotificationIcon.Companion.fromDrawable(drawable: Drawable): NotificationIcon {
+    return fromBitmap(drawable.toBitmap())
+}
+
+/**
+ * Creates a new [NotificationIcon] from the given [Drawable] resource.
+ * This is just a convenience function which calls [fromDrawable].
+ *
+ * @param resource The resource ID to create the new notification icon from.
+ * @return A new [NotificationIcon] containing the swizzled bitmap data
+ * of the rasterized [Drawable] associated with the given resource ID.
+ */
+fun Resources.getNotificationIcon(resource: Int): NotificationIcon {
+    return NotificationIcon.fromDrawable(getDrawable(resource, null))
+}
+
+/**
+ * Converts this [NotificationIcon] instance to a new [Bitmap] with the
+ * [Bitmap.Config.ARGB_8888] format.
+ *
+ * @return A new [Bitmap] instance with the swizzled data of this
+ *  notification icon instance.
+ */
+fun NotificationIcon.toBitmap(): Bitmap {
+    return Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).apply {
+        for (y in 0..<height) {
+            for (x in 0..<width) {
+                val index = (y * width + x) shl 2
+                val pixel = PackedColor(
+                    data[index].toUByte(),
+                    data[index + 1].toUByte(),
+                    data[index + 2].toUByte(),
+                    data[index + 3].toUByte()
+                ).swizzle(
+                    ColorChannel.A,
+                    ColorChannel.R,
+                    ColorChannel.G,
+                    ColorChannel.B
+                )
+                setPixel(x, y, pixel.value.toInt())
+            }
+        }
+    }
+}
 
 /**
  * Creates a new Android notification handler instance with the given name and ID.

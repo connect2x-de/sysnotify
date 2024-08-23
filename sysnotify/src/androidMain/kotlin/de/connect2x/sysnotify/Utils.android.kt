@@ -18,11 +18,28 @@ package de.connect2x.sysnotify
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Drawable
 import android.os.Build
 import android.os.Parcel
-import android.os.Parcelable
-import android.os.Parcelable.Creator
 import androidx.core.app.ActivityCompat
+import kotlin.math.max
+
+fun Drawable.toBitmap(): Bitmap {
+    return when (this) {
+        is BitmapDrawable -> bitmap
+        else -> Bitmap.createBitmap(
+            max(1, intrinsicWidth),
+            max(1, intrinsicHeight),
+            Bitmap.Config.ARGB_8888
+        ).apply {
+            setBounds(0, 0, width, height)
+            draw(Canvas(this))
+        }
+    }
+}
 
 fun hasNotificationPermissions(context: Context): Boolean {
     return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -33,7 +50,7 @@ fun hasNotificationPermissions(context: Context): Boolean {
     } else true
 }
 
-private inline fun <T> Parcel.writeNullable(value: T?, writer: Parcel.(T) -> Unit) {
+internal inline fun <T> Parcel.writeNullable(value: T?, writer: Parcel.(T) -> Unit) {
     if (value == null) {
         writeInt(0)
         return
@@ -42,51 +59,7 @@ private inline fun <T> Parcel.writeNullable(value: T?, writer: Parcel.(T) -> Uni
     writer(this, value)
 }
 
-private inline fun <T> Parcel.readNullable(reader: Parcel.() -> T): T? {
+internal inline fun <T> Parcel.readNullable(reader: Parcel.() -> T): T? {
     return if (readInt() == 0) null
     else reader(this)
-}
-
-@JvmInline
-internal value class ParcelableNotification(val notification: Notification) : Parcelable {
-    override fun describeContents(): Int = 0
-
-    override fun writeToParcel(parcel: Parcel, flags: Int) {
-        parcel.writeNullable(notification.title, Parcel::writeString)
-        parcel.writeNullable(notification.description, Parcel::writeString)
-        parcel.writeNullable(notification.icon) {
-            writeInt(it.data.size)
-            writeByteArray(it.data)
-            writeInt(it.width)
-            writeInt(it.height)
-        }
-        parcel.writeNullable(notification.userData, Parcel::writeString)
-    }
-
-    companion object CREATOR : Creator<ParcelableNotification> {
-        override fun createFromParcel(parcel: Parcel): ParcelableNotification {
-            return ParcelableNotification(
-                Notification(
-                    title = parcel.readNullable(Parcel::readString),
-                    description = parcel.readNullable(Parcel::readString),
-                    icon = parcel.readNullable {
-                        NotificationIcon(
-                            data = readInt().let {
-                                ByteArray(it).apply {
-                                    readByteArray(this)
-                                }
-                            },
-                            width = readInt(),
-                            height = readInt()
-                        )
-                    },
-                    userData = parcel.readNullable(Parcel::readString)
-                )
-            )
-        }
-
-        override fun newArray(size: Int): Array<ParcelableNotification?> {
-            return arrayOfNulls(size)
-        }
-    }
 }

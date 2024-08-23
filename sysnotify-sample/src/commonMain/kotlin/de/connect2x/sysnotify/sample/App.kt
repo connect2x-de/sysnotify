@@ -44,7 +44,7 @@ internal val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.Default
 fun App(
     notificationHandler: NotificationHandler,
     icon: NotificationIcon? = null,
-    launchNotification: Notification? = null
+    launchUserData: String? = null
 ) {
     coroutineScope.launch {
         notificationHandler.requestPermissions() // Request permissions in-place because we are lazy here
@@ -105,7 +105,7 @@ fun App(
                 )
             }
             // Launch Notification
-            launchNotification?.let {
+            launchUserData?.let {
                 Text(
                     text = "Launch Notification",
                     modifier = Modifier.padding(vertical = 5.dp),
@@ -113,7 +113,7 @@ fun App(
                 )
                 Text(
                     modifier = Modifier.padding(vertical = 5.dp),
-                    text = "User Data: ${it.userData}"
+                    text = "User Data: $launchUserData"
                 )
             }
 
