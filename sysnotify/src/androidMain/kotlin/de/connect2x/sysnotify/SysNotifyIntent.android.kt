@@ -18,6 +18,39 @@ package de.connect2x.sysnotify
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.os.Parcel
+import android.os.Parcelable
+import android.os.Parcelable.Creator
+
+data class ParcelableNotification(
+    val title: String?,
+    val description: String?,
+    val userData: String?
+) : Parcelable {
+    constructor(notification: Notification) : this(notification.title, notification.description, notification.userData)
+
+    override fun describeContents(): Int = 0
+
+    override fun writeToParcel(parcel: Parcel, flags: Int) {
+        parcel.writeNullable(title, Parcel::writeString)
+        parcel.writeNullable(description, Parcel::writeString)
+        parcel.writeNullable(userData, Parcel::writeString)
+    }
+
+    companion object CREATOR : Creator<ParcelableNotification> {
+        override fun createFromParcel(parcel: Parcel): ParcelableNotification {
+            return ParcelableNotification(
+                title = parcel.readNullable(Parcel::readString),
+                description = parcel.readNullable(Parcel::readString),
+                userData = parcel.readNullable(Parcel::readString)
+            )
+        }
+
+        override fun newArray(size: Int): Array<ParcelableNotification?> {
+            return arrayOfNulls(size)
+        }
+    }
+}
 
 open class SysNotifyIntent(
     packageContext: Context,
