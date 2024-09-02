@@ -74,7 +74,7 @@ private inline fun MemScope.allocNotificationTag(tag: Uuid): sn_notification_tag
 
 internal data class WindowsNotificationHandle(
     val handler: WindowsNotificationHandler,
-    val tag: Uuid
+    val tag: Uuid,
 ) : NotificationHandle {
     inline val isValid: Boolean
         get() = memScoped {
@@ -92,7 +92,7 @@ internal class WindowsNotificationHandler(
     override val name: String,
     override val id: String,
     override val priority: NotificationPriority,
-    private val activationCallback: (Notification) -> Unit
+    private val activationCallback: (Notification) -> Unit,
 ) : NotificationHandler {
     internal val address: sn_notification_handler = memScoped {
         val pointer = alloc<sn_notification_handlerVar>()
@@ -111,7 +111,7 @@ internal class WindowsNotificationHandler(
         isDescriptionSupported = true,
         isIconSupported = true,
         isActionSupported = true,
-        isPopSupported = true
+        isPopSupported = true,
     )
 
     override fun close() {
@@ -141,7 +141,7 @@ internal class WindowsNotificationHandler(
             sysnotify_handler_update(
                 address,
                 tag.ptr,
-                content.ptr
+                content.ptr,
             ).check()
         }
         return handle
@@ -173,5 +173,5 @@ fun NotificationHandler.Companion.create(
     name: String,
     id: String = name,
     activationCallback: (Notification) -> Unit = {},
-    priority: NotificationPriority = NotificationPriority.DEFAULT
+    priority: NotificationPriority = NotificationPriority.DEFAULT,
 ): NotificationHandler = WindowsNotificationHandler(name, id, priority, activationCallback)

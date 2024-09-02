@@ -28,7 +28,7 @@ private class WebNotificationHandle(
 private class WebNotificationHandler(
     override val name: String,
     override val id: String,
-    override val priority: NotificationPriority
+    override val priority: NotificationPriority,
 ) : NotificationHandler {
     override val platform: NotificationPlatform = NotificationPlatform.WEB
     override val hasPermissions: Boolean = false // TODO: Implement hasPermissions flag
@@ -38,7 +38,7 @@ private class WebNotificationHandler(
         isDescriptionSupported = true,
         isIconSupported = false, // TODO: implement icon support
         isActionSupported = true,
-        isPopSupported = true
+        isPopSupported = true,
     )
 
     override suspend fun requestPermissions() {
@@ -79,5 +79,5 @@ private class WebNotificationHandler(
 fun NotificationHandler.Companion.create(
     name: String,
     id: String = name,
-    priority: NotificationPriority = NotificationPriority.DEFAULT
+    priority: NotificationPriority = NotificationPriority.DEFAULT,
 ): NotificationHandler = WebNotificationHandler(name, id, priority)

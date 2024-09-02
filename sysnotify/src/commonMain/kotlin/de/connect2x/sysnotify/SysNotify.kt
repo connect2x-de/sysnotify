@@ -26,7 +26,7 @@ enum class NotificationPlatform {
     APPLE, // This includes iOS and macOS
     LINUX,
     WINDOWS,
-    WEB
+    WEB,
 }
 
 /**
@@ -38,7 +38,7 @@ enum class NotificationPlatform {
 enum class NotificationPriority {
     LOW,
     DEFAULT,
-    HIGH
+    HIGH,
 }
 
 /**
@@ -138,7 +138,7 @@ data class Notification(
     val icon: NotificationIcon? = null,
     val userData: String? = null,
     val dismissible: Boolean = true,
-    val priority: NotificationPriority = NotificationPriority.DEFAULT
+    val priority: NotificationPriority = NotificationPriority.DEFAULT,
 )
 
 /**
@@ -255,7 +255,7 @@ interface NotificationHandler : AutoCloseable {
      */
     suspend fun update(
         handle: NotificationHandle,
-        notification: Notification
+        notification: Notification,
     ): NotificationHandle? {
         pop(handle)
         return push(notification)

@@ -65,14 +65,14 @@ fun <P : CPointer<GError>> P.freeAndThrow() {
 }
 
 internal class LinuxNotificationHandle(
-    internal val address: CPointer<NotifyNotification>
+    internal val address: CPointer<NotifyNotification>,
 ) : NotificationHandle
 
 internal class LinuxNotificationHandler(
     override val name: String,
     override val id: String,
     override val priority: NotificationPriority,
-    private val activationCallback: (Notification) -> Unit
+    private val activationCallback: (Notification) -> Unit,
 ) : NotificationHandler {
     companion object {
         private const val DEFAULT_ICON: String = "dialog-information"
@@ -87,7 +87,7 @@ internal class LinuxNotificationHandler(
         isDescriptionSupported = true,
         isIconSupported = true,
         isActionSupported = false,
-        isPopSupported = true
+        isPopSupported = true,
     )
 
     init {
@@ -192,5 +192,5 @@ fun NotificationHandler.Companion.create(
     name: String,
     id: String = name,
     activationCallback: (Notification) -> Unit = {},
-    priority: NotificationPriority = NotificationPriority.DEFAULT
+    priority: NotificationPriority = NotificationPriority.DEFAULT,
 ): NotificationHandler = LinuxNotificationHandler(name, id, priority, activationCallback)

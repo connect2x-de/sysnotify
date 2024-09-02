@@ -36,7 +36,7 @@ import android.app.NotificationChannel as AndroidNotificationChannel
 
 private class AndroidNotificationHandle(
     val uuid: Uuid = uuid4(),
-    var value: AndroidNotification? = null
+    var value: AndroidNotification? = null,
 ) : NotificationHandle {
     override fun equals(other: Any?): Boolean {
         return if (other !is AndroidNotificationHandle) false
@@ -54,7 +54,8 @@ internal class AndroidNotificationHandler(
     internal val contextGetter: () -> Context,
     internal var activityGetter: () -> Activity?,
     private val activationIntent: (Context, Notification) -> SysNotifyIntent,
-    internal var permissionCallback: (Activity, Boolean) -> Unit
+    internal var permissionCallback: (Activity, Boolean) -> Unit,
+    private val builderCallback: (NotificationCompat.Builder) -> Unit,
 ) : NotificationHandler {
     companion object {
         const val PERMISSION_REQUEST_CODE: Int = 0xBEEF
@@ -117,6 +118,7 @@ internal class AndroidNotificationHandler(
                         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                     )
                 )
+                builderCallback(this)
             }.build()
         }
     }
@@ -334,6 +336,9 @@ fun NotificationIcon.toBitmap(): Bitmap {
  *  which will be activated when the user taps on one of the notifications pushed by SysNotify.
  * @param permissionCallback An optional callback closure which is called when the permission grant results are processed.
  *  The boolean parameter will be true if the permission was granted, false otherwise.
+ * @param builderCallback An optional callback closure which is called when a new notification
+ *  is being constructed by the Android implementation. Allows inserting platform-specific properties into
+ *  the newly created [NotificationCompat.Builder].
  * @return A new notification handler with the given properties.
  */
 fun NotificationHandler.Companion.create(
@@ -343,6 +348,16 @@ fun NotificationHandler.Companion.create(
     activityGetter: () -> Activity? = { contextGetter() as? Activity },
     activationIntent: (Context, Notification) -> SysNotifyIntent,
     permissionCallback: (Activity, Boolean) -> Unit = { _, _ -> },
-    priority: NotificationPriority = NotificationPriority.DEFAULT
+    priority: NotificationPriority = NotificationPriority.DEFAULT,
+    builderCallback: (NotificationCompat.Builder) -> Unit = {},
 ): NotificationHandler =
-    AndroidNotificationHandler(name, id, priority, contextGetter, activityGetter, activationIntent, permissionCallback)
+    AndroidNotificationHandler(
+        name,
+        id,
+        priority,
+        contextGetter,
+        activityGetter,
+        activationIntent,
+        permissionCallback,
+        builderCallback,
+    )

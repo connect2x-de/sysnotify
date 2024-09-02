@@ -18,14 +18,14 @@ package de.connect2x.sysnotify
 import java.awt.image.BufferedImage
 
 private data class JvmNotificationHandle(
-    val address: Long
+    val address: Long,
 ) : NotificationHandle
 
 private class JvmNotificationHandler(
     override val name: String,
     override val id: String,
     override val priority: NotificationPriority,
-    private val activationCallback: (Notification) -> Unit
+    private val activationCallback: (Notification) -> Unit,
 ) : NotificationHandler {
     private val address: Long = NativeNotificationHandler.create(name, id, {
         activationCallback(it) // Delegate the call to the closure
@@ -55,7 +55,7 @@ private class JvmNotificationHandler(
             description = notification.description,
             icon = notification.icon?.data,
             iconWidth = notification.icon?.width ?: 0,
-            iconHeight = notification.icon?.height ?: 0
+            iconHeight = notification.icon?.height ?: 0,
         )
         return if (handle != 0L) JvmNotificationHandle(handle)
         else null
@@ -73,7 +73,7 @@ private class JvmNotificationHandler(
             description = notification.description,
             icon = notification.icon?.data,
             iconWidth = notification.icon?.width ?: 0,
-            iconHeight = notification.icon?.height ?: 0
+            iconHeight = notification.icon?.height ?: 0,
         )
         return if (newHandle != 0L) JvmNotificationHandle(newHandle)
         else null
@@ -89,7 +89,7 @@ fun NotificationHandler.Companion.create(
     name: String,
     id: String = name,
     activationCallback: (Notification) -> Unit = {},
-    priority: NotificationPriority = NotificationPriority.DEFAULT
+    priority: NotificationPriority = NotificationPriority.DEFAULT,
 ): NotificationHandler = JvmNotificationHandler(name, id, priority, activationCallback)
 
 fun NotificationIcon.Companion.fromBufferedImage(image: BufferedImage): NotificationIcon {
