@@ -34,7 +34,7 @@ internal class AppleNotificationHandler(
     override val name: String,
     override val id: String,
     override val priority: NotificationPriority,
-    private val activationCallback: (Notification) -> Unit
+    private val activationCallback: (Notification) -> Unit,
 ) : NotificationHandler {
     override val platform: NotificationPlatform = NotificationPlatform.APPLE
     override val hasPermissions: Boolean = false // TODO: Implement hasPermissions flag
@@ -44,7 +44,7 @@ internal class AppleNotificationHandler(
         isDescriptionSupported = true,
         isIconSupported = false,
         isActionSupported = false,
-        isPopSupported = true
+        isPopSupported = true,
     )
 
     override suspend fun requestPermissions() {
@@ -112,5 +112,5 @@ fun NotificationHandler.Companion.create(
     name: String,
     id: String = name,
     activationCallback: (Notification) -> Unit = {},
-    priority: NotificationPriority = NotificationPriority.DEFAULT
+    priority: NotificationPriority = NotificationPriority.DEFAULT,
 ): NotificationHandler = AppleNotificationHandler(name, id, priority, activationCallback)

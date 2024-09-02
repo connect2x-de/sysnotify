@@ -36,7 +36,7 @@ import android.app.NotificationChannel as AndroidNotificationChannel
 
 private class AndroidNotificationHandle(
     val uuid: Uuid = uuid4(),
-    var value: AndroidNotification? = null
+    var value: AndroidNotification? = null,
 ) : NotificationHandle {
     override fun equals(other: Any?): Boolean {
         return if (other !is AndroidNotificationHandle) false
@@ -55,7 +55,7 @@ internal class AndroidNotificationHandler(
     internal var activityGetter: () -> Activity?,
     private val activationIntent: (Context, Notification) -> SysNotifyIntent,
     internal var permissionCallback: (Activity, Boolean) -> Unit,
-    private val builderCallback: (NotificationCompat.Builder) -> Unit
+    private val builderCallback: (NotificationCompat.Builder) -> Unit,
 ) : NotificationHandler {
     companion object {
         const val PERMISSION_REQUEST_CODE: Int = 0xBEEF
@@ -349,7 +349,7 @@ fun NotificationHandler.Companion.create(
     activationIntent: (Context, Notification) -> SysNotifyIntent,
     permissionCallback: (Activity, Boolean) -> Unit = { _, _ -> },
     priority: NotificationPriority = NotificationPriority.DEFAULT,
-    builderCallback: (NotificationCompat.Builder) -> Unit = {}
+    builderCallback: (NotificationCompat.Builder) -> Unit = {},
 ): NotificationHandler =
     AndroidNotificationHandler(
         name,
@@ -359,5 +359,5 @@ fun NotificationHandler.Companion.create(
         activityGetter,
         activationIntent,
         permissionCallback,
-        builderCallback
+        builderCallback,
     )

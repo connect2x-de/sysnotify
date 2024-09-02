@@ -57,7 +57,7 @@ internal value class PackedColor(val value: UInt) {
         swizzleR: ColorChannel,
         swizzleG: ColorChannel,
         swizzleB: ColorChannel,
-        swizzleA: ColorChannel
+        swizzleA: ColorChannel,
     ): PackedColor {
         if (swizzleR == ColorChannel.R
             && swizzleG == ColorChannel.G

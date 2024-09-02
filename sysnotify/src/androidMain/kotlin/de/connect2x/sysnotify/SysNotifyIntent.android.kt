@@ -25,7 +25,7 @@ import android.os.Parcelable.Creator
 data class ParcelableNotification(
     val title: String?,
     val description: String?,
-    val userData: String?
+    val userData: String?,
 ) : Parcelable {
     constructor(notification: Notification) : this(notification.title, notification.description, notification.userData)
 
@@ -55,7 +55,7 @@ data class ParcelableNotification(
 open class SysNotifyIntent(
     packageContext: Context,
     clazz: Class<out Activity>,
-    notification: Notification
+    notification: Notification,
 ) : Intent(packageContext, clazz) {
     companion object {
         const val EXTRA_LAUNCH_NOTIFICATION: String = "launch_notification"
