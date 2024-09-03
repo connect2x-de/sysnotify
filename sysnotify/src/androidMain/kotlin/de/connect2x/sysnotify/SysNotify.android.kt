@@ -90,7 +90,7 @@ internal class AndroidNotificationHandler(
     internal fun createImpl(
         notification: Notification,
         handle: AndroidNotificationHandle = AndroidNotificationHandle(),
-        callback: (NotificationCompat.Builder) -> Unit = {},
+        callback: NotificationCompat.Builder.() -> Unit = {},
     ): AndroidNotificationHandle {
         return handle.apply {
             val context = contextGetter()
@@ -157,7 +157,7 @@ internal class AndroidNotificationHandler(
  */
 fun NotificationHandler.create(
     notification: Notification,
-    callback: (NotificationCompat.Builder) -> Unit,
+    callback: NotificationCompat.Builder.() -> Unit,
 ): NotificationHandle {
     require(this is AndroidNotificationHandler)
     return createImpl(notification, callback = callback)
@@ -170,7 +170,7 @@ fun NotificationHandler.create(
 @SuppressLint("MissingPermission") // It is the callers responsibility to make sure perms are defined
 fun NotificationHandler.push(
     notification: Notification,
-    callback: (NotificationCompat.Builder) -> Unit,
+    callback: NotificationCompat.Builder.() -> Unit,
 ): NotificationHandle {
     require(this is AndroidNotificationHandler)
     if (!hasPermissions) return AndroidNotificationHandle()
@@ -187,7 +187,7 @@ fun NotificationHandler.push(
 fun NotificationHandler.update(
     handle: NotificationHandle,
     notification: Notification,
-    callback: (NotificationCompat.Builder) -> Unit,
+    callback: NotificationCompat.Builder.() -> Unit,
 ): NotificationHandle {
     require(this is AndroidNotificationHandler && handle is AndroidNotificationHandle)
     if (!hasPermissions) return AndroidNotificationHandle()
