@@ -33,7 +33,7 @@ import com.benasher44.uuid.uuid4
 import android.app.Notification as AndroidNotification
 import android.app.NotificationChannel as AndroidNotificationChannel
 
-private class AndroidNotificationHandle(
+internal class AndroidNotificationHandle(
     val tag: String = uuid4().toString(),
     var value: AndroidNotification? = null,
 ) : NotificationHandle {
@@ -54,7 +54,6 @@ internal class AndroidNotificationHandler(
     internal var activityGetter: () -> Activity?,
     private val activationIntent: (Context, Notification) -> SysNotifyIntent,
     internal var permissionCallback: (Activity, Boolean) -> Unit,
-    private val builderCallback: (NotificationCompat.Builder) -> Unit,
 ) : NotificationHandler {
     companion object {
         const val PERMISSION_REQUEST_CODE: Int = 0xBEEF
@@ -63,7 +62,7 @@ internal class AndroidNotificationHandler(
     internal val channel: AndroidNotificationChannel = AndroidNotificationChannel(
         id, name, priority.nativeImportance
     ).apply { manager.createNotificationChannel(this) }
-    private val manager: NotificationManagerCompat
+    internal val manager: NotificationManagerCompat
         get() = NotificationManagerCompat.from(contextGetter())
 
     override val platform: NotificationPlatform = NotificationPlatform.ANDROID
@@ -88,9 +87,10 @@ internal class AndroidNotificationHandler(
         }
     }
 
-    private fun createImpl(
+    internal fun createImpl(
         notification: Notification,
-        handle: AndroidNotificationHandle = AndroidNotificationHandle()
+        handle: AndroidNotificationHandle = AndroidNotificationHandle(),
+        callback: (NotificationCompat.Builder) -> Unit = {},
     ): AndroidNotificationHandle {
         return handle.apply {
             val context = contextGetter()
@@ -117,7 +117,7 @@ internal class AndroidNotificationHandler(
                         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                     )
                 )
-                builderCallback(this)
+                callback(this)
             }.build()
         }
     }
@@ -148,6 +148,51 @@ internal class AndroidNotificationHandler(
         if (!hasPermissions) return
         require(handle is AndroidNotificationHandle) { "Handle is not an android notification handle" }
         manager.cancel(handle.hashCode())
+    }
+}
+
+/**
+ * Same as [NotificationHandler.create] but with an additional
+ * builder callback to customize the platform-specific notification instance.
+ */
+fun NotificationHandler.create(
+    notification: Notification,
+    callback: (NotificationCompat.Builder) -> Unit,
+): NotificationHandle {
+    require(this is AndroidNotificationHandler)
+    return createImpl(notification, callback = callback)
+}
+
+/**
+ * Same as [NotificationHandler.push] but with an additional
+ * builder callback to customize the platform-specific notification instance.
+ */
+@SuppressLint("MissingPermission") // It is the callers responsibility to make sure perms are defined
+fun NotificationHandler.push(
+    notification: Notification,
+    callback: (NotificationCompat.Builder) -> Unit,
+): NotificationHandle {
+    require(this is AndroidNotificationHandler)
+    if (!hasPermissions) return AndroidNotificationHandle()
+    return createImpl(notification, callback = callback).apply {
+        manager.notify(hashCode(), requireNotNull(value) { "Invalid notification handle" })
+    }
+}
+
+/**
+ * Same as [NotificationHandler.update] but with an additional
+ * builder callback to customize the platform-specific notification instance.
+ */
+@SuppressLint("MissingPermission") // It is the callers responsibility to make sure perms are defined
+fun NotificationHandler.update(
+    handle: NotificationHandle,
+    notification: Notification,
+    callback: (NotificationCompat.Builder) -> Unit,
+): NotificationHandle {
+    require(this is AndroidNotificationHandler && handle is AndroidNotificationHandle)
+    if (!hasPermissions) return AndroidNotificationHandle()
+    return createImpl(notification, handle, callback).apply {
+        manager.notify(hashCode(), requireNotNull(value) { "Invalid notification handle" })
     }
 }
 
@@ -344,9 +389,6 @@ fun NotificationHandle.Companion.create(tag: String): NotificationHandle = Andro
  *  which will be activated when the user taps on one of the notifications pushed by SysNotify.
  * @param permissionCallback An optional callback closure which is called when the permission grant results are processed.
  *  The boolean parameter will be true if the permission was granted, false otherwise.
- * @param builderCallback An optional callback closure which is called when a new notification
- *  is being constructed by the Android implementation. Allows inserting platform-specific properties into
- *  the newly created [NotificationCompat.Builder].
  * @return A new notification handler with the given properties.
  */
 fun NotificationHandler.Companion.create(
@@ -357,7 +399,6 @@ fun NotificationHandler.Companion.create(
     activationIntent: (Context, Notification) -> SysNotifyIntent,
     permissionCallback: (Activity, Boolean) -> Unit = { _, _ -> },
     priority: NotificationPriority = NotificationPriority.DEFAULT,
-    builderCallback: (NotificationCompat.Builder) -> Unit = {},
 ): NotificationHandler =
     AndroidNotificationHandler(
         name,
@@ -367,5 +408,4 @@ fun NotificationHandler.Companion.create(
         activityGetter,
         activationIntent,
         permissionCallback,
-        builderCallback,
     )
