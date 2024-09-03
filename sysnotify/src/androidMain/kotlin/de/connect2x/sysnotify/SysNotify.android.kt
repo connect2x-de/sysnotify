@@ -148,7 +148,70 @@ internal class AndroidNotificationHandler(
     override suspend fun pop(handle: NotificationHandle) {
         if (!hasPermissions) return
         require(handle is AndroidNotificationHandle) { "Handle is not an android notification handle" }
+<<<<<<< Updated upstream
         manager.cancel(handle.uuid.hashCode())
+=======
+        manager.cancel(handle.hashCode())
+    }
+}
+
+/**
+ * Same as [NotificationHandler.create] but with an additional
+ * builder callback to customize the platform-specific notification instance.
+ */
+fun NotificationHandler.create(
+    notification: Notification,
+    tag: String = uuid4().toString(),
+    callback: NotificationCompat.Builder.() -> Unit,
+): NotificationHandle {
+    require(this is AndroidNotificationHandler)
+    return createImpl(
+        notification = notification,
+        callback = callback,
+        handle = AndroidNotificationHandle(tag)
+    )
+}
+
+/**
+ * Same as [NotificationHandler.push] but with an additional
+ * builder callback to customize the platform-specific notification instance.
+ */
+@SuppressLint("MissingPermission") // It is the callers responsibility to make sure perms are defined
+fun NotificationHandler.push(
+    notification: Notification,
+    tag: String = uuid4().toString(),
+    callback: NotificationCompat.Builder.() -> Unit,
+): NotificationHandle {
+    require(this is AndroidNotificationHandler)
+    if (!hasPermissions) return AndroidNotificationHandle()
+    return createImpl(
+        notification = notification,
+        callback = callback,
+        handle = AndroidNotificationHandle(tag)
+    ).apply {
+        manager.notify(hashCode(), requireNotNull(value) { "Invalid notification handle" })
+    }
+}
+
+/**
+ * Same as [NotificationHandler.update] but with an additional
+ * builder callback to customize the platform-specific notification instance.
+ */
+@SuppressLint("MissingPermission") // It is the callers responsibility to make sure perms are defined
+fun NotificationHandler.update(
+    handle: NotificationHandle,
+    notification: Notification,
+    callback: NotificationCompat.Builder.() -> Unit,
+): NotificationHandle {
+    require(this is AndroidNotificationHandler && handle is AndroidNotificationHandle)
+    if (!hasPermissions) return AndroidNotificationHandle()
+    return createImpl(
+        notification = notification,
+        callback = callback,
+        handle = handle,
+    ).apply {
+        manager.notify(hashCode(), requireNotNull(value) { "Invalid notification handle" })
+>>>>>>> Stashed changes
     }
 }
 
