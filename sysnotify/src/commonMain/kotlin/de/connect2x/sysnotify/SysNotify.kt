@@ -145,7 +145,9 @@ data class Notification(
  * This interface describes a notification that was created by an [NotificationHandler] instance
  * on any given platform.
  */
-interface NotificationHandle
+interface NotificationHandle {
+    companion object
+}
 
 /**
  * This object is used to represent handles which are non-null but not valid for use with any
