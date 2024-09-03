@@ -29,22 +29,21 @@ import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.graphics.drawable.IconCompat
-import com.benasher44.uuid.Uuid
 import com.benasher44.uuid.uuid4
 import android.app.Notification as AndroidNotification
 import android.app.NotificationChannel as AndroidNotificationChannel
 
 private class AndroidNotificationHandle(
-    val uuid: Uuid = uuid4(),
+    val tag: String = uuid4().toString(),
     var value: AndroidNotification? = null,
 ) : NotificationHandle {
     override fun equals(other: Any?): Boolean {
         return if (other !is AndroidNotificationHandle) false
-        else other.uuid == uuid
+        else tag == other.tag
     }
 
-    override fun hashCode(): Int = uuid.hashCode()
-    override fun toString(): String = uuid.toString()
+    override fun hashCode(): Int = tag.hashCode()
+    override fun toString(): String = tag
 }
 
 internal class AndroidNotificationHandler(
@@ -129,7 +128,7 @@ internal class AndroidNotificationHandler(
     override suspend fun push(notification: Notification): NotificationHandle {
         if (!hasPermissions) return AndroidNotificationHandle()
         return createImpl(notification).apply {
-            manager.notify(uuid.hashCode(), requireNotNull(value) { "Invalid notification handle" })
+            manager.notify(hashCode(), requireNotNull(value) { "Invalid notification handle" })
         }
     }
 
@@ -141,14 +140,14 @@ internal class AndroidNotificationHandler(
         if (!hasPermissions) return handle
         require(handle is AndroidNotificationHandle) { "Handle is not an android notification handle" }
         return createImpl(notification, handle).apply {
-            manager.notify(uuid.hashCode(), requireNotNull(value) { "Invalid notification handle" })
+            manager.notify(hashCode(), requireNotNull(value) { "Invalid notification handle" })
         }
     }
 
     override suspend fun pop(handle: NotificationHandle) {
         if (!hasPermissions) return
         require(handle is AndroidNotificationHandle) { "Handle is not an android notification handle" }
-        manager.cancel(handle.uuid.hashCode())
+        manager.cancel(handle.hashCode())
     }
 }
 
@@ -320,6 +319,15 @@ fun NotificationIcon.toBitmap(): Bitmap {
         }
     }
 }
+
+/**
+ * Creates a new notification handle for the given tag
+ * which can be used to query or invalidate existing
+ * notifications.
+ * @param tag The tag of the notification associated with this handle.
+ * @return A new [NotificationHandle] instance containing the given tag.
+ */
+fun NotificationHandle.Companion.create(tag: String): NotificationHandle = AndroidNotificationHandle(tag)
 
 /**
  * Creates a new Android notification handler instance with the given name and ID.
