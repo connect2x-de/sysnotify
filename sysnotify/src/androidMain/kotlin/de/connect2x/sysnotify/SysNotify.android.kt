@@ -157,10 +157,15 @@ internal class AndroidNotificationHandler(
  */
 fun NotificationHandler.create(
     notification: Notification,
+    tag: String = uuid4().toString(),
     callback: NotificationCompat.Builder.() -> Unit,
 ): NotificationHandle {
     require(this is AndroidNotificationHandler)
-    return createImpl(notification, callback = callback)
+    return createImpl(
+        notification = notification,
+        callback = callback,
+        handle = AndroidNotificationHandle(tag)
+    )
 }
 
 /**
@@ -170,11 +175,16 @@ fun NotificationHandler.create(
 @SuppressLint("MissingPermission") // It is the callers responsibility to make sure perms are defined
 fun NotificationHandler.push(
     notification: Notification,
+    tag: String = uuid4().toString(),
     callback: NotificationCompat.Builder.() -> Unit,
 ): NotificationHandle {
     require(this is AndroidNotificationHandler)
     if (!hasPermissions) return AndroidNotificationHandle()
-    return createImpl(notification, callback = callback).apply {
+    return createImpl(
+        notification = notification,
+        callback = callback,
+        handle = AndroidNotificationHandle(tag)
+    ).apply {
         manager.notify(hashCode(), requireNotNull(value) { "Invalid notification handle" })
     }
 }
@@ -191,7 +201,11 @@ fun NotificationHandler.update(
 ): NotificationHandle {
     require(this is AndroidNotificationHandler && handle is AndroidNotificationHandle)
     if (!hasPermissions) return AndroidNotificationHandle()
-    return createImpl(notification, handle, callback).apply {
+    return createImpl(
+        notification = notification,
+        callback = callback,
+        handle = handle,
+    ).apply {
         manager.notify(hashCode(), requireNotNull(value) { "Invalid notification handle" })
     }
 }
