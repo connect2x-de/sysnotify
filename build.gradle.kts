@@ -25,7 +25,7 @@ plugins {
 
 allprojects {
     group = "de.connect2x"
-    version = withVersionSuffix("1.3.0")
+    version = withVersionSuffix("1.4.0")
 
     dependencyLocking {
         lockMode = LockMode.LENIENT

@@ -20,6 +20,7 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Resources
 import android.graphics.Bitmap
@@ -52,7 +53,7 @@ internal class AndroidNotificationHandler(
     override val priority: NotificationPriority,
     internal val contextGetter: () -> Context,
     internal var activityGetter: () -> Activity?,
-    private val activationIntent: (Context, Notification) -> SysNotifyIntent,
+    private val activationIntent: (Context, Notification) -> Intent,
     internal var permissionCallback: (Activity, Boolean) -> Unit,
 ) : NotificationHandler {
     companion object {
@@ -398,7 +399,7 @@ fun NotificationHandle.Companion.create(tag: String): NotificationHandle = Andro
  *  application context, a service or an activity.
  * @param activityGetter A getter closure which provides the current activity of your app.
  *  This is required for requesting permissions and retrieving the launch notification.
- * @param activationIntent A factory closure which creates a new [SysNotifyIntent] or any subtype of it.
+ * @param activationIntent A factory closure which creates a new [Intent] or any subtype of it.
  *  For each pushed notification, this closure will be invoked to create an associated launch intent,
  *  which will be activated when the user taps on one of the notifications pushed by SysNotify.
  * @param permissionCallback An optional callback closure which is called when the permission grant results are processed.
@@ -410,7 +411,7 @@ fun NotificationHandler.Companion.create(
     id: String = name,
     contextGetter: () -> Context,
     activityGetter: () -> Activity? = { contextGetter() as? Activity },
-    activationIntent: (Context, Notification) -> SysNotifyIntent,
+    activationIntent: (Context, Notification) -> Intent,
     permissionCallback: (Activity, Boolean) -> Unit = { _, _ -> },
     priority: NotificationPriority = NotificationPriority.DEFAULT,
 ): NotificationHandler =
