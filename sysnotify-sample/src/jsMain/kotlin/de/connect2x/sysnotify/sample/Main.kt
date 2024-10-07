@@ -18,14 +18,26 @@ package de.connect2x.sysnotify.sample
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.window.CanvasBasedWindow
 import de.connect2x.sysnotify.NotificationHandler
+import de.connect2x.sysnotify.NotificationIcon
 import de.connect2x.sysnotify.create
+import de.connect2x.sysnotify_sample.generated.resources.Res
+import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.skiko.wasm.onWasmReady
 
-@OptIn(ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalComposeUiApi::class, ExperimentalResourceApi::class)
 suspend fun main() {
+    val icon = Res.readBytes("files/app_icon.png")
     onWasmReady {
         CanvasBasedWindow("Sysnotify Sample") {
-            App(NotificationHandler.create("Sysnotify Sample", "Connect2x.Sysnotify"))
+            App(
+                NotificationHandler.create(
+                    name = "Sysnotify Sample",
+                    id = "Connect2x.Sysnotify",
+                ),
+                icon = NotificationIcon(
+                    icon, 512, 512,
+                )
+            )
         }
     }
 }
