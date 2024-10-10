@@ -159,7 +159,4 @@ compose {
             }
         }
     }
-    experimental {
-        web.application { }
-    }
 }

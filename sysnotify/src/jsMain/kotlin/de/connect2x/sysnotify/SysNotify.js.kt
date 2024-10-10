@@ -18,6 +18,8 @@ package de.connect2x.sysnotify
 import kotlinx.coroutines.await
 import org.w3c.notifications.GRANTED
 import org.w3c.notifications.NotificationOptions
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 import org.w3c.notifications.Notification as JsNotification
 import org.w3c.notifications.NotificationPermission as JsNotificationPermission
 
@@ -36,7 +38,7 @@ private class WebNotificationHandler(
     override val capabilities: NotificationCapabilities = NotificationCapabilities(
         isTitleSupported = true,
         isDescriptionSupported = true,
-        isIconSupported = false, // TODO: implement icon support
+        isIconSupported = true,
         isActionSupported = true,
         isPopSupported = true,
     )
@@ -46,28 +48,22 @@ private class WebNotificationHandler(
         JsNotification.requestPermission().await()
     }
 
-    override fun create(notification: Notification): NotificationHandle = InvalidNotificationHandle // TODO: implement this
+    @OptIn(ExperimentalEncodingApi::class)
+    override fun create(notification: Notification): NotificationHandle {
+        val icon = notification.icon?.data?.let { Base64.encode(it) }
+        return WebNotificationHandle(
+            instance = org.w3c.notifications.Notification(
+                title = notification.title ?: "",
+                options = NotificationOptions(
+                    body = notification.description,
+                    icon = icon?.let { "data:image/*;base64,$it" },
+                )
+            )
+        )
+    }
 
     override suspend fun push(notification: Notification): NotificationHandle {
-        val instance = JsNotification(
-            notification.title ?: "Undefined", NotificationOptions(
-                body = notification.description
-            )
-        ).apply {
-            //notification.onActivated?.let { action ->
-            //    onclick = {
-            //        it.preventDefault()
-            //        action()
-            //    }
-            //}
-            //notification.onFailed?.let { action ->
-            //    onerror = {
-            //        it.preventDefault()
-            //        action()
-            //    }
-            //}
-        }
-        return WebNotificationHandle(instance)
+        return create(notification)
     }
 
     override suspend fun pop(handle: NotificationHandle) {
