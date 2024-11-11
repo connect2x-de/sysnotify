@@ -13,11 +13,14 @@
  * limitations under the License.
  */
 
+rootProject.name = "sysnotify"
+
 pluginManagement {
     repositories {
         google()
         mavenCentral()
         gradlePluginPortal()
+        maven("https://git.karmakrafts.dev/api/v4/projects/177/packages/maven")
     }
 }
 
@@ -28,6 +31,10 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "sysnotify"
+plugins {
+    id("org.gradle.toolchains.foojay-resolver-convention") version "0.8.0"
+}
+
 include(":sysnotify")
 include(":sysnotify-com")
+include(":sysnotify-sample")

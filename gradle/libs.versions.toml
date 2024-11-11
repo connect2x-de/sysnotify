@@ -1,20 +1,39 @@
 [versions]
+jvmTarget = "17"
 agp = "8.2.2"
-kotlin = "1.9.23"
-kotlinxCoroutines = "1.8.1"
-ksp = "1.9.23-1.0.20"
+kotlin = "2.0.10"
+kotlinx-coroutines = "1.8.1"
+ksp = "2.0.10-1.0.24"
 android-minSdk = "28"
 android-compileSdk = "34"
-core = "1.13.1"
+core = "1.13.1"#
 uuid = "0.8.4"
+# For sample
+androidx-activityCompose = "1.9.2"
+androidx-ui-tooling = "1.7.1"
+compose-plugin = "1.6.11"
+compose-compiler = "2.0.0"
+
+gradleCMake = "1.1.0.28"
 
 [libraries]
-kotlinx-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
+kotlinx-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 androidx-core = { group = "androidx.core", name = "core", version.ref = "core" }
 uuid = { module = "com.benasher44:uuid", version.ref = "uuid" }
+# For sample
+androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activityCompose" }
+androidx-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling", version.ref = "androidx-ui-tooling" }
+androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview", version.ref = "androidx-ui-tooling" }
 
 [plugins]
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 androidLibrary = { id = "com.android.library", version.ref = "agp" }
-kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+# For sample
+androidApplication = { id = "com.android.application", version.ref = "agp" }
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "compose-compiler" }
+compose = { id = "org.jetbrains.compose", version.ref = "compose-plugin" }
+kotlinx-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+
+gradleCMake = { id = "io.karma.gradlecm.gradle-cmake", version.ref = "gradleCMake" }

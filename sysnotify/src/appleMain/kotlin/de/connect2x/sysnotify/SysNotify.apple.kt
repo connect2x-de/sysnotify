@@ -17,6 +17,7 @@ package de.connect2x.sysnotify
 
 import com.benasher44.uuid.Uuid
 import com.benasher44.uuid.uuid4
+import de.connect2x.sysnotify.NoopNotificationHandler.platform
 import platform.UserNotifications.UNAuthorizationOptionAlert
 import platform.UserNotifications.UNAuthorizationOptionBadge
 import platform.UserNotifications.UNAuthorizationOptionSound
@@ -25,19 +26,25 @@ import platform.UserNotifications.UNNotification
 import platform.UserNotifications.UNNotificationRequest
 import platform.UserNotifications.UNUserNotificationCenter
 
-private data class AppleNotificationHandle(
+internal data class AppleNotificationHandle(
     val uuid: Uuid = uuid4()
 ) : NotificationHandle
 
-private class AppleNotificationHandler(override val name: String) : NotificationHandler {
+internal class AppleNotificationHandler(
+    override val name: String,
+    override val id: String,
+    override val priority: NotificationPriority,
+    private val activationCallback: (Notification) -> Unit,
+) : NotificationHandler {
     override val platform: NotificationPlatform = NotificationPlatform.APPLE
+    override val hasPermissions: Boolean = false // TODO: Implement hasPermissions flag
 
     override val capabilities: NotificationCapabilities = NotificationCapabilities(
         isTitleSupported = true,
         isDescriptionSupported = true,
         isIconSupported = false,
         isActionSupported = false,
-        isPopSupported = true
+        isPopSupported = true,
     )
 
     override suspend fun requestPermissions() {
@@ -52,6 +59,8 @@ private class AppleNotificationHandler(override val name: String) : Notification
                 }
             }
     }
+
+    override fun create(notification: Notification): NotificationHandle = InvalidNotificationHandle // TODO: implement this
 
     override suspend fun push(notification: Notification): NotificationHandle {
         val handle = AppleNotificationHandle()
@@ -74,7 +83,7 @@ private class AppleNotificationHandler(override val name: String) : Notification
 
     @Suppress("UNCHECKED_CAST")
     override suspend fun pop(handle: NotificationHandle) {
-        if (handle !is AppleNotificationHandle) throw IllegalArgumentException("Handle is not an apple notification handle")
+        require(handle is AppleNotificationHandle) { "Handle is not an Apple notification handle" }
         val center = UNUserNotificationCenter.currentNotificationCenter()
         val identifier = handle.uuid.toString()
         var found = false
@@ -100,5 +109,8 @@ private class AppleNotificationHandler(override val name: String) : Notification
 }
 
 fun NotificationHandler.Companion.create(
-    name: String
-): NotificationHandler = AppleNotificationHandler(name)
+    name: String,
+    id: String = name,
+    activationCallback: (Notification) -> Unit = {},
+    priority: NotificationPriority = NotificationPriority.DEFAULT,
+): NotificationHandler = AppleNotificationHandler(name, id, priority, activationCallback)

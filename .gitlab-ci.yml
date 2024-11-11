@@ -10,14 +10,13 @@ stages:
   - build
   # - test
   - security
-  # - publish
+  - publish
 
 variables:
   GRADLE_OPTS: -Dorg.gradle.daemon=false
   GRADLE_USER_HOME: $CI_PROJECT_DIR/.gradle
   KONAN_DATA_DIR: $CI_PROJECT_DIR/.konan
-  ANDROID_SDK_TOOLS_VERSION: "11076708"
-  ANDROID_SDK_TOOLS_CHECKSUM: "2d2d50857e4eb553af5a6dc3ad507a17adf43d115264b1afc116f95c92e5e258"
+  BUILD_LINUX_IMAGE_NAME: registry.gitlab.com/trixnity/trixnity/trixnity-build-linux:latest
 
 .cache-linux: &cache-linux
   - key: global-sysnotify-cache-linux
@@ -114,6 +113,7 @@ build:windows:
     - ./gradlew
       compileKotlinMingwX64
       linkMingwX64
+      nativesJar
       --stacktrace
 
 build:mac:
@@ -128,108 +128,29 @@ build:mac:
     - ./gradlew
       compileKotlin{MacosX64,MacosArm64,IosArm64,IosSimulatorArm64,IosX64}
       link{MacosX64,MacosArm64,IosArm64,IosX64}
+      nativesJar
       --stacktrace
 
 build:linux:
   stage: build
   interruptible: true
-  image: ubuntu:22.04
   tags: [ "saas-linux-small-amd64" ]
+  image: $BUILD_LINUX_IMAGE_NAME
   cache:
     - *cache-linux
   rules:
     - *if-merge-request-or-main
   before_script:
-    - apt -qq update
-    - apt -qqy --no-install-recommends install
-      apt-utils
-      build-essential
-      openjdk-17-jdk
-      openjdk-17-jre-headless
-      software-properties-common
-      libssl-dev
-      libffi-dev
-      python3-dev
-      pkg-config
-      libstdc++6
-      libpulse0
-      libglu1-mesa
-      zip
-      unzip
-      curl
-      gcc-multilib
-      libnotify-dev
-    - export ANDROID_HOME="/opt/android-sdk-linux"
-    - export ANDROID_SDK_ROOT=$ANDROID_HOME
-    - export PATH=$PATH:$ANDROID_HOME/cmdline-tools:$ANDROID_HOME/cmdline-tools/bin:$ANDROID_HOME/platform-tools
-    - curl -s https://dl.google.com/android/repository/commandlinetools-linux-${ANDROID_SDK_TOOLS_VERSION}_latest.zip > ./tools.zip
-      && echo "$ANDROID_SDK_TOOLS_CHECKSUM ./tools.zip" | sha256sum -c
-      && unzip -qq ./tools.zip -d $ANDROID_HOME
-      && rm -v ./tools.zip
-    - set +o pipefail
-    - mkdir -p $ANDROID_HOME/licenses/
-      && echo "8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb78af6dfcb131a6481e\n24333f8a63b6825ea9c5514f83c2829b004d1fee" > $ANDROID_HOME/licenses/android-sdk-license
-      && echo "84831b9409646a918e30573bab4c9c91346d8abd\n504667f4c0de7af1a06de9f4b1727b84351f2910" > $ANDROID_HOME/licenses/android-sdk-preview-license --licenses
-      && yes | $ANDROID_HOME/cmdline-tools/bin/sdkmanager --licenses --sdk_root=${ANDROID_SDK_ROOT}
-    - set -o pipefail
-    - mkdir -p /home/user/.android
-      && mkdir -p /home/user/app
-      && touch /home/user/.android/repositories.cfg
-    - export HOME=/home/user
+    - export DEBIAN_FRONTEND=noninteractive
+    - apt update -y
+    - apt install keyboard-configuration gcc-multilib libnotify-bin libnotify-dev -y
   script:
     - ./gradlew
       compileKotlin{Jvm,LinuxX64}
       compileReleaseKotlinAndroid
       linkLinuxX64
+      nativesJar
       --stacktrace
-
-# test:mac:
-#   stage: test
-#   interruptible: true
-#   timeout: 1h
-#   needs: [ "build:mac" ]
-#   tags: [ "connect2x-mac" ]
-#   cache:
-#     - *pull-cache-mac
-#   artifacts: *artifact-reports
-#   rules:
-#     - *if-merge-request-or-main
-#   script:
-#     - ./gradlew
-#       {iosSimulatorArm64,iosX64}Test
-#       --stacktrace
-
-# test:linux:
-#   stage: test
-#   interruptible: true
-#   timeout: 1h
-#   needs: [ "build:linux" ]
-#   tags: [ "saas-linux-small-amd64" ]
-#   cache:
-#     - *pull-cache-linux
-#   artifacts: *artifact-reports
-#   rules:
-#     - *if-merge-request-or-main
-#   script:
-#     - ./gradlew
-#       {jvm,js,testReleaseUnit}Test -x :integrationtests:jvmTest
-#       --stacktrace
-
-# test:integration-test:
-#   stage: test
-#   interruptible: true
-#   timeout: 30m
-#   needs: [ "build:linux" ]
-#   tags: [ "saas-linux-small-amd64" ]
-#   cache:
-#     - *pull-cache-linux
-#   artifacts: *artifact-reports
-#   rules:
-#     - *if-merge-request-or-main
-#   script:
-#     - ./gradlew
-#       :integrationtests:jvmTest
-#       --stacktrace
 
 security:dependencies:
   stage: security
@@ -261,28 +182,47 @@ security:dependencies:
     - trivy repo ./ --exit-code 0 --format template --template "@/contrib/gitlab.tpl" --output report.json
     - trivy repo ./ --exit-code 1 --severity CRITICAL
 
-# publish:mac:
-#   stage: publish
-#   tags: [ "connect2x-mac" ]
-#   cache:
-#     - *pull-cache-mac
-#   rules:
-#     - *if-main
-#     - *if-release
-#   script:
-#     - ./gradlew
-#       publish{IosArm64,IosSimulatorArm64,IosX64}PublicationToGitlabRepository
-#       --stacktrace
+publish:mac:
+  stage: publish
+  tags: [ "connect2x-mac" ]
+  cache:
+    - *pull-cache-mac
+  rules:
+    - *if-main
+    - *if-release
+  script:
+    - ./gradlew
+      publish{MacosX64,MacosArm64,IosArm64,IosSimulatorArm64,IosX64,NativesJar}PublicationToGitlabRepository
+      --stacktrace
 
-# publish:linux:
-#   stage: publish
-#   tags: [ "saas-linux-small-amd64" ]
-#   cache:
-#     - *pull-cache-linux
-#   rules:
-#     - *if-main
-#     - *if-release
-#   script:
-#     - ./gradlew
-#       publish{KotlinMultiplatform,Jvm,Js,AndroidRelease}PublicationToGitlabRepository
-#       --stacktrace
+publish:linux:
+  stage: publish
+  tags: [ "saas-linux-small-amd64" ]
+  image: $BUILD_LINUX_IMAGE_NAME
+  cache:
+    - *pull-cache-linux
+  rules:
+    - *if-main
+    - *if-release
+  before_script:
+    - export DEBIAN_FRONTEND=noninteractive
+    - apt update -y
+    - apt install keyboard-configuration gcc-multilib libnotify-bin libnotify-dev -y
+  script:
+    - ./gradlew
+      publish{KotlinMultiplatform,Jvm,NativesJar,Js,AndroidRelease}PublicationToGitlabRepository
+      --stacktrace
+
+publish:windows:
+  stage: publish
+  tags: [ "saas-windows-medium-amd64" ]
+  cache:
+    - *pull-cache-windows
+  rules:
+    - *if-main
+    - *if-release
+  script:
+    - ./gradlew
+      publishMingwX64PublicationToGitlabRepository
+      publishNativesJarPublicationToGitlabRepository
+      --stacktrace

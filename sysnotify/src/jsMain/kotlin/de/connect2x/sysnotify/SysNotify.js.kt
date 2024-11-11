@@ -18,6 +18,8 @@ package de.connect2x.sysnotify
 import kotlinx.coroutines.await
 import org.w3c.notifications.GRANTED
 import org.w3c.notifications.NotificationOptions
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 import org.w3c.notifications.Notification as JsNotification
 import org.w3c.notifications.NotificationPermission as JsNotificationPermission
 
@@ -26,16 +28,19 @@ private class WebNotificationHandle(
 ) : NotificationHandle
 
 private class WebNotificationHandler(
-    override val name: String
+    override val name: String,
+    override val id: String,
+    override val priority: NotificationPriority,
 ) : NotificationHandler {
     override val platform: NotificationPlatform = NotificationPlatform.WEB
+    override val hasPermissions: Boolean = false // TODO: Implement hasPermissions flag
 
     override val capabilities: NotificationCapabilities = NotificationCapabilities(
         isTitleSupported = true,
         isDescriptionSupported = true,
-        isIconSupported = false, // TODO: implement icon support
+        isIconSupported = true,
         isActionSupported = true,
-        isPopSupported = true
+        isPopSupported = true,
     )
 
     override suspend fun requestPermissions() {
@@ -43,20 +48,22 @@ private class WebNotificationHandler(
         JsNotification.requestPermission().await()
     }
 
-    override suspend fun push(notification: Notification): NotificationHandle {
-        val instance = JsNotification(
-            notification.title ?: "Undefined", NotificationOptions(
-                body = notification.description
+    @OptIn(ExperimentalEncodingApi::class)
+    override fun create(notification: Notification): NotificationHandle {
+        val icon = notification.icon?.data?.let { Base64.encode(it) }
+        return WebNotificationHandle(
+            instance = org.w3c.notifications.Notification(
+                title = notification.title ?: "",
+                options = NotificationOptions(
+                    body = notification.description,
+                    icon = icon?.let { "data:image/*;base64,$it" },
+                )
             )
-        ).apply {
-            notification.action?.let { action ->
-                onclick = {
-                    it.preventDefault()
-                    action()
-                }
-            }
-        }
-        return WebNotificationHandle(instance)
+        )
+    }
+
+    override suspend fun push(notification: Notification): NotificationHandle {
+        return create(notification)
     }
 
     override suspend fun pop(handle: NotificationHandle) {
@@ -66,5 +73,7 @@ private class WebNotificationHandler(
 }
 
 fun NotificationHandler.Companion.create(
-    name: String
-): NotificationHandler = WebNotificationHandler(name)
+    name: String,
+    id: String = name,
+    priority: NotificationPriority = NotificationPriority.DEFAULT,
+): NotificationHandler = WebNotificationHandler(name, id, priority)

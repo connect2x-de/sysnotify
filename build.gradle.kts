@@ -15,5 +15,26 @@
 
 plugins {
     alias(libs.plugins.androidLibrary).apply(false)
-    alias(libs.plugins.kotlinMultiplatform).apply(false)
+    alias(libs.plugins.kotlin.multiplatform).apply(false)
+    // For sample
+    alias(libs.plugins.androidApplication) apply false
+    alias(libs.plugins.compose.compiler) apply false
+    alias(libs.plugins.compose) apply false
+    alias(libs.plugins.kotlinx.serialization) apply false
+}
+
+allprojects {
+    group = "de.connect2x"
+    version = withVersionSuffix("1.4.0")
+
+    dependencyLocking {
+        lockMode = LockMode.LENIENT
+        lockAllConfigurations()
+    }
+
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        google()
+    }
 }
