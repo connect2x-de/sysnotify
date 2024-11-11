@@ -18,7 +18,7 @@ import org.gradle.internal.os.OperatingSystem
 import org.gradle.jvm.tasks.Jar
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import java.nio.file.Path
+import kotlin.io.path.Path
 import kotlin.io.path.div
 
 plugins {
@@ -28,12 +28,8 @@ plugins {
 }
 
 fun OperatingSystem.getFriendlyName(): String = familyName.replace("os x", "macos")
-
 fun OperatingSystem.getPlatformPair(arch: String): String = "${getFriendlyName()}-$arch"
-
 val hostOs: OperatingSystem = OperatingSystem.current()
-val comPath: Path = project(":sysnotify-com").projectDir.toPath()
-val comBuildOutput: Path = comPath / "build" / "cmake" / "RelWithDebInfo"
 
 kotlin {
     val kotlinJvmVersion = libs.versions.jvmTarget.get()
@@ -95,22 +91,12 @@ kotlin {
         }
     }
     mingwX64 {
-        compilations["main"].cinterops {
-            val sysnotifycom by creating {
-                headers(
-                    "${comPath / "include" / "sysnotify_types.h"}",
-                    "${comPath / "include" / "sysnotify.h"}"
-                )
+        compilations.configureEach {
+            cinterops {
+                val sysnotifycom by creating
             }
         }
-        binaries {
-            sharedLib {
-                linkerOpts(
-                    "-L$comBuildOutput",
-                    "-lsysnotify-com"
-                )
-            }
-        }
+        binaries.sharedLib()
     }
     applyDefaultHierarchyTemplate()
     sourceSets {
@@ -169,7 +155,7 @@ fun jvmNativesJar(os: OperatingSystem, arch: String): Jar {
         from(linkTask.outputs) {
             exclude("*.h", "*.def")
         }
-        if (os.isWindows) from(comBuildOutput / "sysnotify-com.dll") // Make sure to ship the COM adaptor
+        if (os.isWindows) from(Path("sysnotify-com") / "lib" / "sysnotify-com.dll") // Make sure to ship the COM adaptor
         into("natives/$platformPair")
     }.apply {
         tasks {

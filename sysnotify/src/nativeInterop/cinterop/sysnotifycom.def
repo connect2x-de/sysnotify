@@ -1,1 +1,5 @@
 package = de.connect2x.sysnotify.com
+headers = sysnotify.h
+compilerOpts = -Isysnotify-com/include
+staticLibraries = sysnotify-com.lib
+libraryPaths = sysnotify-com/lib
