@@ -1,4 +1,10 @@
 package = libnotify
 headers = libnotify/notify.h
-linkerOpts = -L/usr/lib -L/usr/lib/x86_64-linux-gnu -l:libnotify.so
-compilerOpts = -I/usr/include -I/usr/local/include -I/usr/include/gdk-pixbuf-2.0 -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include
+
+linkerOpts = -L/usr/lib -l:libnotify.so
+linkerOpts.x64 = -L/usr/lib/x86_64-linux-gnu
+linkerOpts.arm64 = -L/usr/lib/aarch64-linux-gnu
+
+compilerOpts = -I/usr/include -I/usr/local/include -I/usr/include/gdk-pixbuf-2.0 -I/usr/include/glib-2.0
+compilerOpts.x64 = -I/usr/lib/x86_64-linux-gnu/glib-2.0/include
+compilerOpts.arm64 = -I/usr/lib/aarch64-linux-gnu/glib-2.0/include

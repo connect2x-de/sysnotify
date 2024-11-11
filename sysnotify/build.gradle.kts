@@ -105,15 +105,17 @@ kotlin {
             }
         }
     }
-    linuxX64 {
-        compilations["main"].cinterops {
-            val libnotify by creating {}
-            val jni by creating {
-                compilerOpts("-I${jniHeaders / "linux"}")
-                headers("${jniHeaders / "jni.h"}")
+    listOf(linuxX64(), linuxArm64()).forEach {
+        it.apply {
+            compilations["main"].cinterops {
+                val libnotify by creating {}
+                val jni by creating {
+                    compilerOpts("-I${jniHeaders / "linux"}")
+                    headers("${jniHeaders / "jni.h"}")
+                }
             }
+            binaries.sharedLib {}
         }
-        binaries.sharedLib {}
     }
     mingwX64 {
         compilations["main"].cinterops {
