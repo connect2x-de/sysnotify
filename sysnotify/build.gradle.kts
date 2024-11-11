@@ -120,28 +120,28 @@ kotlin {
             sharedLib {
                 linkerOpts(
                     "-L$comBuildOutput",
-                    "-L$jniLibraries",
-                    "-lsysnotify-com",
-                    "-ljawt",
-                    "-ljvm"
+                    "-lsysnotify-com"
                 )
             }
         }
     }
     applyDefaultHierarchyTemplate()
     sourceSets {
+        val desktopMain by creating {
+            dependsOn(nativeMain.get())
+            dependencies {
+                implementation(libs.multiplatformJni)
+            }
+        }
+        macosMain { dependsOn(desktopMain) }
+        linuxMain { dependsOn(desktopMain) }
+        mingwMain { dependsOn(desktopMain) }
         commonMain {
             dependencies {
                 api(libs.kotlinx.coroutines)
                 implementation(libs.uuid)
             }
         }
-        val desktopMain by creating {
-            dependsOn(nativeMain.get())
-        }
-        macosMain { dependsOn(desktopMain) }
-        linuxMain { dependsOn(desktopMain) }
-        mingwMain { dependsOn(desktopMain) }
     }
     applyCrossCompilationHack()
 }

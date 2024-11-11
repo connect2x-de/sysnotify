@@ -25,7 +25,7 @@ plugins {
 
 allprojects {
     group = "de.connect2x"
-    version = withVersionSuffix("1.4.0")
+    version = withVersionSuffix("1.5.0")
 
     dependencyLocking {
         lockMode = LockMode.LENIENT
@@ -36,5 +36,6 @@ allprojects {
         mavenLocal()
         mavenCentral()
         google()
+        maven("https://git.karmakrafts.dev/api/v4/projects/307/packages/maven") // Multiplatform JNI
     }
 }
