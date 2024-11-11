@@ -5,7 +5,7 @@ android-compileSdk = "34"
 agp = "8.5.2"
 kotlin = "2.0.10"
 kotlinx-coroutines = "1.9.0" # https://github.com/Kotlin/kotlinx.coroutines/releases
-core = "1.15.0" # https://mvnrepository.com/artifact/androidx.core/core
+core = "1.13.1" # https://mvnrepository.com/artifact/androidx.core/core
 uuid = "0.8.4" # https://github.com/benasher44/uuid/releases
 # For sample
 androidx-activityCompose = "1.9.3" # https://mvnrepository.com/artifact/androidx.activity/activity-compose

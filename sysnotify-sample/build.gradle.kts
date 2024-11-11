@@ -85,9 +85,13 @@ kotlin {
             implementation(compose.components.uiToolingPreview)
             implementation(project(":sysnotify"))
         }
-        val desktopMain by getting {
+        jvmMain {
             dependencies {
-                implementation(project(path = ":sysnotify", configuration = "nativesJar")) // We need the natives jar to be in the classpath
+                implementation(project(path = ":sysnotify", configuration = "nativesJarLinuxX64"))
+                implementation(project(path = ":sysnotify", configuration = "nativesJarLinuxArm64"))
+                implementation(project(path = ":sysnotify", configuration = "nativesJarMacosX64"))
+                implementation(project(path = ":sysnotify", configuration = "nativesJarMacosArm64"))
+                implementation(project(path = ":sysnotify", configuration = "nativesJarMingwX64"))
                 // this is needed to create lock files working on all machines
                 if (System.getProperty("bundleAll") == "true") {
                     implementation(compose.desktop.linux_x64)
@@ -105,7 +109,7 @@ kotlin {
 }
 
 android {
-    namespace = "de.connect2x.sysnotify.sample"
+    namespace = "${rootProject.group}.${rootProject.name}.sample"
     compileSdk = 34
 
     sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
@@ -113,7 +117,7 @@ android {
     sourceSets["main"].resources.srcDirs("src/commonMain/resources")
 
     defaultConfig {
-        applicationId = "de.connect2x.sysnotify.sample"
+        applicationId = "${rootProject.group}.${rootProject.name}.sample"
         minSdk = 28
         targetSdk = 34
         versionCode = 1
@@ -139,7 +143,7 @@ android {
 compose {
     desktop {
         application {
-            mainClass = "de.connect2x.sysnotify.sample.MainKt"
+            mainClass = "${rootProject.group}.${rootProject.name}.sample.MainKt"
             buildTypes.release.proguard { isEnabled = false }
             nativeDistributions {
                 modules("java.net.http", "java.sql", "java.naming")

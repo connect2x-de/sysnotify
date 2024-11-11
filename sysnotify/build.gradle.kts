@@ -13,13 +13,12 @@
  * limitations under the License.
  */
 
-import org.gradle.configurationcache.extensions.capitalized
+import org.gradle.internal.extensions.stdlib.capitalized
 import org.gradle.internal.os.OperatingSystem
 import org.gradle.jvm.tasks.Jar
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
-import kotlin.io.path.Path
+import java.nio.file.Path
 import kotlin.io.path.div
 
 plugins {
@@ -28,28 +27,13 @@ plugins {
     id("maven-publish")
 }
 
-// Remap host architecture to some consistent aliases (mostly used for native packaging)
-val architecture = when (System.getProperty("os.arch")) {
-    "i386", "i486", "i586", "i686", "x86", "x32" -> "x86"
-    "x64", "amd64", "x86_64", "x86-64" -> "x64"
-    "aarch64", "arm64" -> "arm64"
-    "arm", "armv7", "aarch32" -> "arm32"
-    else -> throw IllegalStateException("Could not determine host architecture")
-}
-println("Detected host architecture $architecture")
+fun OperatingSystem.getFriendlyName(): String = familyName.replace("os x", "macos")
 
-val os = OperatingSystem.current()
-val platform = os.familyName.replace("os x", "macos") // Fix this mistake..
-val platformPair = "$platform-$architecture"
-println("Detected host OS $platform")
+fun OperatingSystem.getPlatformPair(arch: String): String = "${getFriendlyName()}-$arch"
 
-val javaHome = Path(System.getProperty("java.home")) // For JNI interop
-println("Found java home at $javaHome")
-val jniHeaders = javaHome / "include"
-val jniLibraries = javaHome / "lib"
-
-val comPath = project(":sysnotify-com").projectDir.toPath()
-val comBuildOutput = comPath / "build" / "cmake" / "RelWithDebInfo"
+val hostOs: OperatingSystem = OperatingSystem.current()
+val comPath: Path = project(":sysnotify-com").projectDir.toPath()
+val comBuildOutput: Path = comPath / "build" / "cmake" / "RelWithDebInfo"
 
 kotlin {
     val kotlinJvmVersion = libs.versions.jvmTarget.get()
@@ -86,7 +70,7 @@ kotlin {
                 framework {
                     baseName = rootProject.name
                 }
-                sharedLib {}
+                sharedLib()
             }
         }
     }
@@ -96,15 +80,18 @@ kotlin {
                 framework {
                     baseName = rootProject.name
                 }
+                sharedLib()
             }
         }
     }
     listOf(linuxX64(), linuxArm64()).forEach {
         it.apply {
-            compilations["main"].cinterops {
-                val libnotify by creating {}
+            compilations.configureEach {
+                cinterops {
+                    val libnotify by creating {}
+                }
             }
-            binaries.sharedLib {}
+            binaries.sharedLib()
         }
     }
     mingwX64 {
@@ -143,33 +130,6 @@ kotlin {
             }
         }
     }
-    applyCrossCompilationHack()
-}
-
-fun applyCrossCompilationHack() {
-    // Disable cross-compilation - https://youtrack.jetbrains.com/issue/KT-30498/Option-to-disable-kotlin-native-cross-compilation
-    when {
-        os.isLinux -> kotlin.targets.filter { "linux" !in it.name }
-        os.isWindows -> kotlin.targets.filter { "mingw" !in it.name }
-        os.isMacOsX -> kotlin.targets.filter { "linux" in it.name || "mingw" in it.name }
-        else -> emptyList()
-    }.mapNotNull { it as? KotlinNativeTarget }.forEach { target ->
-        target.apply {
-            compilations.all {
-                cinterops.all { tasks[interopProcessingTaskName].enabled = false }
-                compileTaskProvider { enabled = false }
-                tasks[processResourcesTaskName].enabled = false
-            }
-            binaries.all { linkTask.enabled = false }
-            mavenPublication {
-                val publicationToDisable = this
-                tasks.withType<AbstractPublishToMaven>()
-                    .all { onlyIf { publication != publicationToDisable } }
-                tasks.withType<GenerateModuleMetadata>()
-                    .all { onlyIf { publication.get() != publicationToDisable } }
-            }
-        }
-    }
 }
 
 android {
@@ -188,8 +148,60 @@ dependencies {
     implementation(libs.androidx.core)
 }
 
-// If we are on Windows, inject the CMake submodule as a dependency to all 'mingw' tasks
-if (os.isWindows) {
+@Suppress("UnstableApiUsage")
+fun jvmNativesJar(os: OperatingSystem, arch: String): Jar {
+    // Create custom JAR task(s) for packaging shared libraries produced by Kotlin/Native targets
+    val linkTask = tasks.let { taskList ->
+        when {
+            os.isLinux -> taskList.findByName("linkReleaseSharedLinux${arch.capitalized()}")
+            os.isWindows -> taskList.findByName("linkReleaseSharedMingw${arch.capitalized()}")
+            os.isMacOsX -> taskList.findByName("linkReleaseSharedMacos${arch.capitalized()}")
+            else -> null
+        }
+    } ?: throw IllegalStateException("Could not find matching Kotlin/Native link task for building JVM bindings")
+    println("Using '${linkTask.name}' as JVM bindings link task")
+    val platformPair = os.getPlatformPair(arch)
+    val taskName = "jvmNativesJar${os.getFriendlyName().capitalized()}${arch.capitalized()}"
+
+    return task(taskName, Jar::class) {
+        dependsOn(linkTask)
+        archiveClassifier = "jvm-natives-$platformPair"
+        from(linkTask.outputs) {
+            exclude("*.h", "*.def")
+        }
+        if (os.isWindows) from(comBuildOutput / "sysnotify-com.dll") // Make sure to ship the COM adaptor
+        into("natives/$platformPair")
+    }.apply {
+        tasks {
+            assemble {
+                dependsOn(this@apply)
+                mustRunAfter(this@apply)
+            }
+        }
+        configurations {
+            create(taskName)
+        }
+        artifacts {
+            add(taskName, this@apply) // Make sure our natives JAR is added as an artifact
+        }
+        publishing {
+            publications {
+                create<MavenPublication>(taskName) {
+                    artifact(this@apply)
+                }
+            }
+        }
+    }
+}
+
+jvmNativesJar(OperatingSystem.forName("osx"), "x64")
+jvmNativesJar(OperatingSystem.forName("osx"), "arm64")
+jvmNativesJar(OperatingSystem.forName("linux"), "x64")
+jvmNativesJar(OperatingSystem.forName("linux"), "arm64")
+jvmNativesJar(OperatingSystem.forName("windows"), "x64")
+
+// When on windows, always rebuild-module from source instead of using prebuilt binaries
+if(hostOs.isWindows) {
     tasks {
         filter { it.name.contains("mingw", true) }.forEach { task ->
             task.apply {
@@ -212,43 +224,6 @@ if (os.isWindows) {
     }
 }
 
-// Create custom JAR task(s) for packaging shared libraries produced by Kotlin/Native targets
-val linkTask = tasks.let { taskList ->
-    when {
-        os.isLinux -> taskList.find { it.name == "linkReleaseSharedLinux${architecture.capitalized()}" }
-        os.isWindows -> taskList.find { it.name == "linkReleaseSharedMingw${architecture.capitalized()}" }
-        os.isMacOsX -> taskList.find { it.name == "linkReleaseSharedMacos${architecture.capitalized()}" }
-        else -> throw IllegalStateException("JVM bindings are not supported on the current platform")
-    }
-        ?: throw IllegalStateException("Could not find matching Kotlin/Native link task for building JVM bindings")
-}
-println("Using '${linkTask.name}' as JVM bindings link task")
-
-val nativesJar = task("nativesJar", Jar::class) {
-    dependsOn(linkTask)
-    archiveClassifier = "jvm-natives-$platformPair"
-    from(linkTask.outputs) {
-        exclude("*.h", "*.def")
-    }
-    if (os.isWindows) from(comBuildOutput / "sysnotify-com.dll") // Make sure to ship the COM adaptor
-    into("natives/$platformPair")
-}
-
-tasks {
-    assemble {
-        dependsOn(nativesJar)
-        mustRunAfter(nativesJar)
-    }
-}
-
-configurations {
-    val nativesJar by creating
-}
-
-artifacts {
-    add("nativesJar", nativesJar) // Make sure our natives JAR is added as an artifact
-}
-
 publishing {
     repositories {
         repositories {
@@ -268,9 +243,6 @@ publishing {
         }
     }
     publications {
-        create<MavenPublication>("nativesJar") {
-            artifact(nativesJar)
-        }
         configureEach {
             if (this is MavenPublication) {
                 pom {
