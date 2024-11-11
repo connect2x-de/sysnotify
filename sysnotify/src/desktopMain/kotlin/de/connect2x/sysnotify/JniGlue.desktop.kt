@@ -94,10 +94,10 @@ internal fun registerNatives() {
     }
 }
 
-private fun create(env: JNIEnvVar, clazz: jclass, name: jstring, id: jstring, activationCallback: jobject, priority: jint): jlong {
+private fun create(env: JNIEnvVar, clazz: jclass, name: jstring, id: jstring, activationCallback: jobject): jlong {
     return StableRef.create(createNotificationHandler(name.toKString(), id.toKString(), {
         // TODO: implement this
-    }, NotificationPriority.entries[priority])).asCPointer().rawValue.toLong()
+    }, NotificationPriority.DEFAULT)).asCPointer().rawValue.toLong()
 }
 
 private fun destroy(env: JNIEnvVar, clazz: jclass, handler: jlong) {

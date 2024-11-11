@@ -156,7 +156,10 @@ fun jvmNativesJar(os: OperatingSystem, arch: String): Jar {
         from(linkTask.outputs) {
             exclude("*.h", "*.def")
         }
-        if (os.isWindows) from(Path("sysnotify-com") / "lib" / "sysnotify-com.dll") // Make sure to ship the COM adaptor
+        if (os.isWindows) from(
+            Path("sysnotify-com") / "lib" / "sysnotify-com.dll",      // Make sure to ship the COM adaptor..
+            //Path("sysnotify-com") / "lib" / "sysnotify-com-dummy.exe" // ..as well as the COM dummy for stubbing toast events.
+        )
         into("natives/$platformPair")
     }.apply {
         tasks {

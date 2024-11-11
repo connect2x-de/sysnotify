@@ -101,9 +101,7 @@ kotlin {
                     implementation(compose.desktop.windows_x64)
                     implementation(compose.desktop.macos_x64)
                     implementation(compose.desktop.macos_arm64)
-                } else {
-                    implementation(compose.desktop.currentOs)
-                }
+                } else implementation(compose.desktop.currentOs)
             }
         }
 

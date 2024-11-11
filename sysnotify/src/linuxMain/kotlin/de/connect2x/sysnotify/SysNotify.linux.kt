@@ -80,7 +80,7 @@ internal class LinuxNotificationHandler(
     }
 
     override val platform: NotificationPlatform = NotificationPlatform.LINUX
-    override val hasPermissions: Boolean = false // TODO: Implement hasPermissions flag
+    override val hasPermissions: Boolean = true // Desktop on Linux always has permission to send notifications
 
     override val capabilities: NotificationCapabilities = NotificationCapabilities(
         isTitleSupported = true,
