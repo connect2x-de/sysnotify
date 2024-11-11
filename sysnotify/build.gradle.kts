@@ -134,7 +134,6 @@ dependencies {
     implementation(libs.androidx.core)
 }
 
-@Suppress("UnstableApiUsage")
 fun jvmNativesJar(os: OperatingSystem, arch: String): Jar {
     // Create custom JAR task(s) for packaging shared libraries produced by Kotlin/Native targets
     val linkTask = tasks.let { taskList ->
@@ -148,6 +147,7 @@ fun jvmNativesJar(os: OperatingSystem, arch: String): Jar {
     println("Using '${linkTask.name}' as JVM bindings link task")
     val platformPair = os.getPlatformPair(arch)
     val taskName = "jvmNativesJar${os.getFriendlyName().capitalized()}${arch.capitalized()}"
+    configurations.create(taskName)
 
     return task(taskName, Jar::class) {
         dependsOn(linkTask)
@@ -164,27 +164,17 @@ fun jvmNativesJar(os: OperatingSystem, arch: String): Jar {
                 mustRunAfter(this@apply)
             }
         }
-        configurations {
-            create(taskName)
-        }
         artifacts {
             add(taskName, this@apply) // Make sure our natives JAR is added as an artifact
-        }
-        publishing {
-            publications {
-                create<MavenPublication>(taskName) {
-                    artifact(this@apply)
-                }
-            }
         }
     }
 }
 
-jvmNativesJar(OperatingSystem.forName("osx"), "x64")
-jvmNativesJar(OperatingSystem.forName("osx"), "arm64")
-jvmNativesJar(OperatingSystem.forName("linux"), "x64")
-jvmNativesJar(OperatingSystem.forName("linux"), "arm64")
-jvmNativesJar(OperatingSystem.forName("windows"), "x64")
+val jvmNativesMacosX64: Jar = jvmNativesJar(OperatingSystem.forName("osx"), "x64")
+val jvmNativesMacosArm64: Jar = jvmNativesJar(OperatingSystem.forName("osx"), "arm64")
+val jvmNativesLinunxX64: Jar = jvmNativesJar(OperatingSystem.forName("linux"), "x64")
+val jvmNativesLinuxArm64: Jar = jvmNativesJar(OperatingSystem.forName("linux"), "arm64")
+val jvmNativesMingwX64: Jar = jvmNativesJar(OperatingSystem.forName("windows"), "x64")
 
 // When on windows, always rebuild-module from source instead of using prebuilt binaries
 if(hostOs.isWindows) {
@@ -229,6 +219,13 @@ publishing {
         }
     }
     publications {
+        create<MavenPublication>("jvmNatives") {
+            artifact(jvmNativesMacosX64)
+            artifact(jvmNativesMacosArm64)
+            artifact(jvmNativesLinunxX64)
+            artifact(jvmNativesLinuxArm64)
+            artifact(jvmNativesMingwX64)
+        }
         configureEach {
             if (this is MavenPublication) {
                 pom {

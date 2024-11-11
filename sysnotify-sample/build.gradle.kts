@@ -29,7 +29,7 @@ kotlin {
     val kotlinJvmVersion = libs.versions.jvmTarget.get()
     val kotlinJvmTarget = JvmTarget.fromTarget(kotlinJvmVersion)
     jvmToolchain(JavaLanguageVersion.of(kotlinJvmVersion).asInt())
-    jvm("desktop") {
+    jvm {
         compilations.all {
             compileTaskProvider {
                 compilerOptions {
@@ -70,28 +70,30 @@ kotlin {
     }
 
     sourceSets {
-        androidMain.dependencies {
-            implementation(libs.androidx.compose.ui.tooling.preview)
-            implementation(libs.androidx.activity.compose)
+        androidMain {
+            dependencies {
+                implementation(libs.androidx.compose.ui.tooling.preview)
+                implementation(libs.androidx.activity.compose)
+            }
         }
-        iosMain.dependencies {
-        }
-        commonMain.dependencies {
-            implementation(compose.runtime)
-            implementation(compose.foundation)
-            implementation(compose.material)
-            implementation(compose.ui)
-            implementation(compose.components.resources)
-            implementation(compose.components.uiToolingPreview)
-            implementation(project(":sysnotify"))
+        commonMain {
+            dependencies {
+                implementation(compose.runtime)
+                implementation(compose.foundation)
+                implementation(compose.material)
+                implementation(compose.ui)
+                implementation(compose.components.resources)
+                implementation(compose.components.uiToolingPreview)
+                implementation(project(":sysnotify"))
+            }
         }
         jvmMain {
             dependencies {
-                implementation(project(path = ":sysnotify", configuration = "nativesJarLinuxX64"))
-                implementation(project(path = ":sysnotify", configuration = "nativesJarLinuxArm64"))
-                implementation(project(path = ":sysnotify", configuration = "nativesJarMacosX64"))
-                implementation(project(path = ":sysnotify", configuration = "nativesJarMacosArm64"))
-                implementation(project(path = ":sysnotify", configuration = "nativesJarMingwX64"))
+                implementation(project(path = ":sysnotify", configuration = "jvmNativesJarLinuxX64"))
+                implementation(project(path = ":sysnotify", configuration = "jvmNativesJarLinuxArm64"))
+                implementation(project(path = ":sysnotify", configuration = "jvmNativesJarMacosX64"))
+                implementation(project(path = ":sysnotify", configuration = "jvmNativesJarMacosArm64"))
+                implementation(project(path = ":sysnotify", configuration = "jvmNativesJarWindowsX64"))
                 // this is needed to create lock files working on all machines
                 if (System.getProperty("bundleAll") == "true") {
                     implementation(compose.desktop.linux_x64)
