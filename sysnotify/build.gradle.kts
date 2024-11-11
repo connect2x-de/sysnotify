@@ -148,10 +148,11 @@ fun jvmNativesJar(os: OperatingSystem, arch: String): Jar {
     val platformPair = os.getPlatformPair(arch)
     val taskName = "jvmNativesJar${os.getFriendlyName().capitalized()}${arch.capitalized()}"
     configurations.create(taskName)
+    val classifier = "jvm-natives-$platformPair"
 
     return task(taskName, Jar::class) {
         dependsOn(linkTask)
-        archiveClassifier = "jvm-natives-$platformPair"
+        archiveClassifier = classifier
         from(linkTask.outputs) {
             exclude("*.h", "*.def")
         }
@@ -167,6 +168,16 @@ fun jvmNativesJar(os: OperatingSystem, arch: String): Jar {
         artifacts {
             add(taskName, this@apply) // Make sure our natives JAR is added as an artifact
         }
+        publishing {
+            publications {
+                create<MavenPublication>(taskName) {
+                    artifact(this@apply) {
+                        this.classifier = ""
+                    }
+                    artifactId = "${rootProject.name}-$classifier" // These get their own unique artifact IDs
+                }
+            }
+        }
     }
 }
 
@@ -177,7 +188,7 @@ val jvmNativesLinuxArm64: Jar = jvmNativesJar(OperatingSystem.forName("linux"), 
 val jvmNativesMingwX64: Jar = jvmNativesJar(OperatingSystem.forName("windows"), "x64")
 
 // When on windows, always rebuild-module from source instead of using prebuilt binaries
-if(hostOs.isWindows) {
+if (hostOs.isWindows) {
     tasks {
         filter { it.name.contains("mingw", true) }.forEach { task ->
             task.apply {
@@ -219,13 +230,6 @@ publishing {
         }
     }
     publications {
-        create<MavenPublication>("jvmNatives") {
-            artifact(jvmNativesMacosX64)
-            artifact(jvmNativesMacosArm64)
-            artifact(jvmNativesLinunxX64)
-            artifact(jvmNativesLinuxArm64)
-            artifact(jvmNativesMingwX64)
-        }
         configureEach {
             if (this is MavenPublication) {
                 pom {
