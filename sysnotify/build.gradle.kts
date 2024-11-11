@@ -82,15 +82,9 @@ kotlin {
     }
     listOf(macosX64(), macosArm64()).forEach { target ->
         target.apply {
-            compilations["main"].cinterops {
-                val jni by creating {
-                    compilerOpts("-I${jniHeaders / "darwin"}")
-                    headers("${jniHeaders / "jni.h"}")
-                }
-            }
             binaries {
                 framework {
-                    baseName = "sysnotify"
+                    baseName = rootProject.name
                 }
                 sharedLib {}
             }
@@ -100,7 +94,7 @@ kotlin {
         target.apply {
             binaries {
                 framework {
-                    baseName = "sysnotify"
+                    baseName = rootProject.name
                 }
             }
         }
@@ -109,10 +103,6 @@ kotlin {
         it.apply {
             compilations["main"].cinterops {
                 val libnotify by creating {}
-                val jni by creating {
-                    compilerOpts("-I${jniHeaders / "linux"}")
-                    headers("${jniHeaders / "jni.h"}")
-                }
             }
             binaries.sharedLib {}
         }
@@ -124,10 +114,6 @@ kotlin {
                     "${comPath / "include" / "sysnotify_types.h"}",
                     "${comPath / "include" / "sysnotify.h"}"
                 )
-            }
-            val jni by creating {
-                compilerOpts("-I${jniHeaders / "win32"}")
-                headers("${jniHeaders / "jni.h"}")
             }
         }
         binaries {
@@ -187,7 +173,7 @@ fun applyCrossCompilationHack() {
 }
 
 android {
-    namespace = "de.connect2x.sysnotify"
+    namespace = "${rootProject.group}.${rootProject.name}"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
     defaultConfig {
         minSdk = libs.versions.android.minSdk.get().toInt()
@@ -268,7 +254,7 @@ publishing {
         repositories {
             System.getenv("CI_API_V4_URL")?.let { apiUrl ->
                 maven {
-                    url = uri("$apiUrl/projects/58749664/packages/maven")
+                    url = uri("$apiUrl/projects/${System.getenv("CI_PROJECT_ID")}/packages/maven")
                     name = "GitLab"
                     credentials(HttpHeaderCredentials::class) {
                         name = "Job-Token"
@@ -290,7 +276,7 @@ publishing {
                 pom {
                     name.set(project.name)
                     description.set("Cross-platform system notifications for Kotlin Multiplatform")
-                    url.set("https://gitlab.com/connect2x/sysnotify")
+                    url.set(System.getenv("CI_PROJECT_URL"))
                     licenses {
                         license {
                             name.set("Apache License 2.0")
@@ -305,7 +291,7 @@ publishing {
                         }
                     }
                     scm {
-                        url.set("https://gitlab.com/connect2x/sysnotify")
+                        url.set(this@pom.url)
                     }
                 }
             }
