@@ -23,9 +23,11 @@ plugins {
     alias(libs.plugins.kotlinx.serialization)
 }
 
+val baseVersion: String = libs.versions.sysnotify.get()
+
 allprojects {
     group = "de.connect2x"
-    version = withVersionSuffix("1.5.0")
+    version = withVersionSuffix(baseVersion)
 
     dependencyLocking {
         lockMode = LockMode.LENIENT

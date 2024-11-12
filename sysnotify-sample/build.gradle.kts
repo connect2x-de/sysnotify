@@ -25,6 +25,8 @@ plugins {
     alias(libs.plugins.kotlinx.serialization)
 }
 
+val baseVersion: String = libs.versions.sysnotify.get()
+
 kotlin {
     val kotlinJvmVersion = libs.versions.jvmTarget.get()
     val kotlinJvmTarget = JvmTarget.fromTarget(kotlinJvmVersion)
@@ -124,7 +126,7 @@ android {
         minSdk = 28
         targetSdk = 34
         versionCode = 1
-        versionName = "1.0.0"
+        versionName = baseVersion
     }
     packaging {
         resources {
@@ -151,16 +153,15 @@ compose {
             nativeDistributions {
                 modules("java.net.http", "java.sql", "java.naming")
                 targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-                appResourcesRootDir.set(layout.buildDirectory) // @see https://github.com/JetBrains/compose-jb/tree/master/tutorials/Native_distributions_and_local_execution#jvm-resource-loading
+                appResourcesRootDir.set(layout.buildDirectory)
                 packageName = "Sysnotify Sample"
-                packageVersion = "1.1.0"
-
+                packageVersion = baseVersion
                 windows {
                     menu = true
-                    // see https://wixtoolset.org/documentation/manual/v3/howtos/general/generate_guids.html
                     upgradeUuid = "3e1d7fa0-4c3f-4c3d-805f-d28bd21d6019"
                 }
                 macOS {
+                    bundleID = "${rootProject.group}.${rootProject.name}.sample"
                     dockName = "Sysnotify Sample"
                 }
             }

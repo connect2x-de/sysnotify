@@ -17,6 +17,7 @@ package de.connect2x.sysnotify
 
 import com.benasher44.uuid.Uuid
 import com.benasher44.uuid.uuid4
+import kotlinx.atomicfu.atomic
 import platform.UserNotifications.UNAuthorizationOptionAlert
 import platform.UserNotifications.UNAuthorizationOptionBadge
 import platform.UserNotifications.UNAuthorizationOptionSound
@@ -36,7 +37,7 @@ internal class AppleNotificationHandler(
     private val activationCallback: (Notification) -> Unit,
 ) : NotificationHandler {
     override val platform: NotificationPlatform = NotificationPlatform.APPLE
-    override val hasPermissions: Boolean = false // TODO: Implement hasPermissions flag
+    override var hasPermissions: Boolean by atomic(false)
 
     override val capabilities: NotificationCapabilities = NotificationCapabilities(
         isTitleSupported = true,
@@ -52,7 +53,8 @@ internal class AppleNotificationHandler(
                 UNAuthorizationOptionSound
                         or UNAuthorizationOptionBadge
                         or UNAuthorizationOptionAlert
-            ) { _, error ->
+            ) { granted, error ->
+                if(granted) hasPermissions = true
                 error?.localizedDescription?.let {
                     throw IllegalStateException("Could not request permission: $it")
                 }
