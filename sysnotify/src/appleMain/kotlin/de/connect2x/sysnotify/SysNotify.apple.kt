@@ -25,11 +25,13 @@ import platform.UserNotifications.UNMutableNotificationContent
 import platform.UserNotifications.UNNotification
 import platform.UserNotifications.UNNotificationRequest
 import platform.UserNotifications.UNUserNotificationCenter
+import kotlin.experimental.ExperimentalNativeApi
 
 internal data class AppleNotificationHandle(
     val uuid: Uuid = uuid4()
 ) : NotificationHandle
 
+@OptIn(ExperimentalNativeApi::class)
 internal class AppleNotificationHandler(
     override val name: String,
     override val id: String,
@@ -48,6 +50,7 @@ internal class AppleNotificationHandler(
     )
 
     override suspend fun requestPermissions() {
+        if(Platform.isDebugBinary || hasPermissions) return
         UNUserNotificationCenter.currentNotificationCenter()
             .requestAuthorizationWithOptions(
                 UNAuthorizationOptionSound
@@ -61,10 +64,15 @@ internal class AppleNotificationHandler(
             }
     }
 
-    override fun create(notification: Notification): NotificationHandle = InvalidNotificationHandle // TODO: implement this
+    override fun create(notification: Notification): NotificationHandle {
+        return if(hasPermissions) AppleNotificationHandle()
+        else InvalidNotificationHandle
+    }
 
     override suspend fun push(notification: Notification): NotificationHandle {
         val handle = AppleNotificationHandle()
+        if(Platform.isDebugBinary || !hasPermissions) return handle
+
         val content = UNMutableNotificationContent().apply {
             setTitle(notification.title ?: handle.uuid.toString())
             notification.description?.let(::setBody)
@@ -85,6 +93,8 @@ internal class AppleNotificationHandler(
     @Suppress("UNCHECKED_CAST")
     override suspend fun pop(handle: NotificationHandle) {
         require(handle is AppleNotificationHandle) { "Handle is not an Apple notification handle" }
+        if(Platform.isDebugBinary || !hasPermissions) return
+
         val center = UNUserNotificationCenter.currentNotificationCenter()
         val identifier = handle.uuid.toString()
         var found = false
