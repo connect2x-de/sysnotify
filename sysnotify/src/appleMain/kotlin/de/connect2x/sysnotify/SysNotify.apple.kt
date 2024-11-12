@@ -17,7 +17,6 @@ package de.connect2x.sysnotify
 
 import com.benasher44.uuid.Uuid
 import com.benasher44.uuid.uuid4
-import de.connect2x.sysnotify.NoopNotificationHandler.platform
 import platform.UserNotifications.UNAuthorizationOptionAlert
 import platform.UserNotifications.UNAuthorizationOptionBadge
 import platform.UserNotifications.UNAuthorizationOptionSound

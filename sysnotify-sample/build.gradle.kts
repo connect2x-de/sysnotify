@@ -58,16 +58,19 @@ kotlin {
         }
     }
 
-    listOf(
-        iosX64(),
-        iosArm64(),
-        iosSimulatorArm64()
-    ).forEach { iosTarget ->
-        iosTarget.binaries.framework {
-            baseName = "Sysnotify"
-            isStatic = true
+    listOf(macosX64(), macosArm64()).forEach {
+        it.apply {
+            binaries {
+                executable {
+                    entryPoint = "${rootProject.group}.${rootProject.name}.sample.main"
+                }
+            }
         }
     }
+
+    iosX64()
+    iosArm64()
+    iosSimulatorArm64()
 
     sourceSets {
         androidMain {

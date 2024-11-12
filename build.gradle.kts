@@ -14,13 +14,13 @@
  */
 
 plugins {
-    alias(libs.plugins.androidLibrary).apply(false)
-    alias(libs.plugins.kotlin.multiplatform).apply(false)
+    alias(libs.plugins.androidLibrary) apply false
+    alias(libs.plugins.kotlin.multiplatform) apply false
     // For sample
     alias(libs.plugins.androidApplication) apply false
-    alias(libs.plugins.compose.compiler) apply false
-    alias(libs.plugins.compose) apply false
-    alias(libs.plugins.kotlinx.serialization) apply false
+    alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.compose)
+    alias(libs.plugins.kotlinx.serialization)
 }
 
 allprojects {
