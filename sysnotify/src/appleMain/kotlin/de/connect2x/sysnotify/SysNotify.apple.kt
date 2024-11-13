@@ -15,8 +15,6 @@
 
 package de.connect2x.sysnotify
 
-import com.benasher44.uuid.Uuid
-import com.benasher44.uuid.uuid4
 import kotlinx.atomicfu.atomic
 import platform.UserNotifications.UNAuthorizationOptionAlert
 import platform.UserNotifications.UNAuthorizationOptionBadge
@@ -26,9 +24,12 @@ import platform.UserNotifications.UNNotification
 import platform.UserNotifications.UNNotificationRequest
 import platform.UserNotifications.UNUserNotificationCenter
 import kotlin.experimental.ExperimentalNativeApi
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
+@OptIn(ExperimentalUuidApi::class)
 internal data class AppleNotificationHandle(
-    val uuid: Uuid = uuid4()
+    val uuid: Uuid = Uuid.random()
 ) : NotificationHandle
 
 @OptIn(ExperimentalNativeApi::class)
@@ -64,11 +65,13 @@ internal class AppleNotificationHandler(
             }
     }
 
+    @OptIn(ExperimentalUuidApi::class)
     override fun create(notification: Notification): NotificationHandle {
         return if(hasPermissions) AppleNotificationHandle()
         else InvalidNotificationHandle
     }
 
+    @OptIn(ExperimentalUuidApi::class)
     override suspend fun push(notification: Notification): NotificationHandle {
         val handle = AppleNotificationHandle()
         if(Platform.isDebugBinary || !hasPermissions) return handle
@@ -91,6 +94,7 @@ internal class AppleNotificationHandler(
     }
 
     @Suppress("UNCHECKED_CAST")
+    @OptIn(ExperimentalUuidApi::class)
     override suspend fun pop(handle: NotificationHandle) {
         require(handle is AppleNotificationHandle) { "Handle is not an Apple notification handle" }
         if(Platform.isDebugBinary || !hasPermissions) return

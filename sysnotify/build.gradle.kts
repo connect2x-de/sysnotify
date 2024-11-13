@@ -112,7 +112,6 @@ kotlin {
         commonMain {
             dependencies {
                 api(libs.kotlinx.coroutines)
-                implementation(libs.uuid)
             }
         }
     }

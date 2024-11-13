@@ -14,7 +14,6 @@
  */
 
 @file:OptIn(ExperimentalForeignApi::class, ExperimentalNativeApi::class)
-@file:Suppress("NOTHING_TO_INLINE")
 
 package de.connect2x.sysnotify
 
