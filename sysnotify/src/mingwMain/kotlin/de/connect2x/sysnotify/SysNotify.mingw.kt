@@ -45,20 +45,24 @@ import kotlinx.cinterop.value
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
+@Suppress("NOTHING_TO_INLINE")
 private inline fun sn_error.check() {
     if (this == SYSNOTIFY_OK) return
     throwLastError()
 }
 
+@Suppress("NOTHING_TO_INLINE")
 private inline fun throwLastError() {
     sysnotify_get_last_error()?.apply {
         throw IllegalStateException(toKStringFromUtf8())
     }
 }
 
+@Suppress("NOTHING_TO_INLINE")
 @OptIn(ExperimentalUuidApi::class)
 private inline fun sn_notification_tag.toUuid(): Uuid = Uuid.fromULongs(lower, upper)
 
+@Suppress("NOTHING_TO_INLINE")
 @OptIn(ExperimentalUuidApi::class)
 private inline fun MemScope.allocNotificationTag(tag: Uuid): sn_notification_tag {
     return tag.toULongs { mostSignificantBits, leastSignificantBits ->
@@ -157,6 +161,7 @@ internal class WindowsNotificationHandler(
         }
     }
 
+    @Suppress("NOTHING_TO_INLINE")
     private inline fun MemScope.allocNotification(notification: Notification): sn_notification_content {
         return alloc<sn_notification_content> {
             title = allocCString(notification.title)

@@ -1,10 +1,26 @@
 package = libnotify
 headers = libnotify/notify.h
 
-libraryPaths.x64 = libnotify/x64/lib
-libraryPaths.arm64 = libnotify/arm64/lib
-staticLibraries = libnotify.so
+libraryPaths.x64 = build/sysnotify-platform/linux-x64/lib
+libraryPaths.arm64 = build/sysnotify-platform/linux-arm64/lib
+staticLibraries = libnotify.so.4.0.0
 
-compilerOpts = -Ilibnotify/include -Ilibnotify/include/glib-2.0 -Ilibnotify/include/gdk-pixbuf-2.0
-compilerOpts.x64 = -Ilibnotify/x64/include/glib-2.0
-compilerOpts.arm64 = -Ilibnotify/arm64/include/glib-2.0
+compilerOpts.x64 = \
+    -Ibuild/sysnotify-platform/linux-x64/include \
+    -Ibuild/sysnotify-platform/linux-x64/include/glib \
+    -Ibuild/sysnotify-platform/linux-x64/include/gio \
+    -Ibuild/sysnotify-platform/linux-x64/include/gmodule \
+    -Ibuild/sysnotify-platform/linux-x64/include/gobject \
+    -Ibuild/sysnotify-platform/linux-x64/include/gthread \
+    -Ibuild/sysnotify-platform/linux-x64/include/girepository \
+    -Ibuild/sysnotify-platform/linux-x64/include/gdk-pixbuf
+
+compilerOpts.arm64 = \
+    -Ibuild/sysnotify-platform/linux-arm64/include \
+    -Ibuild/sysnotify-platform/linux-arm64/include/glib \
+    -Ibuild/sysnotify-platform/linux-arm64/include/gio \
+    -Ibuild/sysnotify-platform/linux-arm64/include/gmodule \
+    -Ibuild/sysnotify-platform/linux-arm64/include/gobject \
+    -Ibuild/sysnotify-platform/linux-arm64/include/gthread \
+    -Ibuild/sysnotify-platform/linux-arm64/include/girepository \
+    -Ibuild/sysnotify-platform/linux-arm64/include/gdk-pixbuf

@@ -116,8 +116,10 @@ internal inline fun <reified O : jobject> O.deleteGlobalRef() {
     }
 }
 
+@Suppress("NOTHING_TO_INLINE")
 internal inline fun Boolean.toJBoolean(): jboolean = if (this) 1U else 0U
 
+@Suppress("NOTHING_TO_INLINE")
 internal inline fun jstring.toKString(): String {
     return jvmEnvironment {
         val data = requireNotNull(
@@ -137,6 +139,7 @@ internal inline fun jstring.toKString(): String {
     }
 }
 
+@Suppress("NOTHING_TO_INLINE")
 internal inline fun jbyteArray.toByteArray(): ByteArray {
     return jvmEnvironment {
         val size = requireNotNull(pointed?.GetArrayLength)(
@@ -165,6 +168,7 @@ internal inline fun jbyteArray.toByteArray(): ByteArray {
     }
 }
 
+@Suppress("NOTHING_TO_INLINE")
 internal inline fun MemScope.allocCString(value: String?): CPointer<ByteVar>? {
     if (value == null) return null
     val length = value.length
@@ -209,6 +213,7 @@ internal inline val JvmRefType.jClass: jclass
         }
     }
 
+@Suppress("NOTHING_TO_INLINE")
 internal inline fun jclass.getMethod(
     name: String,
     isStatic: Boolean = false,
@@ -235,6 +240,7 @@ internal inline fun jclass.getMethod(
     }
 }
 
+@Suppress("NOTHING_TO_INLINE")
 internal inline fun jclass.getField(name: String, isStatic: Boolean, type: JvmType): jfieldID {
     val typeString = type.objectName
     return jvmEnvironment {

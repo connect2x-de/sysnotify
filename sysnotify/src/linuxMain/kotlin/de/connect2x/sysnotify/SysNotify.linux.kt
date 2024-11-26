@@ -89,6 +89,7 @@ internal class LinuxNotificationHandler(
         notify_uninit()
     }
 
+    @Suppress("NOTHING_TO_INLINE")
     private inline fun setIcon(nativeNotification: CPointer<NotifyNotification>, notification: Notification) {
         notification.icon?.let { icon ->
             val width = icon.width
@@ -106,6 +107,7 @@ internal class LinuxNotificationHandler(
         }
     }
 
+    @Suppress("NOTHING_TO_INLINE")
     private inline fun show(notification: CPointer<NotifyNotification>): Boolean {
         memScoped {
             val errorAddress = allocPointerTo<GError>()
