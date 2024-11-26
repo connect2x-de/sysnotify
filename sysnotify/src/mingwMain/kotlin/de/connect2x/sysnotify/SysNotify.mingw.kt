@@ -14,17 +14,14 @@
  */
 
 @file:OptIn(ExperimentalForeignApi::class)
-@file:Suppress("NOTHING_TO_INLINE")
 
 package de.connect2x.sysnotify
 
-import com.benasher44.uuid.Uuid
 import de.connect2x.sysnotify.com.SYSNOTIFY_OK
 import de.connect2x.sysnotify.com.SYSNOTIFY_TRUE
 import de.connect2x.sysnotify.com.sn_boolVar
 import de.connect2x.sysnotify.com.sn_error
 import de.connect2x.sysnotify.com.sn_notification_content
-import de.connect2x.sysnotify.com.sn_notification_dismissal_reason
 import de.connect2x.sysnotify.com.sn_notification_handler
 import de.connect2x.sysnotify.com.sn_notification_handlerVar
 import de.connect2x.sysnotify.com.sn_notification_tag
@@ -35,43 +32,48 @@ import de.connect2x.sysnotify.com.sysnotify_handler_is_valid_tag
 import de.connect2x.sysnotify.com.sysnotify_handler_pop
 import de.connect2x.sysnotify.com.sysnotify_handler_push
 import de.connect2x.sysnotify.com.sysnotify_handler_update
-import kotlinx.cinterop.COpaquePointer
-import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.MemScope
-import kotlinx.cinterop.Pinned
 import kotlinx.cinterop.StableRef
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.alloc
-import kotlinx.cinterop.allocArrayOf
-import kotlinx.cinterop.asStableRef
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.pin
 import kotlinx.cinterop.ptr
-import kotlinx.cinterop.staticCFunction
 import kotlinx.cinterop.toKStringFromUtf8
 import kotlinx.cinterop.value
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
+@Suppress("NOTHING_TO_INLINE")
 private inline fun sn_error.check() {
     if (this == SYSNOTIFY_OK) return
     throwLastError()
 }
 
+@Suppress("NOTHING_TO_INLINE")
 private inline fun throwLastError() {
     sysnotify_get_last_error()?.apply {
         throw IllegalStateException(toKStringFromUtf8())
     }
 }
 
-private inline fun sn_notification_tag.toUuid(): Uuid = Uuid(lower.toLong(), upper.toLong())
+@Suppress("NOTHING_TO_INLINE")
+@OptIn(ExperimentalUuidApi::class)
+private inline fun sn_notification_tag.toUuid(): Uuid = Uuid.fromULongs(lower, upper)
 
+@Suppress("NOTHING_TO_INLINE")
+@OptIn(ExperimentalUuidApi::class)
 private inline fun MemScope.allocNotificationTag(tag: Uuid): sn_notification_tag {
-    return alloc<sn_notification_tag> {
-        lower = tag.leastSignificantBits.toULong()
-        upper = tag.mostSignificantBits.toULong()
+    return tag.toULongs { mostSignificantBits, leastSignificantBits ->
+        alloc<sn_notification_tag> {
+            lower = leastSignificantBits
+            upper = mostSignificantBits
+        }
     }
 }
 
+@OptIn(ExperimentalUuidApi::class)
 internal data class WindowsNotificationHandle(
     val handler: WindowsNotificationHandler,
     val tag: Uuid,
@@ -118,8 +120,10 @@ internal class WindowsNotificationHandler(
         sysnotify_handler_destroy(address).check()
     }
 
-    override fun create(notification: Notification): NotificationHandle = InvalidNotificationHandle // TODO: implement this
+    override fun create(notification: Notification): NotificationHandle =
+        InvalidNotificationHandle // TODO: implement this
 
+    @OptIn(ExperimentalUuidApi::class)
     override suspend fun push(notification: Notification): NotificationHandle {
         return memScoped {
             val handle = alloc<sn_notification_tag>()
@@ -129,6 +133,7 @@ internal class WindowsNotificationHandler(
         }
     }
 
+    @OptIn(ExperimentalUuidApi::class)
     override suspend fun update(
         handle: NotificationHandle,
         notification: Notification
@@ -147,6 +152,7 @@ internal class WindowsNotificationHandler(
         return handle
     }
 
+    @OptIn(ExperimentalUuidApi::class)
     override suspend fun pop(handle: NotificationHandle) {
         require(handle is WindowsNotificationHandle) { "Handle is not a Windows notification handle" }
         require(handle.isValid) { "Handle is not valid" }
@@ -155,6 +161,7 @@ internal class WindowsNotificationHandler(
         }
     }
 
+    @Suppress("NOTHING_TO_INLINE")
     private inline fun MemScope.allocNotification(notification: Notification): sn_notification_content {
         return alloc<sn_notification_content> {
             title = allocCString(notification.title)

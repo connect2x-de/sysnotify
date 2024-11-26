@@ -20,7 +20,6 @@ pluginManagement {
         google()
         mavenCentral()
         gradlePluginPortal()
-        maven("https://git.karmakrafts.dev/api/v4/projects/177/packages/maven")
     }
 }
 
@@ -36,5 +35,4 @@ plugins {
 }
 
 include(":sysnotify")
-include(":sysnotify-com")
 include(":sysnotify-sample")

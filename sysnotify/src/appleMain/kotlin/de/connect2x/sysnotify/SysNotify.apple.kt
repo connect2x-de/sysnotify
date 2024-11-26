@@ -15,9 +15,7 @@
 
 package de.connect2x.sysnotify
 
-import com.benasher44.uuid.Uuid
-import com.benasher44.uuid.uuid4
-import de.connect2x.sysnotify.NoopNotificationHandler.platform
+import kotlinx.atomicfu.atomic
 import platform.UserNotifications.UNAuthorizationOptionAlert
 import platform.UserNotifications.UNAuthorizationOptionBadge
 import platform.UserNotifications.UNAuthorizationOptionSound
@@ -25,11 +23,16 @@ import platform.UserNotifications.UNMutableNotificationContent
 import platform.UserNotifications.UNNotification
 import platform.UserNotifications.UNNotificationRequest
 import platform.UserNotifications.UNUserNotificationCenter
+import kotlin.experimental.ExperimentalNativeApi
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
+@OptIn(ExperimentalUuidApi::class)
 internal data class AppleNotificationHandle(
-    val uuid: Uuid = uuid4()
+    val uuid: Uuid = Uuid.random()
 ) : NotificationHandle
 
+@OptIn(ExperimentalNativeApi::class)
 internal class AppleNotificationHandler(
     override val name: String,
     override val id: String,
@@ -37,7 +40,7 @@ internal class AppleNotificationHandler(
     private val activationCallback: (Notification) -> Unit,
 ) : NotificationHandler {
     override val platform: NotificationPlatform = NotificationPlatform.APPLE
-    override val hasPermissions: Boolean = false // TODO: Implement hasPermissions flag
+    override var hasPermissions: Boolean by atomic(false)
 
     override val capabilities: NotificationCapabilities = NotificationCapabilities(
         isTitleSupported = true,
@@ -48,22 +51,31 @@ internal class AppleNotificationHandler(
     )
 
     override suspend fun requestPermissions() {
+        if(Platform.isDebugBinary || hasPermissions) return
         UNUserNotificationCenter.currentNotificationCenter()
             .requestAuthorizationWithOptions(
                 UNAuthorizationOptionSound
                         or UNAuthorizationOptionBadge
                         or UNAuthorizationOptionAlert
-            ) { _, error ->
+            ) { granted, error ->
+                if(granted) hasPermissions = true
                 error?.localizedDescription?.let {
                     throw IllegalStateException("Could not request permission: $it")
                 }
             }
     }
 
-    override fun create(notification: Notification): NotificationHandle = InvalidNotificationHandle // TODO: implement this
+    @OptIn(ExperimentalUuidApi::class)
+    override fun create(notification: Notification): NotificationHandle {
+        return if(hasPermissions) AppleNotificationHandle()
+        else InvalidNotificationHandle
+    }
 
+    @OptIn(ExperimentalUuidApi::class)
     override suspend fun push(notification: Notification): NotificationHandle {
         val handle = AppleNotificationHandle()
+        if(Platform.isDebugBinary || !hasPermissions) return handle
+
         val content = UNMutableNotificationContent().apply {
             setTitle(notification.title ?: handle.uuid.toString())
             notification.description?.let(::setBody)
@@ -82,8 +94,11 @@ internal class AppleNotificationHandler(
     }
 
     @Suppress("UNCHECKED_CAST")
+    @OptIn(ExperimentalUuidApi::class)
     override suspend fun pop(handle: NotificationHandle) {
         require(handle is AppleNotificationHandle) { "Handle is not an Apple notification handle" }
+        if(Platform.isDebugBinary || !hasPermissions) return
+
         val center = UNUserNotificationCenter.currentNotificationCenter()
         val identifier = handle.uuid.toString()
         var found = false

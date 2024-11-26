@@ -30,12 +30,14 @@ import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.graphics.drawable.IconCompat
-import com.benasher44.uuid.uuid4
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 import android.app.Notification as AndroidNotification
 import android.app.NotificationChannel as AndroidNotificationChannel
 
+@OptIn(ExperimentalUuidApi::class)
 internal class AndroidNotificationHandle(
-    val tag: String = uuid4().toString(),
+    val tag: Uuid = Uuid.random(),
     var value: AndroidNotification? = null,
 ) : NotificationHandle {
     override fun equals(other: Any?): Boolean {
@@ -44,7 +46,7 @@ internal class AndroidNotificationHandle(
     }
 
     override fun hashCode(): Int = tag.hashCode()
-    override fun toString(): String = tag
+    override fun toString(): String = tag.toString()
 }
 
 internal class AndroidNotificationHandler(
@@ -88,6 +90,7 @@ internal class AndroidNotificationHandler(
         }
     }
 
+    @OptIn(ExperimentalUuidApi::class)
     internal fun createImpl(
         notification: Notification,
         handle: AndroidNotificationHandle = AndroidNotificationHandle(),
@@ -125,6 +128,7 @@ internal class AndroidNotificationHandler(
 
     override fun create(notification: Notification): NotificationHandle = createImpl(notification)
 
+    @OptIn(ExperimentalUuidApi::class)
     @SuppressLint("MissingPermission") // It is the callers responsibility to make sure perms are defined
     override suspend fun push(notification: Notification): NotificationHandle {
         if (!hasPermissions) return AndroidNotificationHandle()
@@ -156,9 +160,10 @@ internal class AndroidNotificationHandler(
  * Same as [NotificationHandler.create] but with an additional
  * builder callback to customize the platform-specific notification instance.
  */
+@OptIn(ExperimentalUuidApi::class)
 fun NotificationHandler.create(
     notification: Notification,
-    tag: String = uuid4().toString(),
+    tag: Uuid = Uuid.random(),
     callback: NotificationCompat.Builder.() -> Unit,
 ): NotificationHandle {
     require(this is AndroidNotificationHandler)
@@ -173,10 +178,11 @@ fun NotificationHandler.create(
  * Same as [NotificationHandler.push] but with an additional
  * builder callback to customize the platform-specific notification instance.
  */
+@OptIn(ExperimentalUuidApi::class)
 @SuppressLint("MissingPermission") // It is the callers responsibility to make sure perms are defined
 fun NotificationHandler.push(
     notification: Notification,
-    tag: String = uuid4().toString(),
+    tag: Uuid = Uuid.random(),
     callback: NotificationCompat.Builder.() -> Unit,
 ): NotificationHandle {
     require(this is AndroidNotificationHandler)
@@ -194,6 +200,7 @@ fun NotificationHandler.push(
  * Same as [NotificationHandler.update] but with an additional
  * builder callback to customize the platform-specific notification instance.
  */
+@OptIn(ExperimentalUuidApi::class)
 @SuppressLint("MissingPermission") // It is the callers responsibility to make sure perms are defined
 fun NotificationHandler.update(
     handle: NotificationHandle,
@@ -387,7 +394,8 @@ fun NotificationIcon.toBitmap(): Bitmap {
  * @param tag The tag of the notification associated with this handle.
  * @return A new [NotificationHandle] instance containing the given tag.
  */
-fun NotificationHandle.Companion.create(tag: String): NotificationHandle = AndroidNotificationHandle(tag)
+@OptIn(ExperimentalUuidApi::class)
+fun NotificationHandle.Companion.create(tag: Uuid): NotificationHandle = AndroidNotificationHandle(tag)
 
 /**
  * Creates a new Android notification handler instance with the given name and ID.

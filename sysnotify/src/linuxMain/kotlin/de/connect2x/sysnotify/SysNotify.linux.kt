@@ -14,39 +14,30 @@
  */
 
 @file:OptIn(ExperimentalForeignApi::class)
-@file:Suppress("NOTHING_TO_INLINE")
 
 package de.connect2x.sysnotify
 
-import kotlinx.cinterop.ByteVar
-import kotlinx.cinterop.COpaquePointer
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.StableRef
 import kotlinx.cinterop.addressOf
-import kotlinx.cinterop.alloc
 import kotlinx.cinterop.allocPointerTo
-import kotlinx.cinterop.asStableRef
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.pointed
 import kotlinx.cinterop.ptr
-import kotlinx.cinterop.staticCFunction
 import kotlinx.cinterop.toKStringFromUtf8
 import kotlinx.cinterop.usePinned
 import kotlinx.cinterop.value
 import libnotify.GError
 import libnotify.GdkColorspace
+import libnotify.NotifyNotification
+import libnotify.NotifyUrgency
 import libnotify.g_bytes_new_static
 import libnotify.g_bytes_unref
 import libnotify.g_error_free
 import libnotify.g_object_unref
 import libnotify.gdk_pixbuf_new_from_bytes
 import libnotify.gdk_pixbuf_unref
-import libnotify.gpointer
-import libnotify.NotifyNotification
-import libnotify.NotifyUrgency
 import libnotify.notify_init
-import libnotify.notify_notification_add_action
 import libnotify.notify_notification_close
 import libnotify.notify_notification_new
 import libnotify.notify_notification_set_app_name
@@ -80,7 +71,7 @@ internal class LinuxNotificationHandler(
     }
 
     override val platform: NotificationPlatform = NotificationPlatform.LINUX
-    override val hasPermissions: Boolean = false // TODO: Implement hasPermissions flag
+    override val hasPermissions: Boolean = true // Desktop on Linux always has permission to send notifications
 
     override val capabilities: NotificationCapabilities = NotificationCapabilities(
         isTitleSupported = true,
@@ -98,6 +89,7 @@ internal class LinuxNotificationHandler(
         notify_uninit()
     }
 
+    @Suppress("NOTHING_TO_INLINE")
     private inline fun setIcon(nativeNotification: CPointer<NotifyNotification>, notification: Notification) {
         notification.icon?.let { icon ->
             val width = icon.width
@@ -115,6 +107,7 @@ internal class LinuxNotificationHandler(
         }
     }
 
+    @Suppress("NOTHING_TO_INLINE")
     private inline fun show(notification: CPointer<NotifyNotification>): Boolean {
         memScoped {
             val errorAddress = allocPointerTo<GError>()
@@ -126,7 +119,8 @@ internal class LinuxNotificationHandler(
         return true
     }
 
-    override fun create(notification: Notification): NotificationHandle = InvalidNotificationHandle // TODO: implement this
+    override fun create(notification: Notification): NotificationHandle =
+        InvalidNotificationHandle // TODO: implement this
 
     override suspend fun push(notification: Notification): NotificationHandle? {
         val notificationAddress = notify_notification_new(

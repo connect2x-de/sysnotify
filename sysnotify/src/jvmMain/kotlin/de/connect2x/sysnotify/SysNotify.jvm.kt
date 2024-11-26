@@ -29,7 +29,7 @@ private class JvmNotificationHandler(
 ) : NotificationHandler {
     private val address: Long = NativeNotificationHandler.create(name, id, {
         activationCallback(it) // Delegate the call to the closure
-    }, priority.ordinal)
+    })
     override val platform: NotificationPlatform =
         NotificationPlatform.entries[NativeNotificationHandler.getPlatform(address)]
     override val hasPermissions: Boolean = false // TODO: Implement hasPermissions flag

@@ -13,43 +13,76 @@
  * limitations under the License.
  */
 
-import org.gradle.configurationcache.extensions.capitalized
+import de.undercouch.gradle.tasks.download.Download
+import org.gradle.internal.extensions.stdlib.capitalized
 import org.gradle.internal.os.OperatingSystem
 import org.gradle.jvm.tasks.Jar
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
+import java.nio.file.Path
 import kotlin.io.path.Path
+import kotlin.io.path.createDirectories
 import kotlin.io.path.div
+import kotlin.io.path.exists
+import kotlin.io.path.notExists
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.androidLibrary)
-    id("maven-publish")
+    alias(libs.plugins.downloadTask)
+    `maven-publish`
 }
 
-// Remap host architecture to some consistent aliases (mostly used for native packaging)
-val architecture = when (System.getProperty("os.arch")) {
-    "i386", "i486", "i586", "i686", "x86", "x32" -> "x86"
-    "x64", "amd64", "x86_64", "x86-64" -> "x64"
-    "aarch64", "arm64" -> "arm64"
-    "arm", "armv7", "aarch32" -> "arm32"
-    else -> throw IllegalStateException("Could not determine host architecture")
+fun OperatingSystem.getFriendlyName(): String = familyName.replace("os x", "macos")
+fun OperatingSystem.getPlatformPair(arch: String): String = "${getFriendlyName()}-$arch"
+val hostOs: OperatingSystem = OperatingSystem.current()
+
+operator fun DirectoryProperty.div(name: String): Path = get().asFile.toPath() / name
+
+val ensureBuildDirectory: Task = tasks.create("ensureBuildDirectory") {
+    val path = layout.buildDirectory.get().asFile.toPath()
+    doLast { path.createDirectories() }
+    onlyIf { path.notExists() }
 }
-println("Detected host architecture $architecture")
 
-val os = OperatingSystem.current()
-val platform = os.familyName.replace("os x", "macos") // Fix this mistake..
-val platformPair = "$platform-$architecture"
-println("Detected host OS $platform")
+fun downloadSysnotifyBinariesTask(platform: String, arch: String): Download =
+    tasks.create<Download>("downloadSysnotifyBinaries${platform.capitalized()}${arch.capitalized()}") {
+        group = "sysnotifyBinaries"
+        dependsOn(ensureBuildDirectory)
+        val fileName = "build-$platform-$arch.zip"
+        src("https://gitlab.com/api/v4/projects/64488791/packages/generic/build/v${libs.versions.sysnotifyBinaries.get()}/$fileName")
+        val destPath = layout.buildDirectory / "sysnotify-platform" / fileName
+        dest(destPath.toFile())
+        overwrite(true) // Always overwrite when downloading binaries
+        onlyIf { destPath.notExists() }
+    }
 
-val javaHome = Path(System.getProperty("java.home")) // For JNI interop
-println("Found java home at $javaHome")
-val jniHeaders = javaHome / "include"
-val jniLibraries = javaHome / "lib"
+val downloadSdlBinariesWindowsX64: Download = downloadSysnotifyBinariesTask("windows", "x64")
+val downloadSdlBinariesLinuxX64: Download = downloadSysnotifyBinariesTask("linux", "x64")
+val downloadSdlBinariesLinuxArm64: Download = downloadSysnotifyBinariesTask("linux", "arm64")
 
-val comPath = project(":sysnotify-com").projectDir.toPath()
-val comBuildOutput = comPath / "build" / "cmake" / "RelWithDebInfo"
+fun extractSysnotifyBinariesTask(platform: String, arch: String): Copy =
+    tasks.create<Copy>("extractSysnotifyBinaries${platform.capitalized()}${arch.capitalized()}") {
+        group = "sysnotifyBinaries"
+        val downloadTaskName = "downloadSysnotifyBinaries${platform.capitalized()}${arch.capitalized()}"
+        dependsOn(downloadTaskName)
+        val platformPair = "$platform-$arch"
+        from(zipTree((layout.buildDirectory / "sysnotify-platform" / "build-$platformPair.zip").toFile()))
+        val destPath = layout.buildDirectory / "sysnotify-platform" / platformPair
+        into(destPath.toFile())
+        onlyIf { destPath.notExists() }
+    }
+
+val extractSysnotifyBinariesWindowsX64: Copy = extractSysnotifyBinariesTask("windows", "x64")
+val extractSysnotifyBinariesLinuxX64: Copy = extractSysnotifyBinariesTask("linux", "x64")
+val extractSysnotifyBinariesLinuxArm64: Copy = extractSysnotifyBinariesTask("linux", "arm64")
+
+val extractSysnotifyBinaries: Task = tasks.create("extractSysnotifyBinaries") {
+    group = "sysnotifyBinaries"
+    dependsOn(extractSysnotifyBinariesWindowsX64)
+    dependsOn(extractSysnotifyBinariesLinuxX64)
+    dependsOn(extractSysnotifyBinariesLinuxArm64)
+}
 
 kotlin {
     val kotlinJvmVersion = libs.versions.jvmTarget.get()
@@ -82,17 +115,11 @@ kotlin {
     }
     listOf(macosX64(), macosArm64()).forEach { target ->
         target.apply {
-            compilations["main"].cinterops {
-                val jni by creating {
-                    compilerOpts("-I${jniHeaders / "darwin"}")
-                    headers("${jniHeaders / "jni.h"}")
-                }
-            }
             binaries {
                 framework {
-                    baseName = "sysnotify"
+                    baseName = rootProject.name
                 }
-                sharedLib {}
+                sharedLib()
             }
         }
     }
@@ -100,92 +127,59 @@ kotlin {
         target.apply {
             binaries {
                 framework {
-                    baseName = "sysnotify"
+                    baseName = rootProject.name
+                }
+                sharedLib()
+            }
+        }
+    }
+    listOf(linuxX64(), linuxArm64()).forEach {
+        it.apply {
+            compilations.getByName("main") {
+                cinterops {
+                    val libnotify by creating {
+                        tasks.getByName(interopProcessingTaskName) {
+                            dependsOn(extractSysnotifyBinaries)
+                        }
+                    }
+                }
+            }
+            binaries.sharedLib()
+        }
+    }
+    mingwX64 {
+        compilations.getByName("main") {
+            cinterops {
+                val sysnotifycom by creating {
+                    tasks.getByName(interopProcessingTaskName) {
+                        dependsOn(extractSysnotifyBinaries)
+                    }
                 }
             }
         }
-    }
-    linuxX64 {
-        compilations["main"].cinterops {
-            val libnotify by creating {}
-            val jni by creating {
-                compilerOpts("-I${jniHeaders / "linux"}")
-                headers("${jniHeaders / "jni.h"}")
-            }
-        }
-        binaries.sharedLib {}
-    }
-    mingwX64 {
-        compilations["main"].cinterops {
-            val sysnotifycom by creating {
-                headers(
-                    "${comPath / "include" / "sysnotify_types.h"}",
-                    "${comPath / "include" / "sysnotify.h"}"
-                )
-            }
-            val jni by creating {
-                compilerOpts("-I${jniHeaders / "win32"}")
-                headers("${jniHeaders / "jni.h"}")
-            }
-        }
-        binaries {
-            sharedLib {
-                linkerOpts(
-                    "-L$comBuildOutput",
-                    "-L$jniLibraries",
-                    "-lsysnotify-com",
-                    "-ljawt",
-                    "-ljvm"
-                )
-            }
-        }
+        binaries.sharedLib()
     }
     applyDefaultHierarchyTemplate()
     sourceSets {
-        commonMain {
-            dependencies {
-                api(libs.kotlinx.coroutines)
-                implementation(libs.uuid)
-            }
-        }
         val desktopMain by creating {
             dependsOn(nativeMain.get())
+            dependencies {
+                implementation(libs.multiplatformJni)
+            }
         }
         macosMain { dependsOn(desktopMain) }
         linuxMain { dependsOn(desktopMain) }
         mingwMain { dependsOn(desktopMain) }
-    }
-    applyCrossCompilationHack()
-}
-
-fun applyCrossCompilationHack() {
-    // Disable cross-compilation - https://youtrack.jetbrains.com/issue/KT-30498/Option-to-disable-kotlin-native-cross-compilation
-    when {
-        os.isLinux -> kotlin.targets.filter { "linux" !in it.name }
-        os.isWindows -> kotlin.targets.filter { "mingw" !in it.name }
-        os.isMacOsX -> kotlin.targets.filter { "linux" in it.name || "mingw" in it.name }
-        else -> emptyList()
-    }.mapNotNull { it as? KotlinNativeTarget }.forEach { target ->
-        target.apply {
-            compilations.all {
-                cinterops.all { tasks[interopProcessingTaskName].enabled = false }
-                compileTaskProvider { enabled = false }
-                tasks[processResourcesTaskName].enabled = false
-            }
-            binaries.all { linkTask.enabled = false }
-            mavenPublication {
-                val publicationToDisable = this
-                tasks.withType<AbstractPublishToMaven>()
-                    .all { onlyIf { publication != publicationToDisable } }
-                tasks.withType<GenerateModuleMetadata>()
-                    .all { onlyIf { publication.get() != publicationToDisable } }
+        commonMain {
+            dependencies {
+                api(libs.kotlinx.coroutines)
             }
         }
     }
 }
 
 android {
-    namespace = "de.connect2x.sysnotify"
+    namespace = "${rootProject.group}.${rootProject.name}"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
     defaultConfig {
         minSdk = libs.versions.android.minSdk.get().toInt()
@@ -200,8 +194,66 @@ dependencies {
     implementation(libs.androidx.core)
 }
 
-// If we are on Windows, inject the CMake submodule as a dependency to all 'mingw' tasks
-if (os.isWindows) {
+fun jvmNativesJar(os: OperatingSystem, arch: String): Jar {
+    // Create custom JAR task(s) for packaging shared libraries produced by Kotlin/Native targets
+    val linkTask = tasks.let { taskList ->
+        when {
+            os.isLinux -> taskList.findByName("linkReleaseSharedLinux${arch.capitalized()}")
+            os.isWindows -> taskList.findByName("linkReleaseSharedMingw${arch.capitalized()}")
+            os.isMacOsX -> taskList.findByName("linkReleaseSharedMacos${arch.capitalized()}")
+            else -> null
+        }
+    } ?: throw IllegalStateException("Could not find matching Kotlin/Native link task for building JVM bindings")
+    println("Using '${linkTask.name}' as JVM bindings link task")
+    val platformPair = os.getPlatformPair(arch)
+    val taskName = "jvmNativesJar${os.getFriendlyName().capitalized()}${arch.capitalized()}"
+    configurations.create(taskName)
+    val classifier = "jvm-natives-$platformPair"
+
+    return task(taskName, Jar::class) {
+        dependsOn(linkTask)
+        archiveClassifier = classifier
+        from(linkTask.outputs) {
+            exclude("*.h", "*.def")
+        }
+        if (os.isWindows) from(
+            Path("sysnotify-com") / "lib" / "sysnotify-com.dll",      // Make sure to ship the COM adaptor..
+            // TODO: implement the COM dummy executable
+            //Path("sysnotify-com") / "lib" / "sysnotify-com-dummy.exe" // ..as well as the COM dummy for stubbing toast events.
+        )
+        into("natives/$platformPair")
+    }.apply {
+        tasks {
+            assemble {
+                dependsOn(this@apply)
+                mustRunAfter(this@apply)
+            }
+        }
+        artifacts {
+            add(taskName, this@apply) // Make sure our natives JAR is added as an artifact
+        }
+        publishing {
+            publications {
+                create<MavenPublication>(taskName) {
+                    artifact(this@apply) {
+                        this.classifier = ""
+                    }
+                    artifactId = "${rootProject.name}-$classifier" // These get their own unique artifact IDs
+                }
+            }
+        }
+    }
+}
+
+val jvmNativesMacosX64: Jar = jvmNativesJar(OperatingSystem.forName("osx"), "x64")
+val jvmNativesMacosArm64: Jar = jvmNativesJar(OperatingSystem.forName("osx"), "arm64")
+val jvmNativesLinunxX64: Jar = jvmNativesJar(OperatingSystem.forName("linux"), "x64")
+val jvmNativesLinuxArm64: Jar = jvmNativesJar(OperatingSystem.forName("linux"), "arm64")
+val jvmNativesMingwX64: Jar = jvmNativesJar(OperatingSystem.forName("windows"), "x64")
+
+// When on windows, always rebuild-module from source instead of using prebuilt binaries
+/*
+if (hostOs.isWindows) {
     tasks {
         filter { it.name.contains("mingw", true) }.forEach { task ->
             task.apply {
@@ -223,50 +275,14 @@ if (os.isWindows) {
         }
     }
 }
-
-// Create custom JAR task(s) for packaging shared libraries produced by Kotlin/Native targets
-val linkTask = tasks.let { taskList ->
-    when {
-        os.isLinux -> taskList.find { it.name == "linkReleaseSharedLinux${architecture.capitalized()}" }
-        os.isWindows -> taskList.find { it.name == "linkReleaseSharedMingw${architecture.capitalized()}" }
-        os.isMacOsX -> taskList.find { it.name == "linkReleaseSharedMacos${architecture.capitalized()}" }
-        else -> throw IllegalStateException("JVM bindings are not supported on the current platform")
-    }
-        ?: throw IllegalStateException("Could not find matching Kotlin/Native link task for building JVM bindings")
-}
-println("Using '${linkTask.name}' as JVM bindings link task")
-
-val nativesJar = task("nativesJar", Jar::class) {
-    dependsOn(linkTask)
-    archiveClassifier = "jvm-natives-$platformPair"
-    from(linkTask.outputs) {
-        exclude("*.h", "*.def")
-    }
-    if (os.isWindows) from(comBuildOutput / "sysnotify-com.dll") // Make sure to ship the COM adaptor
-    into("natives/$platformPair")
-}
-
-tasks {
-    assemble {
-        dependsOn(nativesJar)
-        mustRunAfter(nativesJar)
-    }
-}
-
-configurations {
-    val nativesJar by creating
-}
-
-artifacts {
-    add("nativesJar", nativesJar) // Make sure our natives JAR is added as an artifact
-}
+*/
 
 publishing {
     repositories {
         repositories {
             System.getenv("CI_API_V4_URL")?.let { apiUrl ->
                 maven {
-                    url = uri("$apiUrl/projects/58749664/packages/maven")
+                    url = uri("$apiUrl/projects/${System.getenv("CI_PROJECT_ID")}/packages/maven")
                     name = "GitLab"
                     credentials(HttpHeaderCredentials::class) {
                         name = "Job-Token"
@@ -280,15 +296,12 @@ publishing {
         }
     }
     publications {
-        create<MavenPublication>("nativesJar") {
-            artifact(nativesJar)
-        }
         configureEach {
             if (this is MavenPublication) {
                 pom {
                     name.set(project.name)
                     description.set("Cross-platform system notifications for Kotlin Multiplatform")
-                    url.set("https://gitlab.com/connect2x/sysnotify")
+                    url.set(System.getenv("CI_PROJECT_URL"))
                     licenses {
                         license {
                             name.set("Apache License 2.0")
@@ -303,7 +316,7 @@ publishing {
                         }
                     }
                     scm {
-                        url.set("https://gitlab.com/connect2x/sysnotify")
+                        url.set(this@pom.url)
                     }
                 }
             }

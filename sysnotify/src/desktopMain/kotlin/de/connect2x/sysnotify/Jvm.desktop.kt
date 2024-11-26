@@ -13,11 +13,7 @@
  * limitations under the License.
  */
 
-@file:OptIn(ExperimentalForeignApi::class)
-
 package de.connect2x.sysnotify
-
-import kotlinx.cinterop.ExperimentalForeignApi
 
 internal interface JvmType {
     val typeName: String

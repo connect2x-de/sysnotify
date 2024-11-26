@@ -13,22 +13,14 @@
  * limitations under the License.
  */
 
-import io.karma.gradlecm.CMakeBuildTask
+package de.connect2x.sysnotify.sample
 
-plugins {
-    alias(libs.plugins.gradleCMake)
-}
+import androidx.compose.ui.window.Window
+import de.connect2x.sysnotify.NotificationHandler
+import de.connect2x.sysnotify.create
 
-cmake {
-    sourceFolder = projectDir
-    buildStaticLibs = true
-    buildSharedLibs = true
-    buildConfig = "RelWithDebInfo"
-    buildClean = false
-}
-
-tasks {
-    withType<CMakeBuildTask> {
-        sourceFolder = projectDir
+fun main() = Window {
+    NotificationHandler.create("Sysnotify Sample", "de.connect2x.sysnotify.sample").use {
+        App(it)
     }
 }

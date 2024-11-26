@@ -14,18 +14,20 @@
  */
 
 plugins {
-    alias(libs.plugins.androidLibrary).apply(false)
-    alias(libs.plugins.kotlin.multiplatform).apply(false)
+    alias(libs.plugins.androidLibrary) apply false
+    alias(libs.plugins.kotlin.multiplatform) apply false
     // For sample
     alias(libs.plugins.androidApplication) apply false
-    alias(libs.plugins.compose.compiler) apply false
-    alias(libs.plugins.compose) apply false
-    alias(libs.plugins.kotlinx.serialization) apply false
+    alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.compose)
+    alias(libs.plugins.kotlinx.serialization)
 }
+
+val baseVersion: String = libs.versions.sysnotify.get()
 
 allprojects {
     group = "de.connect2x"
-    version = withVersionSuffix("1.4.0")
+    version = withVersionSuffix(baseVersion)
 
     dependencyLocking {
         lockMode = LockMode.LENIENT
@@ -36,5 +38,6 @@ allprojects {
         mavenLocal()
         mavenCentral()
         google()
+        maven("https://git.karmakrafts.dev/api/v4/projects/307/packages/maven") // Multiplatform JNI
     }
 }
