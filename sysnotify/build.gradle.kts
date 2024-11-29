@@ -20,7 +20,6 @@ import org.gradle.jvm.tasks.Jar
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.nio.file.Path
-import kotlin.io.path.Path
 import kotlin.io.path.createDirectories
 import kotlin.io.path.div
 import kotlin.io.path.exists
@@ -58,8 +57,6 @@ fun downloadSysnotifyBinariesTask(platform: String, arch: String): Download =
     }
 
 val downloadSdlBinariesWindowsX64: Download = downloadSysnotifyBinariesTask("windows", "x64")
-val downloadSdlBinariesLinuxX64: Download = downloadSysnotifyBinariesTask("linux", "x64")
-val downloadSdlBinariesLinuxArm64: Download = downloadSysnotifyBinariesTask("linux", "arm64")
 
 fun extractSysnotifyBinariesTask(platform: String, arch: String): Copy =
     tasks.create<Copy>("extractSysnotifyBinaries${platform.capitalized()}${arch.capitalized()}") {
@@ -74,15 +71,57 @@ fun extractSysnotifyBinariesTask(platform: String, arch: String): Copy =
     }
 
 val extractSysnotifyBinariesWindowsX64: Copy = extractSysnotifyBinariesTask("windows", "x64")
-val extractSysnotifyBinariesLinuxX64: Copy = extractSysnotifyBinariesTask("linux", "x64")
-val extractSysnotifyBinariesLinuxArm64: Copy = extractSysnotifyBinariesTask("linux", "arm64")
 
 val extractSysnotifyBinaries: Task = tasks.create("extractSysnotifyBinaries") {
     group = "sysnotifyBinaries"
     dependsOn(extractSysnotifyBinariesWindowsX64)
-    dependsOn(extractSysnotifyBinariesLinuxX64)
-    dependsOn(extractSysnotifyBinariesLinuxArm64)
 }
+
+fun headerDownloadTask(name: String, url: String, version: Provider<String>): Exec = tasks.create<Exec>("download${name.capitalized()}Headers") {
+    group = "sysnotifyHeaders"
+    dependsOn(ensureBuildDirectory)
+    workingDir = layout.buildDirectory.get().asFile
+    commandLine("git", "clone", "--branch", version.get(), "--single-branch", url, name)
+    onlyIf { (layout.buildDirectory / name).notExists() }
+}
+
+val downloadGlibHeaders: Exec = headerDownloadTask("glib", "https://github.com/GNOME/glib", libs.versions.glib)
+val downloadGdkPixbufHeaders: Exec = headerDownloadTask("gdkPixbuf", "https://github.com/GNOME/gdk-pixbuf", libs.versions.gdkPixbuf)
+val downloadLibnotifyHeaders: Exec = headerDownloadTask("libnotify", "https://github.com/GNOME/libnotify", libs.versions.libnotify)
+
+fun headerUpdateTask(name: String): Exec = tasks.create<Exec>("update${name.capitalized()}Headers") {
+    group = "sysnotifyHeaders"
+    dependsOn("download${name.capitalized()}Headers")
+    workingDir = (layout.buildDirectory / name).toFile()
+    commandLine("git", "pull", "--force")
+    onlyIf { (layout.buildDirectory / name).exists() }
+}
+
+val updateGlibHeaders: Exec = headerUpdateTask("glib")
+val updateGdkPixbufHeaders: Exec = headerUpdateTask("gdkPixbuf")
+val updateLibnotifyHeaders: Exec = headerUpdateTask("libnotify")
+
+fun headerConfigureTask(name: String): Exec = tasks.create<Exec>("configure${name.capitalized()}Headers") {
+    group = "sysnotifyHeaders"
+    dependsOn("update${name.capitalized()}Headers")
+    workingDir = (layout.buildDirectory / name).toFile()
+    commandLine("meson", "setup", "build")
+}
+
+val configureGlibHeaders: Exec = headerConfigureTask("glib")
+val configureGdkPixbufHeaders: Exec = headerConfigureTask("gdkPixbuf")
+val configureLibnotifyHeaders: Exec = headerConfigureTask("libnotify")
+
+fun headerBuildTask(name: String): Exec = tasks.create<Exec>("build${name.capitalized()}Headers") {
+    group = "sysnotifyHeaders"
+    dependsOn("configure${name.capitalized()}Headers")
+    workingDir = (layout.buildDirectory / name).toFile()
+    commandLine("meson", "compile", "-C", "build")
+}
+
+val buildGlibHeaders: Exec = headerBuildTask("glib")
+val buildGdkPixbufHeaders: Exec = headerBuildTask("gdkPixbuf")
+val buildLibnotifyHeaders: Exec = headerBuildTask("libnotify")
 
 kotlin {
     val kotlinJvmVersion = libs.versions.jvmTarget.get()
@@ -139,7 +178,9 @@ kotlin {
                 cinterops {
                     val libnotify by creating {
                         tasks.getByName(interopProcessingTaskName) {
-                            dependsOn(extractSysnotifyBinaries)
+                            dependsOn(buildGlibHeaders)
+                            dependsOn(buildGdkPixbufHeaders)
+                            dependsOn(buildLibnotifyHeaders)
                         }
                     }
                 }
@@ -165,6 +206,7 @@ kotlin {
             dependsOn(nativeMain.get())
             dependencies {
                 implementation(libs.multiplatformJni)
+                implementation(libs.multiplatformDlfcn)
             }
         }
         macosMain { dependsOn(desktopMain) }
@@ -212,22 +254,22 @@ fun jvmNativesJar(os: OperatingSystem, arch: String): Jar {
 
     return task(taskName, Jar::class) {
         dependsOn(linkTask)
+        dependsOn(extractSysnotifyBinaries)
         archiveClassifier = classifier
         from(linkTask.outputs) {
             exclude("*.h", "*.def")
         }
-        if (os.isWindows) from(
-            Path("sysnotify-com") / "lib" / "sysnotify-com.dll",      // Make sure to ship the COM adaptor..
-            // TODO: implement the COM dummy executable
-            //Path("sysnotify-com") / "lib" / "sysnotify-com-dummy.exe" // ..as well as the COM dummy for stubbing toast events.
-        )
+        val platformDir = layout.buildDirectory / "sysnotify-platform"
+        if (os.isWindows) {
+            from(platformDir / "windows-$arch" / "lib") {
+                include("*.dll")
+            }
+        }
         into("natives/$platformPair")
+        outputs.upToDateWhen { false } // These should always be generated fresh as it doesn't take any time
     }.apply {
         tasks {
-            assemble {
-                dependsOn(this@apply)
-                mustRunAfter(this@apply)
-            }
+            assemble { dependsOn(this@apply) }
         }
         artifacts {
             add(taskName, this@apply) // Make sure our natives JAR is added as an artifact
@@ -250,32 +292,6 @@ val jvmNativesMacosArm64: Jar = jvmNativesJar(OperatingSystem.forName("osx"), "a
 val jvmNativesLinunxX64: Jar = jvmNativesJar(OperatingSystem.forName("linux"), "x64")
 val jvmNativesLinuxArm64: Jar = jvmNativesJar(OperatingSystem.forName("linux"), "arm64")
 val jvmNativesMingwX64: Jar = jvmNativesJar(OperatingSystem.forName("windows"), "x64")
-
-// When on windows, always rebuild-module from source instead of using prebuilt binaries
-/*
-if (hostOs.isWindows) {
-    tasks {
-        filter { it.name.contains("mingw", true) }.forEach { task ->
-            task.apply {
-                val dependencies = arrayOf(
-                    ":sysnotify-com:cmakeConfigure",
-                    ":sysnotify-com:cmakeBuild"
-                )
-                dependsOn(*dependencies)
-                mustRunAfter(*dependencies)
-            }
-        }
-        val cmakeConfigure = findByName(":sysnotify-com:cmakeConfigure")?.apply {
-            dependsOn(":sysnotify-com:cmakeClean")
-            mustRunAfter(":sysnotify-com:cmakeClean")
-        }
-        findByName(":sysnotify-com:cmakeBuild")?.apply {
-            dependsOn(cmakeConfigure)
-            mustRunAfter(cmakeConfigure)
-        }
-    }
-}
-*/
 
 publishing {
     repositories {

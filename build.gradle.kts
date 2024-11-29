@@ -39,5 +39,6 @@ allprojects {
         mavenCentral()
         google()
         maven("https://git.karmakrafts.dev/api/v4/projects/307/packages/maven") // Multiplatform JNI
+        maven("https://git.karmakrafts.dev/api/v4/projects/310/packages/maven") // Multiplatform dlfcn
     }
 }
