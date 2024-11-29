@@ -22,7 +22,6 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
 import kotlin.io.path.div
-import kotlin.io.path.exists
 import kotlin.io.path.notExists
 
 plugins {
