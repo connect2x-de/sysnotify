@@ -77,52 +77,6 @@ val extractSysnotifyBinaries: Task = tasks.create("extractSysnotifyBinaries") {
     dependsOn(extractSysnotifyBinariesWindowsX64)
 }
 
-fun headerDownloadTask(name: String, url: String, version: Provider<String>): Exec = tasks.create<Exec>("download${name.capitalized()}Headers") {
-    group = "sysnotifyHeaders"
-    dependsOn(ensureBuildDirectory)
-    workingDir = layout.buildDirectory.get().asFile
-    commandLine("git", "clone", "--branch", version.get(), "--single-branch", url, name)
-    onlyIf { (layout.buildDirectory / name).notExists() }
-}
-
-val downloadGlibHeaders: Exec = headerDownloadTask("glib", "https://github.com/GNOME/glib", libs.versions.glib)
-val downloadGdkPixbufHeaders: Exec = headerDownloadTask("gdkPixbuf", "https://github.com/GNOME/gdk-pixbuf", libs.versions.gdkPixbuf)
-val downloadLibnotifyHeaders: Exec = headerDownloadTask("libnotify", "https://github.com/GNOME/libnotify", libs.versions.libnotify)
-
-fun headerUpdateTask(name: String): Exec = tasks.create<Exec>("update${name.capitalized()}Headers") {
-    group = "sysnotifyHeaders"
-    dependsOn("download${name.capitalized()}Headers")
-    workingDir = (layout.buildDirectory / name).toFile()
-    commandLine("git", "pull", "--force")
-    onlyIf { (layout.buildDirectory / name).exists() }
-}
-
-val updateGlibHeaders: Exec = headerUpdateTask("glib")
-val updateGdkPixbufHeaders: Exec = headerUpdateTask("gdkPixbuf")
-val updateLibnotifyHeaders: Exec = headerUpdateTask("libnotify")
-
-fun headerConfigureTask(name: String): Exec = tasks.create<Exec>("configure${name.capitalized()}Headers") {
-    group = "sysnotifyHeaders"
-    dependsOn("update${name.capitalized()}Headers")
-    workingDir = (layout.buildDirectory / name).toFile()
-    commandLine("meson", "setup", "build")
-}
-
-val configureGlibHeaders: Exec = headerConfigureTask("glib")
-val configureGdkPixbufHeaders: Exec = headerConfigureTask("gdkPixbuf")
-val configureLibnotifyHeaders: Exec = headerConfigureTask("libnotify")
-
-fun headerBuildTask(name: String): Exec = tasks.create<Exec>("build${name.capitalized()}Headers") {
-    group = "sysnotifyHeaders"
-    dependsOn("configure${name.capitalized()}Headers")
-    workingDir = (layout.buildDirectory / name).toFile()
-    commandLine("meson", "compile", "-C", "build")
-}
-
-val buildGlibHeaders: Exec = headerBuildTask("glib")
-val buildGdkPixbufHeaders: Exec = headerBuildTask("gdkPixbuf")
-val buildLibnotifyHeaders: Exec = headerBuildTask("libnotify")
-
 kotlin {
     val kotlinJvmVersion = libs.versions.jvmTarget.get()
     val kotlinJvmTarget = JvmTarget.fromTarget(kotlinJvmVersion)
@@ -176,13 +130,7 @@ kotlin {
         it.apply {
             compilations.getByName("main") {
                 cinterops {
-                    val libnotify by creating {
-                        tasks.getByName(interopProcessingTaskName) {
-                            dependsOn(buildGlibHeaders)
-                            dependsOn(buildGdkPixbufHeaders)
-                            dependsOn(buildLibnotifyHeaders)
-                        }
-                    }
+                    val libnotify by creating
                 }
             }
             binaries.sharedLib()

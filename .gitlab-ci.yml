@@ -17,7 +17,7 @@ variables:
   GRADLE_USER_HOME: $CI_PROJECT_DIR/.gradle
   KONAN_DATA_DIR: $CI_PROJECT_DIR/.konan
   BUILD_LINUX_IMAGE_NAME: registry.gitlab.com/trixnity/trixnity/trixnity-build-linux:latest
-  LINUX_DEPENDENCIES: keyboard-configuration gcc g++ gcc-multilib libnotify-bin libnotify-dev meson cmake rst2man
+  LINUX_DEPENDENCIES: keyboard-configuration gcc g++ gcc-multilib libnotify-bin libnotify-dev meson cmake python3-docutils
 
 .cache-linux: &cache-linux
   - key: global-sysnotify-cache-linux

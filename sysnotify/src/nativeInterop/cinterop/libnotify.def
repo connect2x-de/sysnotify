@@ -2,26 +2,15 @@ package = libnotify
 headers = libnotify/notify.h
 
 compilerOpts = \
-    -Ibuild/glib/build \
-    -Ibuild/glib/build/glib \
-    -Ibuild/glib/build/gio \
-    -Ibuild/glib/build/girepository \
-    -Ibuild/glib/build/gmodule \
-    -Ibuild/glib/build/gobject \
-    -Ibuild/glib/build/gthread \
-    -Ibuild/glib \
-    -Ibuild/glib/gio \
-    -Ibuild/glib/girepository \
-    -Ibuild/glib/glib \
-    -Ibuild/glib/gmodule \
-    -Ibuild/glib/gobject \
-    -Ibuild/glib/gthread \
-    -Ibuild/gdkPixbuf \
-    -Ibuild/gdkPixbuf/build \
-    -Ibuild/gdkPixbuf/build/gdk-pixbuf \
-    -Ibuild/libnotify \
-    -Ibuild/libnotify/build \
-    -Ibuild/libnotify/build/libnotify
+    -Iinclude \
+    -Iinclude/glib \
+    -Iinclude/gio \
+    -Iinclude/gmodule \
+    -Iinclude/gobject \
+    -Iinclude/girepository \
+    -Iinclude/gthread \
+    -Iinclude/gdk-pixbuf \
+    -Iinclude/libnotify
 
 include = GError, GdkPixbuf, NotifyNotification, NotifyUrgency, gboolean, gint, GBytes, GdkColorspace, GdkColorspace
 exclude = *
