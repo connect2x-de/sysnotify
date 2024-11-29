@@ -17,6 +17,7 @@ variables:
   GRADLE_USER_HOME: $CI_PROJECT_DIR/.gradle
   KONAN_DATA_DIR: $CI_PROJECT_DIR/.konan
   BUILD_LINUX_IMAGE_NAME: registry.gitlab.com/trixnity/trixnity/trixnity-build-linux:latest
+  LINUX_DEPENDENCIES: keyboard-configuration gcc g++ gcc-multilib libnotify-bin libnotify-dev meson cmake
 
 .cache-linux: &cache-linux
   - key: global-sysnotify-cache-linux
@@ -143,12 +144,12 @@ build:linux:
   before_script:
     - export DEBIAN_FRONTEND=noninteractive
     - apt update -y
-    - apt install keyboard-configuration gcc-multilib libnotify-bin libnotify-dev -y
+    - apt install -y $LINUX_DEPENDENCIES
   script:
     - ./gradlew
-      compileKotlin{Jvm,LinuxX64}
+      compileKotlin{Jvm,LinuxX64,LinuxArm64}
       compileReleaseKotlinAndroid
-      linkLinuxX64
+      linkLinux{X64,Arm64}
       jvmNativesJar{LinuxX64,LinuxArm64}
       --stacktrace
 
@@ -207,7 +208,7 @@ publish:linux:
   before_script:
     - export DEBIAN_FRONTEND=noninteractive
     - apt update -y
-    - apt install keyboard-configuration gcc-multilib libnotify-bin libnotify-dev -y
+    - apt install -y $LINUX_DEPENDENCIES
   script:
     - ./gradlew
       publish{KotlinMultiplatform,Jvm,JvmNativesJarLinuxX64,JvmNativesJarLinuxArm64,Js,AndroidRelease}PublicationToGitlabRepository
