@@ -56,6 +56,8 @@ fun downloadSysnotifyBinariesTask(platform: String, arch: String): Download =
     }
 
 val downloadSdlBinariesWindowsX64: Download = downloadSysnotifyBinariesTask("windows", "x64")
+val downloadSdlBinariesLinuxX64: Download = downloadSysnotifyBinariesTask("linux", "x64")
+val downloadSdlBinariesLinuxArm64: Download = downloadSysnotifyBinariesTask("linux", "arm64")
 
 fun extractSysnotifyBinariesTask(platform: String, arch: String): Copy =
     tasks.create<Copy>("extractSysnotifyBinaries${platform.capitalized()}${arch.capitalized()}") {
@@ -70,10 +72,14 @@ fun extractSysnotifyBinariesTask(platform: String, arch: String): Copy =
     }
 
 val extractSysnotifyBinariesWindowsX64: Copy = extractSysnotifyBinariesTask("windows", "x64")
+val extractSysnotifyBinariesLinuxX64: Copy = extractSysnotifyBinariesTask("linux", "x64")
+val extractSysnotifyBinariesLinuxArm64: Copy = extractSysnotifyBinariesTask("linux", "arm64")
 
 val extractSysnotifyBinaries: Task = tasks.create("extractSysnotifyBinaries") {
     group = "sysnotifyBinaries"
     dependsOn(extractSysnotifyBinariesWindowsX64)
+    dependsOn(extractSysnotifyBinariesLinuxX64)
+    dependsOn(extractSysnotifyBinariesLinuxArm64)
 }
 
 kotlin {
