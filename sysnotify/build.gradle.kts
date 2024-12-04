@@ -159,7 +159,6 @@ kotlin {
             dependsOn(nativeMain.get())
             dependencies {
                 implementation(libs.multiplatformJni)
-                implementation(libs.multiplatformDlfcn)
             }
         }
         macosMain { dependsOn(desktopMain) }

@@ -51,14 +51,14 @@ internal class AppleNotificationHandler(
     )
 
     override suspend fun requestPermissions() {
-        if(Platform.isDebugBinary || hasPermissions) return
+        if (Platform.isDebugBinary || hasPermissions) return
         UNUserNotificationCenter.currentNotificationCenter()
             .requestAuthorizationWithOptions(
                 UNAuthorizationOptionSound
                         or UNAuthorizationOptionBadge
                         or UNAuthorizationOptionAlert
             ) { granted, error ->
-                if(granted) hasPermissions = true
+                if (granted) hasPermissions = true
                 error?.localizedDescription?.let {
                     throw IllegalStateException("Could not request permission: $it")
                 }
@@ -67,14 +67,14 @@ internal class AppleNotificationHandler(
 
     @OptIn(ExperimentalUuidApi::class)
     override fun create(notification: Notification): NotificationHandle {
-        return if(hasPermissions) AppleNotificationHandle()
+        return if (hasPermissions) AppleNotificationHandle()
         else InvalidNotificationHandle
     }
 
     @OptIn(ExperimentalUuidApi::class)
     override suspend fun push(notification: Notification): NotificationHandle {
         val handle = AppleNotificationHandle()
-        if(Platform.isDebugBinary || !hasPermissions) return handle
+        if (Platform.isDebugBinary || !hasPermissions) return handle
 
         val content = UNMutableNotificationContent().apply {
             setTitle(notification.title ?: handle.uuid.toString())
@@ -97,7 +97,7 @@ internal class AppleNotificationHandler(
     @OptIn(ExperimentalUuidApi::class)
     override suspend fun pop(handle: NotificationHandle) {
         require(handle is AppleNotificationHandle) { "Handle is not an Apple notification handle" }
-        if(Platform.isDebugBinary || !hasPermissions) return
+        if (Platform.isDebugBinary || !hasPermissions) return
 
         val center = UNUserNotificationCenter.currentNotificationCenter()
         val identifier = handle.uuid.toString()

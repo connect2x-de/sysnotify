@@ -17,7 +17,6 @@
 
 package de.connect2x.sysnotify
 
-import io.karma.dlfcn.SharedLibrary
 import kotlinx.cinterop.ByteVar
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.CPointerVar
@@ -94,6 +93,7 @@ internal object LibNotify {
 
     init {
         atexit(staticCFunction<Unit> {
+            // Must use explicit object ref to avoid non-capturing limitations
             LibNotify.library?.close()
             println("Unloaded libnotify successfully")
         })

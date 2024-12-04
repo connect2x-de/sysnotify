@@ -17,7 +17,6 @@
 
 package de.connect2x.sysnotify
 
-import io.karma.dlfcn.SharedLibrary
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.invoke
@@ -36,7 +35,8 @@ private typealias _gdk_pixbuf_new_from_bytes = (
     bitsPerSample: gint,
     width: gint,
     height: gint,
-    rowStride: gint) -> CPointer<GdkPixbuf>?
+    rowStride: gint
+) -> CPointer<GdkPixbuf>?
 
 private typealias _gdk_pixbuf_unref = (buffer: CPointer<GdkPixbuf>?) -> Unit
 
@@ -48,6 +48,7 @@ internal object LibGdkPixbuf {
 
     init {
         atexit(staticCFunction<Unit> {
+            // Must use explicit object ref to avoid non-capturing limitations
             LibGdkPixbuf.library?.close()
             println("Unloaded libgdk_pixbuf-2.0 successfully")
         })

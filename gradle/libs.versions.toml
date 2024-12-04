@@ -14,7 +14,6 @@ compose-plugin = "1.7.0" # https://github.com/JetBrains/compose-multiplatform/re
 
 sysnotifyBinaries = "1.0.4" # https://gitlab.com/connect2x/sysnotify-platform-binaries/-/packages/
 multiplatformJni = "1.7.1.46" # https://git.karmakrafts.dev/kk/multiplatform-jni/-/packages
-multiplatformDlfcn = "1.1.0.9" # https://git.karmakrafts.dev/kk/multiplatform-dlfcn/-/packages
 downloadTask = "5.6.0" # https://plugins.gradle.org/plugin/de.undercouch.download
 
 glib = "2.83.0" # https://github.com/GNOME/glib/tags
@@ -31,7 +30,6 @@ androidx-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling", versi
 androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview", version.ref = "androidx-ui-tooling" }
 
 multiplatformJni = { module = "io.karma.jni:multiplatform-jni", version.ref = "multiplatformJni" }
-multiplatformDlfcn = { module = "io.karma.dlfcn:multiplatform-dlfcn", version.ref = "multiplatformDlfcn" }
 
 [plugins]
 androidLibrary = { id = "com.android.library", version.ref = "agp" }

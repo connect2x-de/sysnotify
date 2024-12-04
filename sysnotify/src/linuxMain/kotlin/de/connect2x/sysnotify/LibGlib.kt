@@ -17,7 +17,6 @@
 
 package de.connect2x.sysnotify
 
-import io.karma.dlfcn.SharedLibrary
 import kotlinx.cinterop.COpaquePointer
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -46,6 +45,7 @@ internal object LibGlib {
 
     init {
         atexit(staticCFunction<Unit> {
+            // Must use explicit object ref to avoid non-capturing limitations
             LibGlib.library?.close()
             println("Unloaded libglib-2.0 successfully")
         })
