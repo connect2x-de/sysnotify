@@ -75,13 +75,6 @@ val extractSysnotifyBinariesWindowsX64: Copy = extractSysnotifyBinariesTask("win
 val extractSysnotifyBinariesLinuxX64: Copy = extractSysnotifyBinariesTask("linux", "x64")
 val extractSysnotifyBinariesLinuxArm64: Copy = extractSysnotifyBinariesTask("linux", "arm64")
 
-val extractSysnotifyBinaries: Task = tasks.create("extractSysnotifyBinaries") {
-    group = "sysnotifyBinaries"
-    dependsOn(extractSysnotifyBinariesWindowsX64)
-    dependsOn(extractSysnotifyBinariesLinuxX64)
-    dependsOn(extractSysnotifyBinariesLinuxArm64)
-}
-
 kotlin {
     val kotlinJvmVersion = libs.versions.jvmTarget.get()
     val kotlinJvmTarget = JvmTarget.fromTarget(kotlinJvmVersion)
@@ -135,7 +128,12 @@ kotlin {
         it.apply {
             compilations.getByName("main") {
                 cinterops {
-                    val libnotify by creating
+                    val libnotify by creating {
+                        tasks.getByName(interopProcessingTaskName) {
+                            dependsOn(extractSysnotifyBinariesLinuxX64)
+                            dependsOn(extractSysnotifyBinariesLinuxArm64)
+                        }
+                    }
                 }
             }
             binaries.sharedLib()
@@ -146,7 +144,7 @@ kotlin {
             cinterops {
                 val sysnotifycom by creating {
                     tasks.getByName(interopProcessingTaskName) {
-                        dependsOn(extractSysnotifyBinaries)
+                        dependsOn(extractSysnotifyBinariesWindowsX64)
                     }
                 }
             }
@@ -206,7 +204,6 @@ fun jvmNativesJar(os: OperatingSystem, arch: String): Jar {
 
     return task(taskName, Jar::class) {
         dependsOn(linkTask)
-        dependsOn(extractSysnotifyBinaries)
         archiveClassifier = classifier
         from(linkTask.outputs) {
             exclude("*.h", "*.def")
