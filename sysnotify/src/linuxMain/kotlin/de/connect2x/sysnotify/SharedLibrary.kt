@@ -1,0 +1,80 @@
+/*
+ * Copyright 2024 connect2x GmbH
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package de.connect2x.sysnotify
+
+import kotlinx.cinterop.CFunction
+import kotlinx.cinterop.COpaquePointer
+import kotlinx.cinterop.CPointer
+import kotlinx.cinterop.CValuesRef
+import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.reinterpret
+import platform.posix.RTLD_LAZY
+import platform.posix.RTLD_NOW
+import platform.posix.dlclose
+import platform.posix.dlopen
+import platform.posix.dlsym
+
+internal enum class LinkMode(internal val flag: Int) {
+    // @formatter:off
+    IMMEDIATE(RTLD_NOW),
+    LAZY     (RTLD_LAZY)
+    // @formatter:on
+}
+
+@OptIn(ExperimentalForeignApi::class)
+internal class SharedLibrary(
+    val name: String,
+    val linkMode: LinkMode,
+    val handle: CValuesRef<*>,
+) : AutoCloseable {
+    companion object {
+        fun open(
+            names: Array<String>,
+            linkMode: LinkMode = LinkMode.LAZY
+        ): SharedLibrary? {
+            if (names.isEmpty()) return null
+
+            val nameIterator = names.iterator()
+            var name = nameIterator.next()
+            var handle = dlopen(name, linkMode.flag)
+            while (nameIterator.hasNext() && handle == null) {
+                name = nameIterator.next()
+                handle = dlopen(name, linkMode.flag)
+            }
+
+            return if (handle == null) null
+            else SharedLibrary(name, linkMode, handle)
+        }
+
+        fun open(name: String, linkMode: LinkMode = LinkMode.LAZY): SharedLibrary? =
+            open(arrayOf(name), linkMode)
+    }
+
+    override fun close() {
+        dlclose(handle)
+    }
+
+    fun findFunctionOrNull(name: String): COpaquePointer? = dlsym(handle, name)
+
+    inline fun <reified T : Function<*>> findFunctionOrNull(name: String): CPointer<CFunction<T>>? {
+        return findFunctionOrNull(name)?.reinterpret()
+    }
+
+    inline fun <reified T : Function<*>> findFunction(name: String): CPointer<CFunction<T>> {
+        return requireNotNull(findFunctionOrNull(name)) { "Could not find function ${this.name}:$name" }.reinterpret()
+    }
+}
+

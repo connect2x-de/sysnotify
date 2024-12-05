@@ -95,7 +95,7 @@ data class NotificationCapabilities(val mask: UInt) {
  * Data is expected to be in RGBA8888 format. Use per-platform helpers for creating instances.
  */
 data class NotificationIcon(val data: ByteArray, val width: Int, val height: Int) {
-    companion object {}
+    companion object;
 
     // Begin ugly generated code
     override fun equals(other: Any?): Boolean {

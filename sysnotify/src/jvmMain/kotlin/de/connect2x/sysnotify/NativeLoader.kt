@@ -59,8 +59,8 @@ internal object NativeLoader {
     private val isLoaded: AtomicBoolean = AtomicBoolean(false)
 
     @Suppress("UnsafeDynamicallyLoadedCode")
-    private fun unpackAndLoad(name: String) {
-        val filePath = Path("natives") / "$os-$architecture" / "$libPrefix$name.$libExtension"
+    private fun unpackAndLoad(name: String, ext: String = libExtension) {
+        val filePath = Path("natives") / "$os-$architecture" / "$libPrefix$name.$ext"
         val targetDirectory = Path(System.getProperty("user.home")) / ".sysnotify"
         val targetPath = targetDirectory / filePath
         Files.createDirectories(targetPath.parent)
@@ -71,6 +71,9 @@ internal object NativeLoader {
                 StandardCopyOption.REPLACE_EXISTING
             )
         }
+        if (System.getenv("SYSNOTIFY_DEBUG")?.equals("true") == true) {
+            println("Loading native library from ${targetPath.pathString}")
+        }
         System.load(targetPath.pathString)
     }
 
@@ -78,7 +81,6 @@ internal object NativeLoader {
         if (!isLoaded.compareAndSet(false, true)) return
         try {
             when (os) {
-                PLATFORM_LINUX -> System.loadLibrary("notify")
                 PLATFORM_WINDOWS -> {
                     System.loadLibrary("msvcrt")
                     System.loadLibrary("kernel32")

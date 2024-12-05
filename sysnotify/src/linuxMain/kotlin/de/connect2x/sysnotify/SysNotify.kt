@@ -24,6 +24,7 @@ import kotlinx.cinterop.allocPointerTo
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.pointed
 import kotlinx.cinterop.ptr
+import kotlinx.cinterop.reinterpret
 import kotlinx.cinterop.toKStringFromUtf8
 import kotlinx.cinterop.usePinned
 import kotlinx.cinterop.value
@@ -31,27 +32,10 @@ import libnotify.GError
 import libnotify.GdkColorspace
 import libnotify.NotifyNotification
 import libnotify.NotifyUrgency
-import libnotify.g_bytes_new_static
-import libnotify.g_bytes_unref
-import libnotify.g_error_free
-import libnotify.g_object_unref
-import libnotify.gdk_pixbuf_new_from_bytes
-import libnotify.gdk_pixbuf_unref
-import libnotify.notify_init
-import libnotify.notify_notification_close
-import libnotify.notify_notification_new
-import libnotify.notify_notification_set_app_name
-import libnotify.notify_notification_set_hint_string
-import libnotify.notify_notification_set_icon_from_pixbuf
-import libnotify.notify_notification_set_timeout
-import libnotify.notify_notification_set_urgency
-import libnotify.notify_notification_show
-import libnotify.notify_notification_update
-import libnotify.notify_uninit
 
 fun <P : CPointer<GError>> P.freeAndThrow() {
     val message = this.pointed.message?.toKStringFromUtf8()
-    g_error_free(this)
+    LibGlib.g_error_free(this)
     throw IllegalStateException(message)
 }
 
@@ -82,11 +66,11 @@ internal class LinuxNotificationHandler(
     )
 
     init {
-        require(notify_init(name) != 0) { "Could not initialize libnotify" }
+        require(LibNotify.notify_init(name) != 0) { "Could not initialize libnotify" }
     }
 
     override fun close() {
-        notify_uninit()
+        LibNotify.notify_uninit()
     }
 
     @Suppress("NOTHING_TO_INLINE")
@@ -96,13 +80,13 @@ internal class LinuxNotificationHandler(
             val height = icon.height
             if (width <= 0 || height <= 0) return // Return if our size is invalid
             icon.data.usePinned { pinnedArray ->
-                val data = g_bytes_new_static(pinnedArray.addressOf(0), icon.data.size.toULong())
-                val buffer = gdk_pixbuf_new_from_bytes(
+                val data = LibGlib.g_bytes_new_static(pinnedArray.addressOf(0), icon.data.size.toULong())
+                val buffer = LibGdkPixbuf.gdk_pixbuf_new_from_bytes(
                     data, GdkColorspace.GDK_COLORSPACE_RGB, 1, 8, width, height, width shl 2
                 )
-                notify_notification_set_icon_from_pixbuf(nativeNotification, buffer)
-                gdk_pixbuf_unref(buffer)
-                g_bytes_unref(data)
+                LibNotify.notify_notification_set_icon_from_pixbuf(nativeNotification, buffer)
+                LibGdkPixbuf.gdk_pixbuf_unref(buffer)
+                LibGlib.g_bytes_unref(data)
             }
         }
     }
@@ -111,7 +95,7 @@ internal class LinuxNotificationHandler(
     private inline fun show(notification: CPointer<NotifyNotification>): Boolean {
         memScoped {
             val errorAddress = allocPointerTo<GError>()
-            if (notify_notification_show(notification, errorAddress.ptr) == 0) {
+            if (LibNotify.notify_notification_show(notification, errorAddress.ptr) == 0) {
                 errorAddress.value?.freeAndThrow()
                 return false // Return if we fall through, which doesn't happen, but no _Noreturn..
             }
@@ -123,15 +107,15 @@ internal class LinuxNotificationHandler(
         InvalidNotificationHandle // TODO: implement this
 
     override suspend fun push(notification: Notification): NotificationHandle? {
-        val notificationAddress = notify_notification_new(
+        val notificationAddress = LibNotify.notify_notification_new(
             summary = notification.title,
             body = notification.description,
             icon = DEFAULT_ICON
         ) ?: return null
 
-        notify_notification_set_app_name(notificationAddress, name)
-        notify_notification_set_timeout(notificationAddress, 5000) // 5 seconds by default
-        notify_notification_set_urgency(notificationAddress, NotifyUrgency.NOTIFY_URGENCY_NORMAL)
+        LibNotify.notify_notification_set_app_name(notificationAddress, name)
+        LibNotify.notify_notification_set_timeout(notificationAddress, 5000) // 5 seconds by default
+        LibNotify.notify_notification_set_urgency(notificationAddress, NotifyUrgency.NOTIFY_URGENCY_NORMAL)
 
         //notify_notification_add_action(notificationAddress, ACTION_ACTIVATE, name,
         //    staticCFunction { _: CPointer<NotifyNotification>?, action: CPointer<ByteVar>?, userData: gpointer? ->
@@ -147,7 +131,7 @@ internal class LinuxNotificationHandler(
         //)
 
         // On supported FreeDesktop based platforms like GNOME and KDE this will play the default notification sound
-        notify_notification_set_hint_string(
+        LibNotify.notify_notification_set_hint_string(
             notificationAddress,
             "sound-file",
             "/usr/share/sounds/freedesktop/stereo/message.oga"
@@ -159,7 +143,7 @@ internal class LinuxNotificationHandler(
     override suspend fun update(handle: NotificationHandle, notification: Notification): NotificationHandle? {
         require(handle is LinuxNotificationHandle) { "Handle is not a Linux notification handle" }
         val notificationAddress = handle.address
-        notify_notification_update(
+        LibNotify.notify_notification_update(
             notification = notificationAddress,
             summary = notification.title,
             body = notification.description,
@@ -173,12 +157,12 @@ internal class LinuxNotificationHandler(
         require(handle is LinuxNotificationHandle) { "Handle is not a Linux notification handle" }
         memScoped {
             val errorAddress = allocPointerTo<GError>()
-            if (notify_notification_close(handle.address, errorAddress.ptr) == 0) {
+            if (LibNotify.notify_notification_close(handle.address, errorAddress.ptr) == 0) {
                 errorAddress.value?.freeAndThrow()
                 return
             }
         }
-        g_object_unref(handle.address)
+        LibGlib.g_object_unref(handle.address.reinterpret())
     }
 }
 

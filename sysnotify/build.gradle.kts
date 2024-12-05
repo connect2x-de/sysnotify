@@ -20,10 +20,8 @@ import org.gradle.jvm.tasks.Jar
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.nio.file.Path
-import kotlin.io.path.Path
 import kotlin.io.path.createDirectories
 import kotlin.io.path.div
-import kotlin.io.path.exists
 import kotlin.io.path.notExists
 
 plugins {
@@ -137,11 +135,7 @@ kotlin {
         it.apply {
             compilations.getByName("main") {
                 cinterops {
-                    val libnotify by creating {
-                        tasks.getByName(interopProcessingTaskName) {
-                            dependsOn(extractSysnotifyBinaries)
-                        }
-                    }
+                    val libnotify by creating
                 }
             }
             binaries.sharedLib()
@@ -212,22 +206,22 @@ fun jvmNativesJar(os: OperatingSystem, arch: String): Jar {
 
     return task(taskName, Jar::class) {
         dependsOn(linkTask)
+        dependsOn(extractSysnotifyBinaries)
         archiveClassifier = classifier
         from(linkTask.outputs) {
             exclude("*.h", "*.def")
         }
-        if (os.isWindows) from(
-            Path("sysnotify-com") / "lib" / "sysnotify-com.dll",      // Make sure to ship the COM adaptor..
-            // TODO: implement the COM dummy executable
-            //Path("sysnotify-com") / "lib" / "sysnotify-com-dummy.exe" // ..as well as the COM dummy for stubbing toast events.
-        )
+        val platformDir = layout.buildDirectory / "sysnotify-platform"
+        if (os.isWindows) {
+            from(platformDir / "windows-$arch" / "lib") {
+                include("*.dll")
+            }
+        }
         into("natives/$platformPair")
+        outputs.upToDateWhen { false } // These should always be generated fresh as it doesn't take any time
     }.apply {
         tasks {
-            assemble {
-                dependsOn(this@apply)
-                mustRunAfter(this@apply)
-            }
+            assemble { dependsOn(this@apply) }
         }
         artifacts {
             add(taskName, this@apply) // Make sure our natives JAR is added as an artifact
@@ -250,32 +244,6 @@ val jvmNativesMacosArm64: Jar = jvmNativesJar(OperatingSystem.forName("osx"), "a
 val jvmNativesLinunxX64: Jar = jvmNativesJar(OperatingSystem.forName("linux"), "x64")
 val jvmNativesLinuxArm64: Jar = jvmNativesJar(OperatingSystem.forName("linux"), "arm64")
 val jvmNativesMingwX64: Jar = jvmNativesJar(OperatingSystem.forName("windows"), "x64")
-
-// When on windows, always rebuild-module from source instead of using prebuilt binaries
-/*
-if (hostOs.isWindows) {
-    tasks {
-        filter { it.name.contains("mingw", true) }.forEach { task ->
-            task.apply {
-                val dependencies = arrayOf(
-                    ":sysnotify-com:cmakeConfigure",
-                    ":sysnotify-com:cmakeBuild"
-                )
-                dependsOn(*dependencies)
-                mustRunAfter(*dependencies)
-            }
-        }
-        val cmakeConfigure = findByName(":sysnotify-com:cmakeConfigure")?.apply {
-            dependsOn(":sysnotify-com:cmakeClean")
-            mustRunAfter(":sysnotify-com:cmakeClean")
-        }
-        findByName(":sysnotify-com:cmakeBuild")?.apply {
-            dependsOn(cmakeConfigure)
-            mustRunAfter(cmakeConfigure)
-        }
-    }
-}
-*/
 
 publishing {
     repositories {
