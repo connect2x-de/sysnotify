@@ -137,7 +137,7 @@ kotlin {
         val desktopMain by creating {
             dependsOn(nativeMain.get())
             dependencies {
-                implementation(libs.multiplatformJni)
+                implementation(libs.kmpJni)
             }
         }
         macosMain { dependsOn(desktopMain) }

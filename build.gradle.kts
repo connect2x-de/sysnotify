@@ -38,6 +38,6 @@ allprojects {
         mavenLocal()
         mavenCentral()
         google()
-        maven("https://git.karmakrafts.dev/api/v4/projects/307/packages/maven") // Multiplatform JNI
+        maven("https://gitlab.com/api/v4/projects/65231927/packages/maven") // kmp-jni
     }
 }
