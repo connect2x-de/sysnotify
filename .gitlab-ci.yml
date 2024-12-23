@@ -1,3 +1,6 @@
+default:
+  timeout: 2h
+
 workflow:
   auto_cancel:
     on_new_commit: interruptible
