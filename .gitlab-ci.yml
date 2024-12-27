@@ -105,6 +105,7 @@ variables:
 build:windows:
   stage: build
   interruptible: true
+  timeout: 2h
   tags: [ "saas-windows-medium-amd64" ]
   cache:
     - *cache-windows
@@ -216,6 +217,7 @@ publish:linux:
 
 publish:windows:
   stage: publish
+  timeout: 2h
   tags: [ "saas-windows-medium-amd64" ]
   cache:
     - *pull-cache-windows

@@ -1,10 +1,10 @@
 [versions]
-sysnotify = "1.5.1"
+sysnotify = "1.6.0"
 jvmTarget = "17"
 android-minSdk = "28"
 android-compileSdk = "34"
 agp = "8.5.2"
-kotlin = "2.0.21"
+kotlin = "2.1.0"
 kotlinx-coroutines = "1.9.0" # https://github.com/Kotlin/kotlinx.coroutines/releases
 core = "1.13.1" # https://mvnrepository.com/artifact/androidx.core/core
 # For sample
@@ -12,10 +12,8 @@ androidx-activityCompose = "1.9.3" # https://mvnrepository.com/artifact/androidx
 androidx-ui-tooling = "1.7.5" # https://mvnrepository.com/artifact/androidx.compose.ui/ui-tooling
 compose-plugin = "1.7.0" # https://github.com/JetBrains/compose-multiplatform/releases
 
-sysnotifyBinaries = "1.0.4" # https://gitlab.com/connect2x/sysnotify-platform-binaries/-/packages/
-multiplatformJni = "1.7.1.46" # https://git.karmakrafts.dev/kk/multiplatform-jni/-/packages
-downloadTask = "5.6.0" # https://plugins.gradle.org/plugin/de.undercouch.download
-
+kmpJni = "1.0.1" # https://gitlab.com/connect2x/kmp-jni/-/packages
+sysnotifyBinaries = "v1.0.4" # https://gitlab.com/connect2x/sysnotify-platform-binaries/-/packages/
 glib = "2.83.0" # https://github.com/GNOME/glib/tags
 gdkPixbuf = "2.42.12" # https://github.com/GNOME/gdk-pixbuf/tags
 libnotify = "0.8.3" # https://github.com/GNOME/libnotify/tags
@@ -23,13 +21,12 @@ libnotify = "0.8.3" # https://github.com/GNOME/libnotify/tags
 [libraries]
 kotlinx-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
-androidx-core = { group = "androidx.core", name = "core", version.ref = "core" }
+androidx-core = { module = "androidx.core:core", version.ref = "core" }
+kmpJni = { module = "de.connect2x:kmp-jni", version.ref = "kmpJni" }
 # For sample
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activityCompose" }
 androidx-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling", version.ref = "androidx-ui-tooling" }
 androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview", version.ref = "androidx-ui-tooling" }
-
-multiplatformJni = { module = "io.karma.jni:multiplatform-jni", version.ref = "multiplatformJni" }
 
 [plugins]
 androidLibrary = { id = "com.android.library", version.ref = "agp" }
@@ -39,4 +36,3 @@ androidApplication = { id = "com.android.application", version.ref = "agp" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 compose = { id = "org.jetbrains.compose", version.ref = "compose-plugin" }
 kotlinx-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
-downloadTask = { id = "de.undercouch.download", version.ref = "downloadTask" }

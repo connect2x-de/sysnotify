@@ -13,21 +13,20 @@
  * limitations under the License.
  */
 
-import de.undercouch.gradle.tasks.download.Download
 import org.gradle.internal.extensions.stdlib.capitalized
 import org.gradle.internal.os.OperatingSystem
 import org.gradle.jvm.tasks.Jar
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import java.nio.file.Path
-import kotlin.io.path.createDirectories
+import org.jetbrains.kotlin.gradle.plugin.mpp.DefaultCInteropSettings
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
+import org.jetbrains.kotlin.konan.target.Family
+import org.jetbrains.kotlin.konan.target.KonanTarget
 import kotlin.io.path.div
-import kotlin.io.path.notExists
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.androidLibrary)
-    alias(libs.plugins.downloadTask)
     `maven-publish`
 }
 
@@ -35,45 +34,32 @@ fun OperatingSystem.getFriendlyName(): String = familyName.replace("os x", "maco
 fun OperatingSystem.getPlatformPair(arch: String): String = "${getFriendlyName()}-$arch"
 val hostOs: OperatingSystem = OperatingSystem.current()
 
-operator fun DirectoryProperty.div(name: String): Path = get().asFile.toPath() / name
+val KonanTarget.familyName: String
+    get() = when (family) {
+        Family.ANDROID -> "android"
+        Family.IOS -> "ios"
+        Family.OSX -> "macos"
+        Family.LINUX -> "linux"
+        Family.MINGW -> "windows"
+        Family.TVOS -> "tvos"
+        Family.WATCHOS -> "watchos"
+    }
 
-val ensureBuildDirectory: Task = tasks.create("ensureBuildDirectory") {
-    val path = layout.buildDirectory.get().asFile.toPath()
-    doLast { path.createDirectories() }
-    onlyIf { path.notExists() }
+val KonanTarget.architectureName: String
+    get() = architecture.name.lowercase()
+
+val binaryPackage: GitLabPackage = gitlab().project(
+    "connect2x/sysnotify-platform-binaries"
+).packageRegistry["generic/build", libs.versions.sysnotifyBinaries]
+
+fun DefaultCInteropSettings.includePlatformBinaries(target: KotlinNativeTarget) {
+    tasks.getByName(interopProcessingTaskName) {
+        val konanTarget = target.konanTarget
+        val fileName = "build-${konanTarget.familyName}-${konanTarget.architectureName}.zip"
+        val suffix = "${konanTarget.familyName}${konanTarget.architectureName.capitalized()}"
+        dependsOn(binaryPackage[fileName, suffix, "sysnotify-platform"].extractTask)
+    }
 }
-
-fun downloadSysnotifyBinariesTask(platform: String, arch: String): Download =
-    tasks.create<Download>("downloadSysnotifyBinaries${platform.capitalized()}${arch.capitalized()}") {
-        group = "sysnotifyBinaries"
-        dependsOn(ensureBuildDirectory)
-        val fileName = "build-$platform-$arch.zip"
-        src("https://gitlab.com/api/v4/projects/64488791/packages/generic/build/v${libs.versions.sysnotifyBinaries.get()}/$fileName")
-        val destPath = layout.buildDirectory / "sysnotify-platform" / fileName
-        dest(destPath.toFile())
-        overwrite(true) // Always overwrite when downloading binaries
-        onlyIf { destPath.notExists() }
-    }
-
-val downloadSdlBinariesWindowsX64: Download = downloadSysnotifyBinariesTask("windows", "x64")
-val downloadSdlBinariesLinuxX64: Download = downloadSysnotifyBinariesTask("linux", "x64")
-val downloadSdlBinariesLinuxArm64: Download = downloadSysnotifyBinariesTask("linux", "arm64")
-
-fun extractSysnotifyBinariesTask(platform: String, arch: String): Copy =
-    tasks.create<Copy>("extractSysnotifyBinaries${platform.capitalized()}${arch.capitalized()}") {
-        group = "sysnotifyBinaries"
-        val downloadTaskName = "downloadSysnotifyBinaries${platform.capitalized()}${arch.capitalized()}"
-        dependsOn(downloadTaskName)
-        val platformPair = "$platform-$arch"
-        from(zipTree((layout.buildDirectory / "sysnotify-platform" / "build-$platformPair.zip").toFile()))
-        val destPath = layout.buildDirectory / "sysnotify-platform" / platformPair
-        into(destPath.toFile())
-        onlyIf { destPath.notExists() }
-    }
-
-val extractSysnotifyBinariesWindowsX64: Copy = extractSysnotifyBinariesTask("windows", "x64")
-val extractSysnotifyBinariesLinuxX64: Copy = extractSysnotifyBinariesTask("linux", "x64")
-val extractSysnotifyBinariesLinuxArm64: Copy = extractSysnotifyBinariesTask("linux", "arm64")
 
 kotlin {
     val kotlinJvmVersion = libs.versions.jvmTarget.get()
@@ -129,10 +115,7 @@ kotlin {
             compilations.getByName("main") {
                 cinterops {
                     val libnotify by creating {
-                        tasks.getByName(interopProcessingTaskName) {
-                            dependsOn(extractSysnotifyBinariesLinuxX64)
-                            dependsOn(extractSysnotifyBinariesLinuxArm64)
-                        }
+                        includePlatformBinaries(target)
                     }
                 }
             }
@@ -143,9 +126,7 @@ kotlin {
         compilations.getByName("main") {
             cinterops {
                 val sysnotifycom by creating {
-                    tasks.getByName(interopProcessingTaskName) {
-                        dependsOn(extractSysnotifyBinariesWindowsX64)
-                    }
+                    includePlatformBinaries(target)
                 }
             }
         }
@@ -156,7 +137,7 @@ kotlin {
         val desktopMain by creating {
             dependsOn(nativeMain.get())
             dependencies {
-                implementation(libs.multiplatformJni)
+                implementation(libs.kmpJni)
             }
         }
         macosMain { dependsOn(desktopMain) }
