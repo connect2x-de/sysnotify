@@ -12,7 +12,7 @@ androidx-activityCompose = "1.9.3" # https://mvnrepository.com/artifact/androidx
 androidx-ui-tooling = "1.7.5" # https://mvnrepository.com/artifact/androidx.compose.ui/ui-tooling
 compose-plugin = "1.7.0" # https://github.com/JetBrains/compose-multiplatform/releases
 
-kmpJni = "1.0.1-DEV-30623423" # https://gitlab.com/connect2x/kmp-jni/-/packages
+kmpJni = "1.0.1" # https://gitlab.com/connect2x/kmp-jni/-/packages
 sysnotifyBinaries = "v1.0.4" # https://gitlab.com/connect2x/sysnotify-platform-binaries/-/packages/
 glib = "2.83.0" # https://github.com/GNOME/glib/tags
 gdkPixbuf = "2.42.12" # https://github.com/GNOME/gdk-pixbuf/tags
