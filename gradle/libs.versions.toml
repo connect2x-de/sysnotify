@@ -1,5 +1,5 @@
 [versions]
-sysnotify = "1.6.0"
+sysnotify = "1.6.1"
 jvmTarget = "17"
 android-minSdk = "28"
 android-compileSdk = "34"
@@ -9,8 +9,8 @@ kotlinx-coroutines = "1.9.0" # https://github.com/Kotlin/kotlinx.coroutines/rele
 core = "1.13.1" # https://mvnrepository.com/artifact/androidx.core/core
 # For sample
 androidx-activityCompose = "1.9.3" # https://mvnrepository.com/artifact/androidx.activity/activity-compose
-androidx-ui-tooling = "1.7.5" # https://mvnrepository.com/artifact/androidx.compose.ui/ui-tooling
-compose-plugin = "1.7.0" # https://github.com/JetBrains/compose-multiplatform/releases
+androidx-ui-tooling = "1.7.6" # https://mvnrepository.com/artifact/androidx.compose.ui/ui-tooling
+compose-plugin = "1.7.3" # https://github.com/JetBrains/compose-multiplatform/releases
 
 kmpJni = "1.0.1" # https://gitlab.com/connect2x/kmp-jni/-/packages
 sysnotifyBinaries = "v1.0.4" # https://gitlab.com/connect2x/sysnotify-platform-binaries/-/packages/

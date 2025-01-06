@@ -226,5 +226,6 @@ publish:windows:
     - *if-release
   script:
     - ./gradlew
-      publish{MingwX64,JvmNativesJarWindowsX64}PublicationToGitlabRepository
+      publishMingwX64PublicationToGitlabRepository
+      publishJvmNativesJarWindowsX64PublicationToGitlabRepository
       --stacktrace
