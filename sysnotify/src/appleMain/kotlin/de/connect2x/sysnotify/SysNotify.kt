@@ -50,19 +50,23 @@ internal class AppleNotificationHandler(
         isPopSupported = true,
     )
 
+    private val notificationCenter: UNUserNotificationCenter? = try {
+        UNUserNotificationCenter.currentNotificationCenter()
+    } catch (error: Throwable) {/* This is a soft fail, so we swallow the exception */
+        // TODO: add a log warning once we support some logging API
+        null
+    }
+
     override suspend fun requestPermissions() {
         if (Platform.isDebugBinary || hasPermissions) return
-        UNUserNotificationCenter.currentNotificationCenter()
-            .requestAuthorizationWithOptions(
-                UNAuthorizationOptionSound
-                        or UNAuthorizationOptionBadge
-                        or UNAuthorizationOptionAlert
-            ) { granted, error ->
-                if (granted) hasPermissions = true
-                error?.localizedDescription?.let {
-                    throw IllegalStateException("Could not request permission: $it")
-                }
+        UNUserNotificationCenter.currentNotificationCenter().requestAuthorizationWithOptions(
+            UNAuthorizationOptionSound or UNAuthorizationOptionBadge or UNAuthorizationOptionAlert
+        ) { granted, error ->
+            if (granted) hasPermissions = true
+            error?.localizedDescription?.let {
+                throw IllegalStateException("Could not request permission: $it")
             }
+        }
     }
 
     @OptIn(ExperimentalUuidApi::class)
@@ -80,16 +84,15 @@ internal class AppleNotificationHandler(
             setTitle(notification.title ?: handle.uuid.toString())
             notification.description?.let(::setBody)
         }
-        UNUserNotificationCenter.currentNotificationCenter()
-            .addNotificationRequest(
-                UNNotificationRequest.requestWithIdentifier(
-                    handle.uuid.toString(), content, null
-                )
-            ) { error ->
-                error?.localizedDescription?.let {
-                    throw IllegalStateException("Could not request notification: $it")
-                }
+        notificationCenter?.addNotificationRequest(
+            UNNotificationRequest.requestWithIdentifier(
+                handle.uuid.toString(), content, null
+            )
+        ) { error ->
+            error?.localizedDescription?.let {
+                throw IllegalStateException("Could not request notification: $it")
             }
+        }
         return handle
     }
 
@@ -99,24 +102,23 @@ internal class AppleNotificationHandler(
         require(handle is AppleNotificationHandle) { "Handle is not an Apple notification handle" }
         if (Platform.isDebugBinary || !hasPermissions) return
 
-        val center = UNUserNotificationCenter.currentNotificationCenter()
         val identifier = handle.uuid.toString()
         var found = false
         // First try to remove it from the pending notifications
-        center.getPendingNotificationRequestsWithCompletionHandler {
+        notificationCenter?.getPendingNotificationRequestsWithCompletionHandler {
             for (request in it as List<UNNotificationRequest>) {
                 if (request.identifier != identifier) continue
-                center.removePendingNotificationRequestsWithIdentifiers(listOf(identifier))
+                notificationCenter.removePendingNotificationRequestsWithIdentifiers(listOf(identifier))
                 found = true
                 break
             }
         }
         if (found) return
         // Otherwise it was already delivered
-        center.getDeliveredNotificationsWithCompletionHandler {
+        notificationCenter?.getDeliveredNotificationsWithCompletionHandler {
             for (notification in it as List<UNNotification>) {
                 if (notification.request.identifier != identifier) continue
-                center.removeDeliveredNotificationsWithIdentifiers(listOf(identifier))
+                notificationCenter.removeDeliveredNotificationsWithIdentifiers(listOf(identifier))
                 break
             }
         }
