@@ -23,10 +23,6 @@ import kotlin.io.encoding.ExperimentalEncodingApi
 import org.w3c.notifications.Notification as JsNotification
 import org.w3c.notifications.NotificationPermission as JsNotificationPermission
 
-private class WebNotificationHandle(
-    val instance: JsNotification
-) : NotificationHandle
-
 private class WebNotificationHandler(
     override val name: String,
     override val id: String,
@@ -41,6 +37,8 @@ private class WebNotificationHandler(
         isIconSupported = true,
         isActionSupported = true,
         isPopSupported = true,
+        isSoundSupported = true,
+        isCustomSoundSupported = false,
     )
 
     override suspend fun requestPermissions() {
@@ -52,11 +50,13 @@ private class WebNotificationHandler(
     override fun create(notification: Notification): NotificationHandle {
         val icon = notification.icon?.data?.let { Base64.encode(it) }
         return WebNotificationHandle(
-            instance = org.w3c.notifications.Notification(
+            instance = JsNotification(
                 title = notification.title ?: "",
                 options = NotificationOptions(
                     body = notification.description,
                     icon = icon?.let { "data:image/*;base64,$it" },
+                    silent = !notification.playSound,
+                    sound = notification.soundPath,
                 )
             )
         )

@@ -22,15 +22,10 @@ import platform.UserNotifications.UNAuthorizationOptionSound
 import platform.UserNotifications.UNMutableNotificationContent
 import platform.UserNotifications.UNNotification
 import platform.UserNotifications.UNNotificationRequest
+import platform.UserNotifications.UNNotificationSound
 import platform.UserNotifications.UNUserNotificationCenter
 import kotlin.experimental.ExperimentalNativeApi
 import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
-
-@OptIn(ExperimentalUuidApi::class)
-internal data class AppleNotificationHandle(
-    val uuid: Uuid = Uuid.random()
-) : NotificationHandle
 
 @OptIn(ExperimentalNativeApi::class)
 internal class AppleNotificationHandler(
@@ -48,6 +43,8 @@ internal class AppleNotificationHandler(
         isIconSupported = false,
         isActionSupported = false,
         isPopSupported = true,
+        isSoundSupported = true,
+        isCustomSoundSupported = false,
     )
 
     private val notificationCenter: UNUserNotificationCenter? = try {
@@ -83,6 +80,11 @@ internal class AppleNotificationHandler(
         val content = UNMutableNotificationContent().apply {
             setTitle(notification.title ?: handle.uuid.toString())
             notification.description?.let(::setBody)
+            if (notification.playSound) {
+                setSound(notification.soundPath?.let {
+                    UNNotificationSound.soundNamed(it)
+                } ?: UNNotificationSound.defaultSound)
+            }
         }
         notificationCenter?.addNotificationRequest(
             UNNotificationRequest.requestWithIdentifier(

@@ -19,6 +19,7 @@
 package de.connect2x.sysnotify
 
 import jni.JNIEnvVar
+import jni.jboolean
 import jni.jbyteArray
 import jni.jclass
 import jni.jint
@@ -75,6 +76,8 @@ internal fun registerNatives() {
             parameter(JvmBuiltinType.BYTE.array())
             parameter(JvmBuiltinType.INT)
             parameter(JvmBuiltinType.INT)
+            parameter(JvmBuiltinType.BOOLEAN)
+            parameter(typeString)
             returns(JvmBuiltinType.LONG)
         }
         registerNativeFunction("update", staticCFunction(::update)) {
@@ -134,7 +137,9 @@ private fun push(
     description: jstring?,
     icon: jbyteArray?,
     iconWidth: jint,
-    iconHeight: jint
+    iconHeight: jint,
+    playSound: jboolean,
+    soundPath: jstring?
 ): jlong {
     return runBlocking {
         requireNotNull(handler.toCPointer<CPointed>())
@@ -143,7 +148,9 @@ private fun push(
                 Notification(
                     title = title?.toKString() ?: "Unknown",
                     description = description?.toKString(),
-                    icon = icon?.let { NotificationIcon(it.toByteArray(), iconWidth, iconHeight) }
+                    icon = icon?.let { NotificationIcon(it.toByteArray(), iconWidth, iconHeight) },
+                    playSound = playSound.toKBoolean(),
+                    soundPath = soundPath?.toKString()
                 )
             )
     }?.let { StableRef.create(it).asCPointer().rawValue.toLong() } ?: 0

@@ -22,26 +22,13 @@ import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.allocPointerTo
 import kotlinx.cinterop.memScoped
-import kotlinx.cinterop.pointed
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.reinterpret
-import kotlinx.cinterop.toKStringFromUtf8
 import kotlinx.cinterop.usePinned
 import kotlinx.cinterop.value
 import libnotify.GError
 import libnotify.GdkColorspace
 import libnotify.NotifyNotification
-import libnotify.NotifyUrgency
-
-fun <P : CPointer<GError>> P.freeAndThrow() {
-    val message = this.pointed.message?.toKStringFromUtf8()
-    LibGlib.g_error_free(this)
-    throw IllegalStateException(message)
-}
-
-internal class LinuxNotificationHandle(
-    internal val address: CPointer<NotifyNotification>,
-) : NotificationHandle
 
 internal class LinuxNotificationHandler(
     override val name: String,
@@ -51,6 +38,7 @@ internal class LinuxNotificationHandler(
 ) : NotificationHandler {
     companion object {
         private const val DEFAULT_ICON: String = "dialog-information"
+        private const val DEFAULT_SOUND: String = "/usr/share/sounds/freedesktop/stereo/message.oga"
         private const val ACTION_ACTIVATE: String = "default"
     }
 
@@ -63,6 +51,8 @@ internal class LinuxNotificationHandler(
         isIconSupported = true,
         isActionSupported = false,
         isPopSupported = true,
+        isSoundSupported = true,
+        isCustomSoundSupported = true,
     )
 
     init {
@@ -115,7 +105,7 @@ internal class LinuxNotificationHandler(
 
         LibNotify.notify_notification_set_app_name(notificationAddress, name)
         LibNotify.notify_notification_set_timeout(notificationAddress, 5000) // 5 seconds by default
-        LibNotify.notify_notification_set_urgency(notificationAddress, NotifyUrgency.NOTIFY_URGENCY_NORMAL)
+        LibNotify.notify_notification_set_urgency(notificationAddress, notification.priority.toUrgency())
 
         //notify_notification_add_action(notificationAddress, ACTION_ACTIVATE, name,
         //    staticCFunction { _: CPointer<NotifyNotification>?, action: CPointer<ByteVar>?, userData: gpointer? ->
@@ -130,12 +120,13 @@ internal class LinuxNotificationHandler(
         //    }
         //)
 
-        // On supported FreeDesktop based platforms like GNOME and KDE this will play the default notification sound
-        LibNotify.notify_notification_set_hint_string(
-            notificationAddress,
-            "sound-file",
-            "/usr/share/sounds/freedesktop/stereo/message.oga"
-        )
+        if (notification.playSound) {
+            LibNotify.notify_notification_set_hint_string(
+                notificationAddress,
+                "sound-file",
+                notification.soundPath ?: DEFAULT_SOUND
+            )
+        }
         setIcon(notificationAddress, notification)
         return if (show(notificationAddress)) LinuxNotificationHandle(notificationAddress) else null
     }

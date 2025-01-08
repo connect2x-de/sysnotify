@@ -17,18 +17,12 @@
 
 package de.connect2x.sysnotify
 
-import de.connect2x.sysnotify.com.SYSNOTIFY_OK
-import de.connect2x.sysnotify.com.SYSNOTIFY_TRUE
-import de.connect2x.sysnotify.com.sn_boolVar
-import de.connect2x.sysnotify.com.sn_error
 import de.connect2x.sysnotify.com.sn_notification_content
 import de.connect2x.sysnotify.com.sn_notification_handler
 import de.connect2x.sysnotify.com.sn_notification_handlerVar
 import de.connect2x.sysnotify.com.sn_notification_tag
-import de.connect2x.sysnotify.com.sysnotify_get_last_error
 import de.connect2x.sysnotify.com.sysnotify_handler_create
 import de.connect2x.sysnotify.com.sysnotify_handler_destroy
-import de.connect2x.sysnotify.com.sysnotify_handler_is_valid_tag
 import de.connect2x.sysnotify.com.sysnotify_handler_pop
 import de.connect2x.sysnotify.com.sysnotify_handler_push
 import de.connect2x.sysnotify.com.sysnotify_handler_update
@@ -40,55 +34,8 @@ import kotlinx.cinterop.alloc
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.pin
 import kotlinx.cinterop.ptr
-import kotlinx.cinterop.toKStringFromUtf8
 import kotlinx.cinterop.value
 import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
-
-@Suppress("NOTHING_TO_INLINE")
-private inline fun sn_error.check() {
-    if (this == SYSNOTIFY_OK) return
-    throwLastError()
-}
-
-@Suppress("NOTHING_TO_INLINE")
-private inline fun throwLastError() {
-    sysnotify_get_last_error()?.apply {
-        throw IllegalStateException(toKStringFromUtf8())
-    }
-}
-
-@Suppress("NOTHING_TO_INLINE")
-@OptIn(ExperimentalUuidApi::class)
-private inline fun sn_notification_tag.toUuid(): Uuid = Uuid.fromULongs(lower, upper)
-
-@Suppress("NOTHING_TO_INLINE")
-@OptIn(ExperimentalUuidApi::class)
-private inline fun MemScope.allocNotificationTag(tag: Uuid): sn_notification_tag {
-    return tag.toULongs { mostSignificantBits, leastSignificantBits ->
-        alloc<sn_notification_tag> {
-            lower = leastSignificantBits
-            upper = mostSignificantBits
-        }
-    }
-}
-
-@OptIn(ExperimentalUuidApi::class)
-internal data class WindowsNotificationHandle(
-    val handler: WindowsNotificationHandler,
-    val tag: Uuid,
-) : NotificationHandle {
-    inline val isValid: Boolean
-        get() = memScoped {
-            val result = alloc<sn_boolVar>()
-            sysnotify_handler_is_valid_tag(
-                handler.address,
-                allocNotificationTag(tag).ptr,
-                result.ptr
-            ).check()
-            return result.value == SYSNOTIFY_TRUE
-        }
-}
 
 internal class WindowsNotificationHandler(
     override val name: String,
@@ -114,6 +61,8 @@ internal class WindowsNotificationHandler(
         isIconSupported = true,
         isActionSupported = true,
         isPopSupported = true,
+        isSoundSupported = true,
+        isCustomSoundSupported = false,
     )
 
     override fun close() {
@@ -172,6 +121,7 @@ internal class WindowsNotificationHandler(
             user_data = StableRef.create(Pair(notification, iconData)).asCPointer()
             icon_width = notification.icon?.width ?: 0
             icon_height = notification.icon?.height ?: 0
+            // TODO: add support for sounds
         }
     }
 }

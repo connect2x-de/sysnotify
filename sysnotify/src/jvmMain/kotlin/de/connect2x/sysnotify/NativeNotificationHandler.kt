@@ -48,6 +48,8 @@ object NativeNotificationHandler {
         icon: ByteArray?,
         iconWidth: Int,
         iconHeight: Int,
+        playSound: Boolean,
+        soundPath: String?
     ): Long
 
     @JvmStatic
