@@ -115,7 +115,6 @@ build:windows:
     - ./gradlew
       compileKotlinMingwX64
       linkMingwX64
-      jvmNativesJarWindowsX64
       --stacktrace
 
 build:mac:
@@ -130,7 +129,6 @@ build:mac:
     - ./gradlew
       compileKotlin{MacosX64,MacosArm64,IosArm64,IosSimulatorArm64,IosX64}
       link{MacosX64,MacosArm64,IosArm64,IosX64}
-      jvmNativesJar{MacosX64,MacosArm64}
       --stacktrace
 
 build:linux:
@@ -151,7 +149,6 @@ build:linux:
       compileKotlin{Jvm,LinuxX64,LinuxArm64}
       compileReleaseKotlinAndroid
       linkLinux{X64,Arm64}
-      jvmNativesJar{LinuxX64,LinuxArm64}
       --stacktrace
 
 security:dependencies:
@@ -194,7 +191,7 @@ publish:mac:
     - *if-release
   script:
     - ./gradlew
-      publish{MacosX64,MacosArm64,JvmNativesJarMacosX64,JvmNativesJarMacosArm64,IosArm64,IosSimulatorArm64,IosX64}PublicationToGitlabRepository
+      publish{MacosX64,MacosArm64,IosArm64,IosSimulatorArm64,IosX64,Jvm}PublicationToGitlabRepository
       --stacktrace
 
 publish:linux:
@@ -212,7 +209,7 @@ publish:linux:
     - apt install -y $LINUX_DEPENDENCIES
   script:
     - ./gradlew
-      publish{KotlinMultiplatform,Jvm,JvmNativesJarLinuxX64,JvmNativesJarLinuxArm64,Js,AndroidRelease}PublicationToGitlabRepository
+      publish{KotlinMultiplatform,Js,AndroidRelease}PublicationToGitlabRepository
       --stacktrace
 
 publish:windows:
@@ -227,5 +224,4 @@ publish:windows:
   script:
     - ./gradlew
       publishMingwX64PublicationToGitlabRepository
-      publishJvmNativesJarWindowsX64PublicationToGitlabRepository
       --stacktrace
