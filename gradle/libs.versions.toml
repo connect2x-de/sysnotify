@@ -9,6 +9,9 @@ kotlinx-coroutines = "1.9.0" # https://github.com/Kotlin/kotlinx.coroutines/rele
 core = "1.13.1" # https://mvnrepository.com/artifact/androidx.core/core
 stately = "2.1.0" # https://mvnrepository.com/artifact/co.touchlab/stately-common
 
+# For tests
+kotest = "5.9.1" # https://mvnrepository.com/artifact/io.kotest/kotest-framework-engine-jvm
+
 # For sample
 androidx-activityCompose = "1.9.3" # https://mvnrepository.com/artifact/androidx.activity/activity-compose
 androidx-ui-tooling = "1.7.6" # https://mvnrepository.com/artifact/androidx.compose.ui/ui-tooling
@@ -22,11 +25,14 @@ libnotify = "0.8.3" # https://github.com/GNOME/libnotify/tags
 
 [libraries]
 kotlinx-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
-kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 androidx-core = { module = "androidx.core:core", version.ref = "core" }
 kmpJni = { module = "de.connect2x:kmp-jni", version.ref = "kmpJni" }
 stately-common = { module = "co.touchlab:stately-common", version.ref = "stately" }
 stately-collections = { module = "co.touchlab:stately-collections", version.ref = "stately" }
+
+# For tests
+kotest-engine = { module = "io.kotest:kotest-framework-engine", version.ref = "kotest" }
+kotest-runner-jvm = { module = "io.kotest:kotest-runner-junit5-jvm", version.ref = "kotest" }
 
 # For sample
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activityCompose" }
@@ -36,6 +42,7 @@ androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling
 [plugins]
 androidLibrary = { id = "com.android.library", version.ref = "agp" }
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+
 # For sample
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }

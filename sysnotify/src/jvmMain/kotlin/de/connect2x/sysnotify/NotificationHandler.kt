@@ -52,7 +52,8 @@ private class JvmNotificationHandler(
             iconWidth = notification.icon?.width ?: 0,
             iconHeight = notification.icon?.height ?: 0,
             playSound = notification.playSound,
-            soundPath = notification.soundPath
+            soundPath = notification.soundPath,
+            group = notification.group
         )
         return if (handle != 0L) JvmNotificationHandle(handle)
         else null
@@ -71,6 +72,7 @@ private class JvmNotificationHandler(
             icon = notification.icon?.data,
             iconWidth = notification.icon?.width ?: 0,
             iconHeight = notification.icon?.height ?: 0,
+            group = notification.group
         )
         return if (newHandle != 0L) JvmNotificationHandle(newHandle)
         else null
