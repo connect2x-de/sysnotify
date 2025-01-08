@@ -61,8 +61,9 @@ internal class WindowsNotificationHandler(
         isIconSupported = true,
         isActionSupported = true,
         isPopSupported = true,
-        isSoundSupported = true,
+        isSoundSupported = true, // Supported via OS default right now
         isCustomSoundSupported = false,
+        isGroupingSupported = false
     )
 
     override fun close() {
@@ -121,7 +122,7 @@ internal class WindowsNotificationHandler(
             user_data = StableRef.create(Pair(notification, iconData)).asCPointer()
             icon_width = notification.icon?.width ?: 0
             icon_height = notification.icon?.height ?: 0
-            // TODO: add support for sounds
+            // TODO: add support for sounds and grouping
         }
     }
 }

@@ -16,7 +16,7 @@
 package de.connect2x.sysnotify
 
 inline val NotificationPriority.relevanceScore: Double
-    get() = when(this) {
+    get() = when (this) {
         NotificationPriority.LOW -> 0.25
         NotificationPriority.DEFAULT -> 0.5
         NotificationPriority.HIGH -> 1.0

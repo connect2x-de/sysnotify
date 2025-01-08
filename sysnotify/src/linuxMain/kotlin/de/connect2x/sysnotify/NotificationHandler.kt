@@ -53,6 +53,7 @@ internal class LinuxNotificationHandler(
         isPopSupported = true,
         isSoundSupported = true,
         isCustomSoundSupported = true,
+        isGroupingSupported = false
     )
 
     init {
@@ -98,9 +99,7 @@ internal class LinuxNotificationHandler(
 
     override suspend fun push(notification: Notification): NotificationHandle? {
         val notificationAddress = LibNotify.notify_notification_new(
-            summary = notification.title,
-            body = notification.description,
-            icon = DEFAULT_ICON
+            summary = notification.title, body = notification.description, icon = DEFAULT_ICON
         ) ?: return null
 
         LibNotify.notify_notification_set_app_name(notificationAddress, name)
@@ -122,9 +121,7 @@ internal class LinuxNotificationHandler(
 
         if (notification.playSound) {
             LibNotify.notify_notification_set_hint_string(
-                notificationAddress,
-                "sound-file",
-                notification.soundPath ?: DEFAULT_SOUND
+                notificationAddress, "sound-file", notification.soundPath ?: DEFAULT_SOUND
             )
         }
         setIcon(notificationAddress, notification)
