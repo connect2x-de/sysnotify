@@ -14,7 +14,6 @@
  */
 
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
-import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -54,7 +53,6 @@ kotlin {
     }
 
     androidTarget {
-        @OptIn(ExperimentalKotlinGradlePluginApi::class)
         compilerOptions {
             jvmTarget.set(kotlinJvmTarget)
         }
@@ -94,11 +92,6 @@ kotlin {
         }
         jvmMain {
             dependencies {
-                implementation(project(path = ":sysnotify", configuration = "jvmNativesJarLinuxX64"))
-                implementation(project(path = ":sysnotify", configuration = "jvmNativesJarLinuxArm64"))
-                implementation(project(path = ":sysnotify", configuration = "jvmNativesJarMacosX64"))
-                implementation(project(path = ":sysnotify", configuration = "jvmNativesJarMacosArm64"))
-                implementation(project(path = ":sysnotify", configuration = "jvmNativesJarWindowsX64"))
                 // this is needed to create lock files working on all machines
                 if (System.getProperty("bundleAll") == "true") {
                     implementation(compose.desktop.linux_x64)
