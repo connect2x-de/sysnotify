@@ -32,6 +32,8 @@ package de.connect2x.sysnotify
  * @param playSound Whether to play a sound when this notification appears or not.
  * @param soundPath The URI to a sound file to play instead of the default sound when supported.
  *  Null means the default sound will be used. The path structure may vary depending on the platform.
+ * @param group All notifications with the same group tag will be visually grouped together on the
+ *  target platform if supported. Null counts as the default group.
  */
 data class Notification(
     val title: String? = null,
@@ -42,4 +44,5 @@ data class Notification(
     val priority: NotificationPriority = NotificationPriority.DEFAULT,
     val playSound: Boolean = true,
     val soundPath: String? = null,
+    val group: String? = null,
 )

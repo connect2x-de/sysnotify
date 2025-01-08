@@ -15,12 +15,16 @@
 
 package de.connect2x.sysnotify
 
+import co.touchlab.stately.collections.SharedHashMap
 import kotlinx.atomicfu.atomic
 import platform.UserNotifications.UNAuthorizationOptionAlert
 import platform.UserNotifications.UNAuthorizationOptionBadge
 import platform.UserNotifications.UNAuthorizationOptionSound
 import platform.UserNotifications.UNMutableNotificationContent
 import platform.UserNotifications.UNNotification
+import platform.UserNotifications.UNNotificationAction
+import platform.UserNotifications.UNNotificationCategory
+import platform.UserNotifications.UNNotificationCategoryOptionNone
 import platform.UserNotifications.UNNotificationRequest
 import platform.UserNotifications.UNNotificationSound
 import platform.UserNotifications.UNUserNotificationCenter
@@ -34,6 +38,10 @@ internal class AppleNotificationHandler(
     override val priority: NotificationPriority,
     private val activationCallback: (Notification) -> Unit,
 ) : NotificationHandler {
+    companion object {
+        internal const val USERDATA_KEY: String = "sysnotify_userData"
+    }
+
     override val platform: NotificationPlatform = NotificationPlatform.APPLE
     override var hasPermissions: Boolean by atomic(false)
 
@@ -44,14 +52,30 @@ internal class AppleNotificationHandler(
         isActionSupported = false,
         isPopSupported = true,
         isSoundSupported = true,
-        isCustomSoundSupported = false,
+        isCustomSoundSupported = true,
+        isGroupingSupported = true
     )
+
+    private val notificationCategories: SharedHashMap<String, UNNotificationCategory> = SharedHashMap()
 
     private val notificationCenter: UNUserNotificationCenter? = try {
         UNUserNotificationCenter.currentNotificationCenter()
     } catch (error: Throwable) {/* This is a soft fail, so we swallow the exception */
         // TODO: add a log warning once we support some logging API
         null
+    }
+
+    private fun ensureCategoryExists(key: String) {
+        if (key in notificationCategories || notificationCenter == null) return
+        val category = UNNotificationCategory.categoryWithIdentifier(
+            identifier = key,
+            actions = emptyList<UNNotificationAction>(),
+            intentIdentifiers = emptyList<String>(),
+            options = UNNotificationCategoryOptionNone
+        )
+        notificationCategories[key] = category
+        // We have to update ALL the categories every time we add a new one
+        notificationCenter.setNotificationCategories(notificationCategories.values.toSet())
     }
 
     override suspend fun requestPermissions() {
@@ -79,13 +103,20 @@ internal class AppleNotificationHandler(
 
         val content = UNMutableNotificationContent().apply {
             setTitle(notification.title ?: handle.uuid.toString())
+            setRelevanceScore(notification.priority.relevanceScore)
+            setUserInfo(mapOf(USERDATA_KEY to notification.userData))
             notification.description?.let(::setBody)
             if (notification.playSound) {
                 setSound(notification.soundPath?.let {
                     UNNotificationSound.soundNamed(it)
                 } ?: UNNotificationSound.defaultSound)
             }
+            notification.group?.let {
+                ensureCategoryExists(it)
+                setCategoryIdentifier(it)
+            }
         }
+
         notificationCenter?.addNotificationRequest(
             UNNotificationRequest.requestWithIdentifier(
                 handle.uuid.toString(), content, null
@@ -95,6 +126,7 @@ internal class AppleNotificationHandler(
                 throw IllegalStateException("Could not request notification: $it")
             }
         }
+
         return handle
     }
 

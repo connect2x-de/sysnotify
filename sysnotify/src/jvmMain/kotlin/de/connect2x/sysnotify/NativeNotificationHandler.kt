@@ -49,7 +49,8 @@ object NativeNotificationHandler {
         iconWidth: Int,
         iconHeight: Int,
         playSound: Boolean,
-        soundPath: String?
+        soundPath: String?,
+        group: String?
     ): Long
 
     @JvmStatic
@@ -61,6 +62,7 @@ object NativeNotificationHandler {
         icon: ByteArray?,
         iconWidth: Int,
         iconHeight: Int,
+        group: String?
     ): Long
 
     @JvmStatic

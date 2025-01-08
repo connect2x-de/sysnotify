@@ -21,7 +21,7 @@ import kotlin.jvm.JvmInline
  * @author Alexander Hinze
  * @since 07/01/2025
  *
- * A data class describing the capabilities of a given [NotificationHandler] instance.
+ * A value class describing the capabilities of a given [NotificationHandler] instance.
  * Each flag indicates whether a feature is supported.
  * The [isSupported] flag indicates if notifications are supported on the current platform at all.
  */
@@ -36,6 +36,7 @@ value class NotificationCapabilities(val mask: UInt) {
         const val IS_POP_SUPPORTED: UInt            = 0b0001_0000U
         const val IS_SOUND_SUPPORTED: UInt          = 0b0010_0000U
         const val IS_CUSTOM_SOUND_SUPPORTED: UInt   = 0b0100_0000U
+        const val IS_GROUPING_SUPPORTED: UInt       = 0b1000_0000U
         // @formatter:on
 
         val ALL: UInt = IS_TITLE_SUPPORTED or
@@ -44,7 +45,8 @@ value class NotificationCapabilities(val mask: UInt) {
                 IS_ACTION_SUPPORTED or
                 IS_POP_SUPPORTED or
                 IS_SOUND_SUPPORTED or
-                IS_CUSTOM_SOUND_SUPPORTED
+                IS_CUSTOM_SOUND_SUPPORTED or
+                IS_GROUPING_SUPPORTED
     }
 
     constructor(
@@ -54,7 +56,8 @@ value class NotificationCapabilities(val mask: UInt) {
         isActionSupported: Boolean,
         isPopSupported: Boolean,
         isSoundSupported: Boolean,
-        isCustomSoundSupported: Boolean
+        isCustomSoundSupported: Boolean,
+        isGroupingSupported: Boolean
     ) : this(
         if (isTitleSupported) IS_TITLE_SUPPORTED else 0U
                 or if (isDescriptionSupported) IS_DESCRIPTION_SUPPORTED else 0U
@@ -63,6 +66,7 @@ value class NotificationCapabilities(val mask: UInt) {
                 or if (isPopSupported) IS_POP_SUPPORTED else 0U
                 or if (isSoundSupported) IS_SOUND_SUPPORTED else 0U
                 or if (isCustomSoundSupported) IS_CUSTOM_SOUND_SUPPORTED else 0U
+                or if (isGroupingSupported) IS_GROUPING_SUPPORTED else 0U
     )
 
     inline val isTitleSupported: Boolean
@@ -86,6 +90,9 @@ value class NotificationCapabilities(val mask: UInt) {
     inline val isCustomSoundSupported: Boolean
         get() = (mask and IS_CUSTOM_SOUND_SUPPORTED) == IS_CUSTOM_SOUND_SUPPORTED
 
+    inline val isGroupingSupported: Boolean
+        get() = (mask and IS_GROUPING_SUPPORTED) == IS_GROUPING_SUPPORTED
+
     /**
      * If true, the underlying implementation supports at least
      * one of three ways to display a basic notification. That is,
@@ -93,5 +100,5 @@ value class NotificationCapabilities(val mask: UInt) {
      * of the aforementioned components.
      */
     inline val isSupported: Boolean
-        get() = isTitleSupported || isDescriptionSupported || isIconSupported
+        get() = isTitleSupported || isDescriptionSupported || isIconSupported || isSoundSupported
 }

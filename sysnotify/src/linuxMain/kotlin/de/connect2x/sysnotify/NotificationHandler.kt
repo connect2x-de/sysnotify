@@ -105,7 +105,7 @@ internal class LinuxNotificationHandler(
 
         LibNotify.notify_notification_set_app_name(notificationAddress, name)
         LibNotify.notify_notification_set_timeout(notificationAddress, 5000) // 5 seconds by default
-        LibNotify.notify_notification_set_urgency(notificationAddress, notification.priority.toUrgency())
+        LibNotify.notify_notification_set_urgency(notificationAddress, notification.priority.urgency)
 
         //notify_notification_add_action(notificationAddress, ACTION_ACTIVATE, name,
         //    staticCFunction { _: CPointer<NotifyNotification>?, action: CPointer<ByteVar>?, userData: gpointer? ->

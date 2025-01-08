@@ -21,7 +21,7 @@ import androidx.core.app.NotificationManagerCompat
 /**
  * The native notification importance associated with this priority enum.
  */
-val NotificationPriority.nativeImportance: Int
+inline val NotificationPriority.nativeImportance: Int
     get() = when (this) {
         NotificationPriority.LOW -> NotificationManagerCompat.IMPORTANCE_LOW
         NotificationPriority.HIGH -> NotificationManagerCompat.IMPORTANCE_HIGH
@@ -31,7 +31,7 @@ val NotificationPriority.nativeImportance: Int
 /**
  * The native notification priority associated with this priority enum.
  */
-val NotificationPriority.nativePriority: Int
+inline val NotificationPriority.nativePriority: Int
     get() = when (this) {
         NotificationPriority.LOW -> NotificationCompat.PRIORITY_LOW
         NotificationPriority.HIGH -> NotificationCompat.PRIORITY_HIGH

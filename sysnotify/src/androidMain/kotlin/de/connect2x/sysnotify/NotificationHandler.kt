@@ -87,6 +87,7 @@ internal class AndroidNotificationHandler(
                 setPriority(notification.priority.nativePriority)
                 setOngoing(!notification.dismissible)
                 setAutoCancel(true) // Remove notification when user taps it
+                setGroup(notification.group)
 
                 // Setup sound
                 if (notification.playSound) notification.soundPath?.let { setSound(Uri.parse(it)) }

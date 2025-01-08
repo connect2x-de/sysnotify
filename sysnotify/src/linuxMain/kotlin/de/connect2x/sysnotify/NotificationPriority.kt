@@ -20,8 +20,9 @@ package de.connect2x.sysnotify
 import kotlinx.cinterop.ExperimentalForeignApi
 import libnotify.NotifyUrgency
 
-internal fun NotificationPriority.toUrgency(): NotifyUrgency = when (this) {
-    NotificationPriority.LOW -> NotifyUrgency.NOTIFY_URGENCY_LOW
-    NotificationPriority.DEFAULT -> NotifyUrgency.NOTIFY_URGENCY_NORMAL
-    NotificationPriority.HIGH -> NotifyUrgency.NOTIFY_URGENCY_CRITICAL
-}
+inline val NotificationPriority.urgency: NotifyUrgency
+    get() = when (this) {
+        NotificationPriority.LOW -> NotifyUrgency.NOTIFY_URGENCY_LOW
+        NotificationPriority.DEFAULT -> NotifyUrgency.NOTIFY_URGENCY_NORMAL
+        NotificationPriority.HIGH -> NotifyUrgency.NOTIFY_URGENCY_CRITICAL
+    }

@@ -39,6 +39,7 @@ private class WebNotificationHandler(
         isPopSupported = true,
         isSoundSupported = true,
         isCustomSoundSupported = false,
+        isGroupingSupported = false
     )
 
     override suspend fun requestPermissions() {
