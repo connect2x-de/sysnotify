@@ -1,5 +1,5 @@
 [versions]
-sysnotify = "1.6.1"
+sysnotify = "1.7.0"
 jvmTarget = "17"
 android-minSdk = "28"
 android-compileSdk = "34"
@@ -7,6 +7,8 @@ agp = "8.5.2"
 kotlin = "2.1.0"
 kotlinx-coroutines = "1.9.0" # https://github.com/Kotlin/kotlinx.coroutines/releases
 core = "1.13.1" # https://mvnrepository.com/artifact/androidx.core/core
+stately = "2.1.0" # https://mvnrepository.com/artifact/co.touchlab/stately-common
+
 # For sample
 androidx-activityCompose = "1.9.3" # https://mvnrepository.com/artifact/androidx.activity/activity-compose
 androidx-ui-tooling = "1.7.6" # https://mvnrepository.com/artifact/androidx.compose.ui/ui-tooling
@@ -23,6 +25,9 @@ kotlinx-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core",
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 androidx-core = { module = "androidx.core:core", version.ref = "core" }
 kmpJni = { module = "de.connect2x:kmp-jni", version.ref = "kmpJni" }
+stately-common = { module = "co.touchlab:stately-common", version.ref = "stately" }
+stately-collections = { module = "co.touchlab:stately-collections", version.ref = "stately" }
+
 # For sample
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activityCompose" }
 androidx-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling", version.ref = "androidx-ui-tooling" }

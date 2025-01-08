@@ -133,6 +133,8 @@ kotlin {
         commonMain {
             dependencies {
                 api(libs.kotlinx.coroutines)
+                implementation(libs.stately.common)
+                implementation(libs.stately.collections)
             }
         }
         androidMain {
