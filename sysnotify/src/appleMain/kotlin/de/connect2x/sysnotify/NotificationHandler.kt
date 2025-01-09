@@ -104,7 +104,7 @@ internal class AppleNotificationHandler(
         val content = UNMutableNotificationContent().apply {
             setTitle(notification.title ?: handle.uuid.toString())
             setRelevanceScore(notification.priority.relevanceScore)
-            setUserInfo(mapOf(USERDATA_KEY to notification.userData))
+            setUserInfo(mapOf(USERDATA_KEY to notification.callbackData))
             notification.description?.let(::setBody)
             if (notification.playSound) {
                 setSound(notification.soundPath?.let {
