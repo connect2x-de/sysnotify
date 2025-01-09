@@ -21,6 +21,9 @@ The support matrix below indicates which specific features are available on whic
 
 **For the JVM, the same features as the respective host-native implementation are available.**
 
+Supported features can be queried at runtime using the `capabilities` property of any
+`NotificationHandler` instance.
+
 ## Supported platforms
 
 ### JVM
