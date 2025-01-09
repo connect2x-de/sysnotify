@@ -8,16 +8,16 @@ Cross-platform system notifications for Kotlin Multiplatform.
 
 The support matrix below indicates which specific features are available on which platforms.
 
-|              | Android | iOS | Windows | mac | Lin | Web |
-|--------------|---------|-----|---------|-----|-----|-----|
-| Title        | ✅       | ✅   | ✅       | ✅   | ✅   | ✅   |
-| Description  | ✅       | ✅   | ✅       | ✅   | ✅   | ✅   |
-| Icon         | ✅       | ❌   | ✅       | ❌   | ✅   | ✅   |
-| Action       | ✅       | ❌   | ❌       | ❌   | ❌   | ❌   |
-| Pop          | ✅       | ✅   | ✅       | ✅   | ✅   | ✅   |
-| Sound        | ✅       | ✅   | ❌       | ✅   | ✅   | ✅   |
-| Custom Sound | ✅       | ✅   | ❌       | ✅   | ✅   | ❌   |
-| Grouping     | ✅       | ✅   | ❌       | ✅   | ❌   | ❌   |
+|              | Android | iOS | Windows | macOS | Linux | Web |
+|--------------|---------|-----|---------|-------|------|-----|
+| Title        | ✅       | ✅   | ✅       | ✅     | ✅    | ✅   |
+| Description  | ✅       | ✅   | ✅       | ✅     | ✅    | ✅   |
+| Icon         | ✅       | ❌   | ✅       | ❌     | ✅    | ✅   |
+| Action       | ✅       | ❌   | ❌       | ❌     | ❌    | ❌   |
+| Pop          | ✅       | ✅   | ✅       | ✅     | ✅    | ✅   |
+| Sound        | ✅       | ✅   | ❌       | ✅     | ✅    | ✅   |
+| Custom Sound | ✅       | ✅   | ❌       | ✅     | ✅    | ❌   |
+| Grouping     | ✅       | ✅   | ❌       | ✅     | ❌    | ❌   |
 
 **For the JVM, the same features as the respective host-native implementation are available.**
 
