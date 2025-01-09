@@ -8,7 +8,7 @@ workflow:
 
 stages:
   - build
-  # - test
+  - test
   - security
   - publish
 
@@ -17,7 +17,6 @@ variables:
   GRADLE_USER_HOME: $CI_PROJECT_DIR/.gradle
   KONAN_DATA_DIR: $CI_PROJECT_DIR/.konan
   BUILD_LINUX_IMAGE_NAME: registry.gitlab.com/trixnity/trixnity/trixnity-build-linux:latest
-  LINUX_DEPENDENCIES: keyboard-configuration gcc g++ gcc-multilib libnotify-bin libnotify-dev meson cmake python3-docutils
 
 .cache-linux: &cache-linux
   - key: global-sysnotify-cache-linux
@@ -140,15 +139,60 @@ build:linux:
     - *cache-linux
   rules:
     - *if-merge-request-or-main
-  before_script:
-    - export DEBIAN_FRONTEND=noninteractive
-    - apt update -y
-    - apt install -y $LINUX_DEPENDENCIES
   script:
     - ./gradlew
       compileKotlin{Jvm,LinuxX64,LinuxArm64}
       compileReleaseKotlinAndroid
       linkLinux{X64,Arm64}
+      --stacktrace
+
+test:linux:
+  stage: test
+  interruptible: true
+  timeout: 1h
+  needs: [ "build:linux" ]
+  tags: [ "saas-linux-small-amd64" ]
+  image: $BUILD_LINUX_IMAGE_NAME
+  cache:
+    - *pull-cache-linux
+  artifacts: *artifact-reports
+  rules:
+    - *if-merge-request-or-main
+  script:
+    - ./gradlew
+      {jvm,linuxX64}Test
+      --stacktrace
+
+test:mac:
+  stage: test
+  interruptible: true
+  timeout: 1h
+  needs: [ "build:mac" ]
+  tags: [ "connect2x-mac" ]
+  cache:
+    - *pull-cache-mac
+  artifacts: *artifact-reports
+  rules:
+    - *if-merge-request-or-main
+  script:
+    - ./gradlew
+      {jvm,macosX64}Test
+      --stacktrace
+
+test:windows:
+  stage: test
+  interruptible: true
+  timeout: 2h
+  needs: [ "build:windows" ]
+  tags: [ "saas-windows-medium-amd64" ]
+  cache:
+    - *pull-cache-windows
+  artifacts: *artifact-reports
+  rules:
+    - *if-merge-request-or-main
+  script:
+    - ./gradlew
+      {jvm,mingwX64}Test
       --stacktrace
 
 security:dependencies:
