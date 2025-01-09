@@ -35,7 +35,7 @@ private class WebNotificationHandler(
         isTitleSupported = true,
         isDescriptionSupported = true,
         isIconSupported = true,
-        isActionSupported = true,
+        isActionSupported = false,
         isPopSupported = true,
         isSoundSupported = true,
         isCustomSoundSupported = false,
