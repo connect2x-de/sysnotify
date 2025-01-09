@@ -11,7 +11,7 @@ The support matrix below indicates which specific features are available on whic
 |----------|----------------------------------------------------------------------|
 | Android  | Title, Description, Icon, Action, Pop, Sound, Custom Sound, Grouping |
 | iOS      | Title, Description, Pop, Sound, Custom Sound, Grouping               |
-| Windows  | Title, Description, Pop                                              |
+| Windows  | Title, Description, Icon (Experimental), Pop                         |
 | macOS    | Title, Description, Pop, Sound, Custom Sound, Grouping               |               
 | Linux    | Title, Description, Icon, Pop, Sound, Custom Sound                   |
 | Web (JS) | Title, Description, Icon, Pop, Sound                                 |
