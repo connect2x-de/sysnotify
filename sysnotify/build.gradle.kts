@@ -170,7 +170,7 @@ android {
     }
 }
 
-val copyNativesForJvm: Copy = tasks.create<Copy>("copyNativesForJvm") {
+val copyNativesForJvm: Copy by tasks.register<Copy>("copyNativesForJvm") {
     dependsOn(
         tasks.getByName("linkReleaseSharedIosArm64"),
         tasks.getByName("linkReleaseSharedIosX64"),

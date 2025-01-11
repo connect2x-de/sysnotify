@@ -6,16 +6,16 @@ android-compileSdk = "34"
 agp = "8.5.2"
 kotlin = "2.1.0"
 kotlinx-coroutines = "1.9.0" # https://github.com/Kotlin/kotlinx.coroutines/releases
-core = "1.13.1" # https://mvnrepository.com/artifact/androidx.core/core
+core = "1.15.0" # https://mvnrepository.com/artifact/androidx.core/core
 stately = "2.1.0" # https://mvnrepository.com/artifact/co.touchlab/stately-common
 
 # For tests
 kotest = "5.9.1" # https://mvnrepository.com/artifact/io.kotest/kotest-framework-engine-jvm
 
 # For sample
+compose = "1.7.3"
 androidx-activityCompose = "1.9.3" # https://mvnrepository.com/artifact/androidx.activity/activity-compose
 androidx-ui-tooling = "1.7.6" # https://mvnrepository.com/artifact/androidx.compose.ui/ui-tooling
-compose-plugin = "1.7.3" # https://github.com/JetBrains/compose-multiplatform/releases
 
 kmpJni = "1.0.1" # https://gitlab.com/connect2x/kmp-jni/-/packages
 sysnotifyBinaries = "v1.0.4" # https://gitlab.com/connect2x/sysnotify-platform-binaries/-/packages/
@@ -45,6 +45,5 @@ kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref 
 
 # For sample
 androidApplication = { id = "com.android.application", version.ref = "agp" }
+compose = { id = "org.jetbrains.compose", version.ref = "compose" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-compose = { id = "org.jetbrains.compose", version.ref = "compose-plugin" }
-kotlinx-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }

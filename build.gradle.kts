@@ -18,9 +18,8 @@ plugins {
     alias(libs.plugins.kotlin.multiplatform) apply false
     // For sample
     alias(libs.plugins.androidApplication) apply false
-    alias(libs.plugins.compose.compiler)
-    alias(libs.plugins.compose)
-    alias(libs.plugins.kotlinx.serialization)
+    alias(libs.plugins.compose) apply false
+    alias(libs.plugins.compose.compiler) apply false
 }
 
 val baseVersion: String = libs.versions.sysnotify.get()
