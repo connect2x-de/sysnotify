@@ -13,7 +13,7 @@ stately = "2.1.0" # https://mvnrepository.com/artifact/co.touchlab/stately-commo
 kotest = "5.9.1" # https://mvnrepository.com/artifact/io.kotest/kotest-framework-engine-jvm
 
 # For sample
-compose = "1.7.1"
+compose = "1.7.3"
 androidx-activityCompose = "1.9.3" # https://mvnrepository.com/artifact/androidx.activity/activity-compose
 androidx-ui-tooling = "1.7.6" # https://mvnrepository.com/artifact/androidx.compose.ui/ui-tooling
 
