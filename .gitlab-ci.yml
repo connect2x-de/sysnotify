@@ -112,8 +112,7 @@ build:windows:
     - *if-merge-request-or-main
   script:
     - ./gradlew
-      compileKotlinMingwX64
-      linkMingwX64
+      :sysnotify:linkMingwX64
       --stacktrace
 
 build:mac:
@@ -126,8 +125,7 @@ build:mac:
     - *if-merge-request-or-main
   script:
     - ./gradlew
-      compileKotlin{MacosX64,MacosArm64,IosArm64,IosSimulatorArm64,IosX64}
-      link{MacosX64,MacosArm64,IosArm64,IosX64}
+      :sysnotify:link{MacosX64,MacosArm64,IosArm64,IosX64,IosSimulatorArm64}
       --stacktrace
 
 build:linux:
@@ -141,9 +139,8 @@ build:linux:
     - *if-merge-request-or-main
   script:
     - ./gradlew
-      compileKotlin{Jvm,LinuxX64,LinuxArm64}
-      compileReleaseKotlinAndroid
-      linkLinux{X64,Arm64}
+      :sysnotify:compile{ReleaseKotlinAndroid,KotlinJvm}
+      :sysnotify:linkLinux{X64,Arm64}
       --stacktrace
 
 test:linux:
@@ -160,7 +157,7 @@ test:linux:
     - *if-merge-request-or-main
   script:
     - ./gradlew
-      {jvm,linuxX64}Test
+      :sysnotify:{jvm,linuxX64}Test
       --stacktrace
 
 test:mac:
@@ -176,7 +173,7 @@ test:mac:
     - *if-merge-request-or-main
   script:
     - ./gradlew
-      {jvm,macosX64}Test
+      :sysnotify:{jvm,macosX64}Test
       --stacktrace
 
 test:windows:
@@ -192,7 +189,8 @@ test:windows:
     - *if-merge-request-or-main
   script:
     - ./gradlew
-      {jvm,mingwX64}Test
+      :sysnotify:jvmTest
+      :sysnotify:mingwX64Test
       --stacktrace
 
 security:dependencies:
@@ -235,7 +233,7 @@ publish:mac:
     - *if-release
   script:
     - ./gradlew
-      publish{MacosX64,MacosArm64,IosArm64,IosSimulatorArm64,IosX64,Jvm}PublicationToGitlabRepository
+      :sysnotify:publish{MacosX64,MacosArm64,IosArm64,IosSimulatorArm64,IosX64,Jvm}PublicationToGitlabRepository
       --stacktrace
 
 publish:linux:
@@ -247,13 +245,9 @@ publish:linux:
   rules:
     - *if-main
     - *if-release
-  before_script:
-    - export DEBIAN_FRONTEND=noninteractive
-    - apt update -y
-    - apt install -y $LINUX_DEPENDENCIES
   script:
     - ./gradlew
-      publish{KotlinMultiplatform,Js,AndroidRelease}PublicationToGitlabRepository
+      :sysnotify:publish{KotlinMultiplatform,Js,AndroidRelease}PublicationToGitlabRepository
       --stacktrace
 
 publish:windows:
@@ -267,5 +261,5 @@ publish:windows:
     - *if-release
   script:
     - ./gradlew
-      publishMingwX64PublicationToGitlabRepository
+      :sysnotify:publishMingwX64PublicationToGitlabRepository
       --stacktrace
