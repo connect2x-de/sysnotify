@@ -131,7 +131,7 @@ build:mac:
 build:linux:
   stage: build
   interruptible: true
-  tags: [ "saas-linux-small-amd64" ]
+  tags: [ "connect2x-linux" ]
   image: $BUILD_LINUX_IMAGE_NAME
   cache:
     - *cache-linux
@@ -148,7 +148,7 @@ test:linux:
   interruptible: true
   timeout: 1h
   needs: [ "build:linux" ]
-  tags: [ "saas-linux-small-amd64" ]
+  tags: [ "connect2x-linux" ]
   image: $BUILD_LINUX_IMAGE_NAME
   cache:
     - *pull-cache-linux
@@ -198,7 +198,7 @@ security:dependencies:
   interruptible: true
   timeout: 30m
   needs: [ ]
-  tags: [ "saas-linux-small-amd64" ]
+  tags: [ "connect2x-linux" ]
   image:
     name: "aquasec/trivy"
     entrypoint: [ "" ]
@@ -238,7 +238,7 @@ publish:mac:
 
 publish:linux:
   stage: publish
-  tags: [ "saas-linux-small-amd64" ]
+  tags: [ "connect2x-linux" ]
   image: $BUILD_LINUX_IMAGE_NAME
   cache:
     - *pull-cache-linux
