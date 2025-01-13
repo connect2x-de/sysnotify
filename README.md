@@ -41,6 +41,15 @@ See [here](https://developer.android.com/develop/ui/views/notifications/build-no
 
 macOS and iOS are supported starting with versions **10.14** and **10.0** respectively.
 
+#### Note on debugging
+
+Since macOS and iOS internally use [bundleProxyForCurrentProcess](https://notprivateapis.com/documentation/notprivateapis/bundleproxyforcurrentprocess/),
+which presumably is declared as `nonnull`, builds of the sample application or the application consuming SysNotify will
+crash when not started with a valid bundle.
+
+This means that using `:sysnotify-sample:run` or `:sysnotify-sample:run_Executable_` will not work. Instead you need to
+launch the **.app** file produced by the `:sysnotify-sample:packageDmg` task or install the **.dmg** that's also built in the process.
+
 ### Windows
 
 Windows is supported starting with Windows 10.

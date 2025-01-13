@@ -54,15 +54,10 @@ internal class AppleNotificationHandler(
 
     private val notificationCategories: SharedHashMap<String, UNNotificationCategory> = SharedHashMap()
 
-    private val notificationCenter: UNUserNotificationCenter? = try {
-        UNUserNotificationCenter.currentNotificationCenter()
-    } catch (error: Throwable) {/* This is a soft fail, so we swallow the exception */
-        // TODO: add a log warning once we support some logging API
-        null
-    }
+    private val notificationCenter: UNUserNotificationCenter = UNUserNotificationCenter.currentNotificationCenter()
 
     private fun ensureCategoryExists(key: String) {
-        if (key in notificationCategories || notificationCenter == null) return
+        if (key in notificationCategories) return
         val category = UNNotificationCategory.categoryWithIdentifier(
             identifier = key,
             actions = emptyList<UNNotificationAction>(),
@@ -75,7 +70,7 @@ internal class AppleNotificationHandler(
     }
 
     override suspend fun requestPermissions() {
-        if (Platform.isDebugBinary || hasPermissions) return
+        if (hasPermissions) return
         UNUserNotificationCenter.currentNotificationCenter().requestAuthorizationWithOptions(
             UNAuthorizationOptionSound or UNAuthorizationOptionBadge or UNAuthorizationOptionAlert
         ) { granted, error ->
@@ -95,7 +90,7 @@ internal class AppleNotificationHandler(
     @OptIn(ExperimentalUuidApi::class)
     override suspend fun push(notification: Notification): NotificationHandle {
         val handle = AppleNotificationHandle()
-        if (Platform.isDebugBinary || !hasPermissions) return handle
+        if (!hasPermissions) return handle
 
         val content = UNMutableNotificationContent().apply {
             setTitle(notification.title ?: handle.uuid.toString())
@@ -112,7 +107,7 @@ internal class AppleNotificationHandler(
             }
         }
 
-        notificationCenter?.addNotificationRequest(
+        notificationCenter.addNotificationRequest(
             UNNotificationRequest.requestWithIdentifier(
                 handle.uuid.toString(), content, null
             )
@@ -129,12 +124,12 @@ internal class AppleNotificationHandler(
     @OptIn(ExperimentalUuidApi::class)
     override suspend fun pop(handle: NotificationHandle) {
         require(handle is AppleNotificationHandle) { "Handle is not an Apple notification handle" }
-        if (Platform.isDebugBinary || !hasPermissions) return
+        if (!hasPermissions) return
 
         val identifier = handle.uuid.toString()
         var found = false
         // First try to remove it from the pending notifications
-        notificationCenter?.getPendingNotificationRequestsWithCompletionHandler {
+        notificationCenter.getPendingNotificationRequestsWithCompletionHandler {
             for (request in it as List<UNNotificationRequest>) {
                 if (request.identifier != identifier) continue
                 notificationCenter.removePendingNotificationRequestsWithIdentifiers(listOf(identifier))
@@ -144,7 +139,7 @@ internal class AppleNotificationHandler(
         }
         if (found) return
         // Otherwise it was already delivered
-        notificationCenter?.getDeliveredNotificationsWithCompletionHandler {
+        notificationCenter.getDeliveredNotificationsWithCompletionHandler {
             for (notification in it as List<UNNotification>) {
                 if (notification.request.identifier != identifier) continue
                 notificationCenter.removeDeliveredNotificationsWithIdentifiers(listOf(identifier))
