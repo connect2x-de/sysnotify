@@ -3,19 +3,19 @@ sysnotify = "1.7.0"
 jvmTarget = "17"
 android-minSdk = "28"
 android-compileSdk = "34"
-agp = "8.5.2"
-kotlin = "2.1.0"
+agp = "8.5.2" # https://developer.android.com/build/releases/gradle-plugin
+kotlin = "2.1.0" # https://github.com/JetBrains/kotlin/releases
 kotlinx-coroutines = "1.9.0" # https://github.com/Kotlin/kotlinx.coroutines/releases
-core = "1.13.1" # https://mvnrepository.com/artifact/androidx.core/core
-stately = "2.1.0" # https://mvnrepository.com/artifact/co.touchlab/stately-common
+core = "1.13.1" # https://developer.android.com/jetpack/androidx/releases/core
+stately = "2.1.0" # https://github.com/touchlab/Stately/releases
 
 # For tests
-kotest = "5.9.1" # https://mvnrepository.com/artifact/io.kotest/kotest-framework-engine-jvm
+kotest = "5.9.1" # https://github.com/kotest/kotest/releases
 
 # For sample
-compose = "1.7.3"
-androidx-activityCompose = "1.9.3" # https://mvnrepository.com/artifact/androidx.activity/activity-compose
-androidx-ui-tooling = "1.7.6" # https://mvnrepository.com/artifact/androidx.compose.ui/ui-tooling
+compose = "1.7.3" # https://github.com/JetBrains/compose-multiplatform/releases
+androidx-activityCompose = "1.9.3" # https://developer.android.com/jetpack/androidx/releases/activity
+androidx-ui-tooling = "1.7.6" # https://developer.android.com/jetpack/androidx/releases/compose-ui
 
 kmpJni = "1.0.1" # https://gitlab.com/connect2x/kmp-jni/-/packages
 sysnotifyBinaries = "v1.0.4" # https://gitlab.com/connect2x/sysnotify-platform-binaries/-/packages/
