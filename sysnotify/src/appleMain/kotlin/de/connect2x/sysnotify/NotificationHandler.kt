@@ -38,10 +38,6 @@ internal class AppleNotificationHandler(
     override val priority: NotificationPriority,
     private val activationCallback: (Notification) -> Unit,
 ) : NotificationHandler {
-    companion object {
-        internal const val USERDATA_KEY: String = "sysnotify_userData"
-    }
-
     override val platform: NotificationPlatform = NotificationPlatform.APPLE
     override var hasPermissions: Boolean by atomic(false)
 
@@ -104,7 +100,6 @@ internal class AppleNotificationHandler(
         val content = UNMutableNotificationContent().apply {
             setTitle(notification.title ?: handle.uuid.toString())
             setRelevanceScore(notification.priority.relevanceScore)
-            setUserInfo(mapOf(USERDATA_KEY to notification.callbackData))
             notification.description?.let(::setBody)
             if (notification.playSound) {
                 setSound(notification.soundPath?.let {

@@ -92,6 +92,7 @@ kotlin {
         target.apply {
             binaries {
                 sharedLib()
+                framework()
             }
         }
     }
@@ -99,6 +100,7 @@ kotlin {
         target.apply {
             binaries {
                 sharedLib()
+                framework()
             }
         }
     }
@@ -172,8 +174,8 @@ android {
 
 val copyNativesForJvm: Copy by tasks.register<Copy>("copyNativesForJvm") {
     dependsOn(
-        tasks.getByName("linkReleaseSharedIosArm64"),
-        tasks.getByName("linkReleaseSharedIosX64"),
+        tasks.getByName("linkReleaseSharedMacosArm64"),
+        tasks.getByName("linkReleaseSharedMacosX64"),
         tasks.getByName("linkReleaseSharedLinuxArm64"),
         tasks.getByName("linkReleaseSharedLinuxX64"),
         tasks.getByName("linkReleaseSharedMingwX64")
