@@ -14,7 +14,6 @@
  */
 
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
-import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -22,7 +21,6 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.compose)
     alias(libs.plugins.compose.compiler)
-    alias(libs.plugins.kotlinx.serialization)
 }
 
 val baseVersion: String = libs.versions.sysnotify.get()
@@ -54,7 +52,6 @@ kotlin {
     }
 
     androidTarget {
-        @OptIn(ExperimentalKotlinGradlePluginApi::class)
         compilerOptions {
             jvmTarget.set(kotlinJvmTarget)
         }
@@ -70,9 +67,16 @@ kotlin {
         }
     }
 
-    iosX64()
-    iosArm64()
-    iosSimulatorArm64()
+    listOf(iosX64(), iosArm64(), iosSimulatorArm64()).forEach {
+        it.apply {
+            binaries {
+                framework {
+                    baseName = "Sysnotify"
+                    isStatic = true
+                }
+            }
+        }
+    }
 
     sourceSets {
         androidMain {
@@ -94,11 +98,6 @@ kotlin {
         }
         jvmMain {
             dependencies {
-                implementation(project(path = ":sysnotify", configuration = "jvmNativesJarLinuxX64"))
-                implementation(project(path = ":sysnotify", configuration = "jvmNativesJarLinuxArm64"))
-                implementation(project(path = ":sysnotify", configuration = "jvmNativesJarMacosX64"))
-                implementation(project(path = ":sysnotify", configuration = "jvmNativesJarMacosArm64"))
-                implementation(project(path = ":sysnotify", configuration = "jvmNativesJarWindowsX64"))
                 // this is needed to create lock files working on all machines
                 if (System.getProperty("bundleAll") == "true") {
                     implementation(compose.desktop.linux_x64)

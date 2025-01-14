@@ -48,7 +48,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             App(
                 notificationHandler = notificationHandler,
-                launchUserData = notificationHandler.getLaunchNotification()?.userData,
+                launchUserData = notificationHandler.getLaunchNotification()?.callbackData,
                 icon = resources.getNotificationIcon(R.drawable.ic_android)
             )
         }

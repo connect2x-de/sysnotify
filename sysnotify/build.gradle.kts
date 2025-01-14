@@ -15,13 +15,12 @@
 
 import org.gradle.internal.extensions.stdlib.capitalized
 import org.gradle.internal.os.OperatingSystem
-import org.gradle.jvm.tasks.Jar
-import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.DefaultCInteropSettings
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.konan.target.Family
 import org.jetbrains.kotlin.konan.target.KonanTarget
+import kotlin.io.path.Path
 import kotlin.io.path.div
 
 plugins {
@@ -76,7 +75,6 @@ kotlin {
     }
     androidTarget {
         publishLibraryVariants("release")
-        @OptIn(ExperimentalKotlinGradlePluginApi::class)
         compilerOptions {
             jvmTarget = kotlinJvmTarget
         }
@@ -93,20 +91,16 @@ kotlin {
     listOf(macosX64(), macosArm64()).forEach { target ->
         target.apply {
             binaries {
-                framework {
-                    baseName = rootProject.name
-                }
                 sharedLib()
+                framework()
             }
         }
     }
     listOf(iosX64(), iosArm64(), iosSimulatorArm64()).forEach { target ->
         target.apply {
             binaries {
-                framework {
-                    baseName = rootProject.name
-                }
                 sharedLib()
+                framework()
             }
         }
     }
@@ -119,7 +113,9 @@ kotlin {
                     }
                 }
             }
-            binaries.sharedLib()
+            binaries {
+                sharedLib()
+            }
         }
     }
     mingwX64 {
@@ -130,10 +126,28 @@ kotlin {
                 }
             }
         }
-        binaries.sharedLib()
+        binaries {
+            sharedLib()
+        }
     }
     applyDefaultHierarchyTemplate()
     sourceSets {
+        commonMain {
+            dependencies {
+                api(libs.kotlinx.coroutines)
+                implementation(libs.stately.common)
+                implementation(libs.stately.collections)
+            }
+        }
+        androidMain {
+            dependencies {
+                implementation(libs.androidx.core)
+            }
+        }
+        jvmMain {
+            // Include JVM natives for desktop targets
+            resources.srcDir("build/generatedResources")
+        }
         val desktopMain by creating {
             dependsOn(nativeMain.get())
             dependencies {
@@ -143,11 +157,6 @@ kotlin {
         macosMain { dependsOn(desktopMain) }
         linuxMain { dependsOn(desktopMain) }
         mingwMain { dependsOn(desktopMain) }
-        commonMain {
-            dependencies {
-                api(libs.kotlinx.coroutines)
-            }
-        }
     }
 }
 
@@ -163,65 +172,26 @@ android {
     }
 }
 
-dependencies {
-    implementation(libs.androidx.core)
+val copyNativesForJvm: Copy by tasks.register<Copy>("copyNativesForJvm") {
+    dependsOn(
+        tasks.getByName("linkReleaseSharedMacosArm64"),
+        tasks.getByName("linkReleaseSharedMacosX64"),
+        tasks.getByName("linkReleaseSharedLinuxArm64"),
+        tasks.getByName("linkReleaseSharedLinuxX64"),
+        tasks.getByName("linkReleaseSharedMingwX64")
+    )
+    from("build/bin/linuxX64/releaseShared/libsysnotify.so") { into("linux-x64/") }
+    from("build/bin/linuxArm64/releaseShared/libsysnotify.so") { into("linux-arm64/") }
+    from("build/bin/macosX64/releaseShared/libsysnotify.dylib") { into("macos-x64/") }
+    from("build/bin/macosArm64/releaseShared/libsysnotify.dylib") { into("macos-arm64/") }
+    from("build/bin/mingwX64/releaseShared/sysnotify.dll") { into("windows-x64/") }
+    from("build/sysnotify-platform/windowsX64/lib/sysnotify-com.dll") { into("windows-x64/") }
+    destinationDir = (Path("build") / "generatedResources" / "natives").toFile()
 }
 
-fun jvmNativesJar(os: OperatingSystem, arch: String): Jar {
-    // Create custom JAR task(s) for packaging shared libraries produced by Kotlin/Native targets
-    val linkTask = tasks.let { taskList ->
-        when {
-            os.isLinux -> taskList.findByName("linkReleaseSharedLinux${arch.capitalized()}")
-            os.isWindows -> taskList.findByName("linkReleaseSharedMingw${arch.capitalized()}")
-            os.isMacOsX -> taskList.findByName("linkReleaseSharedMacos${arch.capitalized()}")
-            else -> null
-        }
-    } ?: throw IllegalStateException("Could not find matching Kotlin/Native link task for building JVM bindings")
-    println("Using '${linkTask.name}' as JVM bindings link task")
-    val platformPair = os.getPlatformPair(arch)
-    val taskName = "jvmNativesJar${os.getFriendlyName().capitalized()}${arch.capitalized()}"
-    configurations.create(taskName)
-    val classifier = "jvm-natives-$platformPair"
-
-    return task(taskName, Jar::class) {
-        dependsOn(linkTask)
-        archiveClassifier = classifier
-        from(linkTask.outputs) {
-            exclude("*.h", "*.def")
-        }
-        val platformDir = layout.buildDirectory / "sysnotify-platform"
-        if (os.isWindows) {
-            from(platformDir / "windows-$arch" / "lib") {
-                include("*.dll")
-            }
-        }
-        into("natives/$platformPair")
-        outputs.upToDateWhen { false } // These should always be generated fresh as it doesn't take any time
-    }.apply {
-        tasks {
-            assemble { dependsOn(this@apply) }
-        }
-        artifacts {
-            add(taskName, this@apply) // Make sure our natives JAR is added as an artifact
-        }
-        publishing {
-            publications {
-                create<MavenPublication>(taskName) {
-                    artifact(this@apply) {
-                        this.classifier = ""
-                    }
-                    artifactId = "${rootProject.name}-$classifier" // These get their own unique artifact IDs
-                }
-            }
-        }
-    }
+tasks.getByName("jvmProcessResources") {
+    dependsOn(copyNativesForJvm)
 }
-
-val jvmNativesMacosX64: Jar = jvmNativesJar(OperatingSystem.forName("osx"), "x64")
-val jvmNativesMacosArm64: Jar = jvmNativesJar(OperatingSystem.forName("osx"), "arm64")
-val jvmNativesLinunxX64: Jar = jvmNativesJar(OperatingSystem.forName("linux"), "x64")
-val jvmNativesLinuxArm64: Jar = jvmNativesJar(OperatingSystem.forName("linux"), "arm64")
-val jvmNativesMingwX64: Jar = jvmNativesJar(OperatingSystem.forName("windows"), "x64")
 
 publishing {
     repositories {

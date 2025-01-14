@@ -24,6 +24,8 @@ import org.gradle.internal.enterprise.test.FileProperty
 import org.gradle.internal.extensions.stdlib.capitalized
 import org.gradle.kotlin.dsl.create
 import org.gradle.kotlin.dsl.get
+import org.gradle.kotlin.dsl.getValue
+import org.gradle.kotlin.dsl.register
 import java.io.File
 import java.net.URL
 import java.nio.file.Files
@@ -78,11 +80,11 @@ fun FileProperty.getPaths(): List<Path> = files.map { it.toPath() }.toList()
 fun TaskContainer.ensureBuildDirectory(): Task {
     // Lazily registers this task when called and not present
     return if (any { it.name == "ensureBuildDirectory" }) this["ensureBuildDirectory"]
-    else create("ensureBuildDirectory") {
+    else register("ensureBuildDirectory") {
         val path = project.layout.buildDirectory.get().asFile.toPath()
         doLast { path.createDirectories() }
         onlyIf { path.notExists() }
-    }
+    }.get()
 }
 
 class GitLabServer(
@@ -178,44 +180,38 @@ class GitLabPackageArtifact(
         else localDirectoryPath / suffix
     }
 
-    val downloadTask: Task by lazy {
-        project.tasks.create<Task>("download${projectName.capitalized()}${suffix.capitalized()}") {
-            group = projectName
-            doLast {
-                val url = "$packageUrl/$fileName"
-                println("Downloading $url..")
-                localPath.createDirectories()
-                URL(url).openConnection().apply {
-                    // Always pretend we're desktop Firefox on Linux to get past CloudFlare
-                    setRequestProperty(
-                        "User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0"
-                    )
-                    connect()
-                    getInputStream().use { Files.copy(it, localPath, StandardCopyOption.REPLACE_EXISTING) }
-                }
-                println("Downloaded $localPath")
+    val downloadTask: Task by project.tasks.register<Task>("download${projectName.capitalized()}${suffix.capitalized()}") {
+        group = projectName
+        doLast {
+            val url = "$packageUrl/$fileName"
+            println("Downloading $url..")
+            localPath.createDirectories()
+            URL(url).openConnection().apply {
+                // Always pretend we're desktop Firefox on Linux to get past CloudFlare
+                setRequestProperty(
+                    "User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0"
+                )
+                connect()
+                getInputStream().use { Files.copy(it, localPath, StandardCopyOption.REPLACE_EXISTING) }
             }
-            onlyIf { !localPath.exists() }
+            println("Downloaded $localPath")
         }
+        onlyIf { !localPath.exists() }
     }
 
-    val extractTask: Copy by lazy {
-        project.tasks.create<Copy>("extract${projectName.capitalized()}${suffix.capitalized()}") {
-            group = projectName
-            dependsOn(downloadTask)
-            mustRunAfter(downloadTask)
-            from(project.zipTree(localPath.toFile()))
-            into(outputDirectoryPath.toFile())
-            doLast { println("Extracted $localPath") }
-        }
+    val extractTask: Copy by project.tasks.register<Copy>("extract${projectName.capitalized()}${suffix.capitalized()}") {
+        group = projectName
+        dependsOn(downloadTask)
+        mustRunAfter(downloadTask)
+        from(project.zipTree(localPath.toFile()))
+        into(outputDirectoryPath.toFile())
+        doLast { println("Extracted $localPath") }
     }
 
-    val cleanTask: Task by lazy {
-        project.tasks.create("clean${projectName.capitalized()}${suffix.capitalized()}") {
-            doLast {
-                localPath.deleteIfExists()
-                println("Removed $localPath")
-            }
+    val cleanTask: Task by project.tasks.register("clean${projectName.capitalized()}${suffix.capitalized()}") {
+        doLast {
+            localPath.deleteIfExists()
+            println("Removed $localPath")
         }
     }
 }
@@ -229,33 +225,29 @@ class GitRepository(
 ) {
     val localPath: Path by lazy { project.layout.buildDirectory / name }
 
-    val cloneTask: Exec by lazy {
-        project.tasks.create<Exec>("clone${name.replace("-", "").capitalized()}") {
-            group = this@GitRepository.group
-            dependsOn(project.tasks.ensureBuildDirectory())
-            workingDir = project.layout.buildDirectory.getFile()
-            if (tag != null) commandLine(
-                "git",
-                "clone",
-                "--branch",
-                tag,
-                "--single-branch",
-                address,
-                this@GitRepository.name
-            )
-            else commandLine("git", "clone", address, this@GitRepository.name)
-            onlyIf { localPath.notExists() }
-        }
+    val cloneTask: Exec by project.tasks.register<Exec>("clone${name.replace("-", "").capitalized()}") {
+        group = this@GitRepository.group
+        dependsOn(project.tasks.ensureBuildDirectory())
+        workingDir = project.layout.buildDirectory.getFile()
+        if (tag != null) commandLine(
+            "git",
+            "clone",
+            "--branch",
+            tag,
+            "--single-branch",
+            address,
+            this@GitRepository.name
+        )
+        else commandLine("git", "clone", address, this@GitRepository.name)
+        onlyIf { localPath.notExists() }
     }
 
-    val pullTask: Exec by lazy {
-        project.tasks.create<Exec>("pull${name.replace("-", "").capitalized()}") {
-            group = this@GitRepository.group
-            dependsOn(cloneTask)
-            workingDir = localPath.toFile()
-            commandLine("git", "pull", "--force")
-            onlyIf { localPath.exists() }
-        }
+    val pullTask: Exec by project.tasks.register<Exec>("pull${name.replace("-", "").capitalized()}") {
+        group = this@GitRepository.group
+        dependsOn(cloneTask)
+        workingDir = localPath.toFile()
+        commandLine("git", "pull", "--force")
+        onlyIf { localPath.exists() }
     }
 }
 

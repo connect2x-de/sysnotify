@@ -52,7 +52,7 @@ fun App(
 
     var title by remember { mutableStateOf("Hello") }
     var description by remember { mutableStateOf("World!") }
-    var userData by remember { mutableStateOf("This is some user data to attach to the notification") }
+    var callbackData by remember { mutableStateOf("This is some user data to attach to the notification") }
 
     Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Column {
@@ -99,8 +99,8 @@ fun App(
             )
             Row {
                 TextField(
-                    value = userData,
-                    onValueChange = { userData = it },
+                    value = callbackData,
+                    onValueChange = { callbackData = it },
                     modifier = Modifier.weight(1F).padding(vertical = 10.dp)
                 )
             }
@@ -126,7 +126,7 @@ fun App(
                                     title = title,
                                     description = description,
                                     icon = icon,
-                                    userData = userData
+                                    callbackData = callbackData
                                 )
                             )
                         }

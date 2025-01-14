@@ -19,6 +19,7 @@
 package de.connect2x.sysnotify
 
 import jni.JNIEnvVar
+import jni.jboolean
 import jni.jbyteArray
 import jni.jclass
 import jni.jint
@@ -75,6 +76,9 @@ internal fun registerNatives() {
             parameter(JvmBuiltinType.BYTE.array())
             parameter(JvmBuiltinType.INT)
             parameter(JvmBuiltinType.INT)
+            parameter(JvmBuiltinType.BOOLEAN)
+            parameter(typeString)
+            parameter(typeString)
             returns(JvmBuiltinType.LONG)
         }
         registerNativeFunction("update", staticCFunction(::update)) {
@@ -85,6 +89,7 @@ internal fun registerNatives() {
             parameter(JvmBuiltinType.BYTE.array())
             parameter(JvmBuiltinType.INT)
             parameter(JvmBuiltinType.INT)
+            parameter(typeString)
             returns(JvmBuiltinType.LONG)
         }
         registerNativeFunction("pop", staticCFunction(::pop)) {
@@ -134,7 +139,10 @@ private fun push(
     description: jstring?,
     icon: jbyteArray?,
     iconWidth: jint,
-    iconHeight: jint
+    iconHeight: jint,
+    playSound: jboolean,
+    soundPath: jstring?,
+    group: jstring?
 ): jlong {
     return runBlocking {
         requireNotNull(handler.toCPointer<CPointed>())
@@ -143,7 +151,10 @@ private fun push(
                 Notification(
                     title = title?.toKString() ?: "Unknown",
                     description = description?.toKString(),
-                    icon = icon?.let { NotificationIcon(it.toByteArray(), iconWidth, iconHeight) }
+                    icon = icon?.let { NotificationIcon(it.toByteArray(), iconWidth, iconHeight) },
+                    playSound = playSound.toKBoolean(),
+                    soundPath = soundPath?.toKString(),
+                    group = group?.toKString()
                 )
             )
     }?.let { StableRef.create(it).asCPointer().rawValue.toLong() } ?: 0
@@ -158,7 +169,8 @@ private fun update(
     description: jstring?,
     icon: jbyteArray?,
     iconWidth: jint,
-    iconHeight: jint
+    iconHeight: jint,
+    group: jstring?
 ): jlong {
     val handle =
         requireNotNull(notification.toCPointer<CPointed>()).asStableRef<NotificationHandle>()
@@ -171,6 +183,7 @@ private fun update(
                     title = title?.toKString() ?: "Unknown",
                     description = description?.toKString(),
                     icon = icon?.let { NotificationIcon(it.toByteArray(), iconWidth, iconHeight) },
+                    group = group?.toKString()
                 )
             )
     }?.let { StableRef.create(it).asCPointer().rawValue.toLong() } ?: 0

@@ -120,6 +120,9 @@ internal inline fun <reified O : jobject> O.deleteGlobalRef() {
 internal inline fun Boolean.toJBoolean(): jboolean = if (this) 1U else 0U
 
 @Suppress("NOTHING_TO_INLINE")
+internal inline fun jboolean.toKBoolean(): Boolean = this == 1U.toUByte()
+
+@Suppress("NOTHING_TO_INLINE")
 internal inline fun jstring.toKString(): String {
     return jvmEnvironment {
         val data = requireNotNull(

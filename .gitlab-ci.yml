@@ -8,7 +8,7 @@ workflow:
 
 stages:
   - build
-  # - test
+  - test
   - security
   - publish
 
@@ -17,7 +17,6 @@ variables:
   GRADLE_USER_HOME: $CI_PROJECT_DIR/.gradle
   KONAN_DATA_DIR: $CI_PROJECT_DIR/.konan
   BUILD_LINUX_IMAGE_NAME: registry.gitlab.com/trixnity/trixnity/trixnity-build-linux:latest
-  LINUX_DEPENDENCIES: keyboard-configuration gcc g++ gcc-multilib libnotify-bin libnotify-dev meson cmake python3-docutils
 
 .cache-linux: &cache-linux
   - key: global-sysnotify-cache-linux
@@ -113,9 +112,7 @@ build:windows:
     - *if-merge-request-or-main
   script:
     - ./gradlew
-      compileKotlinMingwX64
-      linkMingwX64
-      jvmNativesJarWindowsX64
+      :sysnotify:linkMingwX64
       --stacktrace
 
 build:mac:
@@ -128,30 +125,72 @@ build:mac:
     - *if-merge-request-or-main
   script:
     - ./gradlew
-      compileKotlin{MacosX64,MacosArm64,IosArm64,IosSimulatorArm64,IosX64}
-      link{MacosX64,MacosArm64,IosArm64,IosX64}
-      jvmNativesJar{MacosX64,MacosArm64}
+      :sysnotify:link{MacosX64,MacosArm64,IosArm64,IosX64,IosSimulatorArm64}
       --stacktrace
 
 build:linux:
   stage: build
   interruptible: true
-  tags: [ "saas-linux-small-amd64" ]
+  tags: [ "connect2x-linux" ]
   image: $BUILD_LINUX_IMAGE_NAME
   cache:
     - *cache-linux
   rules:
     - *if-merge-request-or-main
-  before_script:
-    - export DEBIAN_FRONTEND=noninteractive
-    - apt update -y
-    - apt install -y $LINUX_DEPENDENCIES
   script:
     - ./gradlew
-      compileKotlin{Jvm,LinuxX64,LinuxArm64}
-      compileReleaseKotlinAndroid
-      linkLinux{X64,Arm64}
-      jvmNativesJar{LinuxX64,LinuxArm64}
+      :sysnotify:compile{ReleaseKotlinAndroid,KotlinJvm}
+      :sysnotify:linkLinux{X64,Arm64}
+      --stacktrace
+
+test:linux:
+  stage: test
+  interruptible: true
+  timeout: 1h
+  needs: [ "build:linux" ]
+  tags: [ "connect2x-linux" ]
+  image: $BUILD_LINUX_IMAGE_NAME
+  cache:
+    - *pull-cache-linux
+  artifacts: *artifact-reports
+  rules:
+    - *if-merge-request-or-main
+  script:
+    - ./gradlew
+      :sysnotify:{jvm,linuxX64}Test
+      --stacktrace
+
+test:mac:
+  stage: test
+  interruptible: true
+  timeout: 1h
+  needs: [ "build:mac" ]
+  tags: [ "connect2x-mac" ]
+  cache:
+    - *pull-cache-mac
+  artifacts: *artifact-reports
+  rules:
+    - *if-merge-request-or-main
+  script:
+    - ./gradlew
+      :sysnotify:{jvm,macosX64}Test
+      --stacktrace
+
+test:windows:
+  stage: test
+  interruptible: true
+  timeout: 2h
+  needs: [ "build:windows" ]
+  tags: [ "saas-windows-medium-amd64" ]
+  cache:
+    - *pull-cache-windows
+  artifacts: *artifact-reports
+  rules:
+    - *if-merge-request-or-main
+  script:
+    - ./gradlew
+      :sysnotify:jvmTest
+      :sysnotify:mingwX64Test
       --stacktrace
 
 security:dependencies:
@@ -159,7 +198,7 @@ security:dependencies:
   interruptible: true
   timeout: 30m
   needs: [ ]
-  tags: [ "saas-linux-small-amd64" ]
+  tags: [ "connect2x-linux" ]
   image:
     name: "aquasec/trivy"
     entrypoint: [ "" ]
@@ -194,25 +233,21 @@ publish:mac:
     - *if-release
   script:
     - ./gradlew
-      publish{MacosX64,MacosArm64,JvmNativesJarMacosX64,JvmNativesJarMacosArm64,IosArm64,IosSimulatorArm64,IosX64}PublicationToGitlabRepository
+      :sysnotify:publish{MacosX64,MacosArm64,IosArm64,IosSimulatorArm64,IosX64,Jvm}PublicationToGitlabRepository
       --stacktrace
 
 publish:linux:
   stage: publish
-  tags: [ "saas-linux-small-amd64" ]
+  tags: [ "connect2x-linux" ]
   image: $BUILD_LINUX_IMAGE_NAME
   cache:
     - *pull-cache-linux
   rules:
     - *if-main
     - *if-release
-  before_script:
-    - export DEBIAN_FRONTEND=noninteractive
-    - apt update -y
-    - apt install -y $LINUX_DEPENDENCIES
   script:
     - ./gradlew
-      publish{KotlinMultiplatform,Jvm,JvmNativesJarLinuxX64,JvmNativesJarLinuxArm64,Js,AndroidRelease}PublicationToGitlabRepository
+      :sysnotify:publish{KotlinMultiplatform,Js,AndroidRelease}PublicationToGitlabRepository
       --stacktrace
 
 publish:windows:
@@ -226,5 +261,5 @@ publish:windows:
     - *if-release
   script:
     - ./gradlew
-      publish{MingwX64,JvmNativesJarWindowsX64}PublicationToGitlabRepository
+      :sysnotify:publishMingwX64PublicationToGitlabRepository
       --stacktrace

@@ -25,16 +25,16 @@ import android.os.Parcelable.Creator
 data class ParcelableNotification(
     val title: String?,
     val description: String?,
-    val userData: String?,
+    val callbackData: String?,
 ) : Parcelable {
-    constructor(notification: Notification) : this(notification.title, notification.description, notification.userData)
+    constructor(notification: Notification) : this(notification.title, notification.description, notification.callbackData)
 
     override fun describeContents(): Int = 0
 
     override fun writeToParcel(parcel: Parcel, flags: Int) {
         parcel.writeNullable(title, Parcel::writeString)
         parcel.writeNullable(description, Parcel::writeString)
-        parcel.writeNullable(userData, Parcel::writeString)
+        parcel.writeNullable(callbackData, Parcel::writeString)
     }
 
     companion object CREATOR : Creator<ParcelableNotification> {
@@ -42,7 +42,7 @@ data class ParcelableNotification(
             return ParcelableNotification(
                 title = parcel.readNullable(Parcel::readString),
                 description = parcel.readNullable(Parcel::readString),
-                userData = parcel.readNullable(Parcel::readString)
+                callbackData = parcel.readNullable(Parcel::readString)
             )
         }
 

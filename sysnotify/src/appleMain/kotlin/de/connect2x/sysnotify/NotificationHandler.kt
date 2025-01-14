@@ -15,22 +15,21 @@
 
 package de.connect2x.sysnotify
 
+import co.touchlab.stately.collections.SharedHashMap
 import kotlinx.atomicfu.atomic
 import platform.UserNotifications.UNAuthorizationOptionAlert
 import platform.UserNotifications.UNAuthorizationOptionBadge
 import platform.UserNotifications.UNAuthorizationOptionSound
 import platform.UserNotifications.UNMutableNotificationContent
 import platform.UserNotifications.UNNotification
+import platform.UserNotifications.UNNotificationAction
+import platform.UserNotifications.UNNotificationCategory
+import platform.UserNotifications.UNNotificationCategoryOptionNone
 import platform.UserNotifications.UNNotificationRequest
+import platform.UserNotifications.UNNotificationSound
 import platform.UserNotifications.UNUserNotificationCenter
 import kotlin.experimental.ExperimentalNativeApi
 import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
-
-@OptIn(ExperimentalUuidApi::class)
-internal data class AppleNotificationHandle(
-    val uuid: Uuid = Uuid.random()
-) : NotificationHandle
 
 @OptIn(ExperimentalNativeApi::class)
 internal class AppleNotificationHandler(
@@ -48,21 +47,38 @@ internal class AppleNotificationHandler(
         isIconSupported = false,
         isActionSupported = false,
         isPopSupported = true,
+        isSoundSupported = true,
+        isCustomSoundSupported = true,
+        isGroupingSupported = true
     )
 
+    private val notificationCategories: SharedHashMap<String, UNNotificationCategory> = SharedHashMap()
+
+    private val notificationCenter: UNUserNotificationCenter = UNUserNotificationCenter.currentNotificationCenter()
+
+    private fun ensureCategoryExists(key: String) {
+        if (key in notificationCategories) return
+        val category = UNNotificationCategory.categoryWithIdentifier(
+            identifier = key,
+            actions = emptyList<UNNotificationAction>(),
+            intentIdentifiers = emptyList<String>(),
+            options = UNNotificationCategoryOptionNone
+        )
+        notificationCategories[key] = category
+        // We have to update ALL the categories every time we add a new one
+        notificationCenter.setNotificationCategories(notificationCategories.values.toSet())
+    }
+
     override suspend fun requestPermissions() {
-        if (Platform.isDebugBinary || hasPermissions) return
-        UNUserNotificationCenter.currentNotificationCenter()
-            .requestAuthorizationWithOptions(
-                UNAuthorizationOptionSound
-                        or UNAuthorizationOptionBadge
-                        or UNAuthorizationOptionAlert
-            ) { granted, error ->
-                if (granted) hasPermissions = true
-                error?.localizedDescription?.let {
-                    throw IllegalStateException("Could not request permission: $it")
-                }
+        if (hasPermissions) return
+        UNUserNotificationCenter.currentNotificationCenter().requestAuthorizationWithOptions(
+            UNAuthorizationOptionSound or UNAuthorizationOptionBadge or UNAuthorizationOptionAlert
+        ) { granted, error ->
+            if (granted) hasPermissions = true
+            error?.localizedDescription?.let {
+                throw IllegalStateException("Could not request permission: $it")
             }
+        }
     }
 
     @OptIn(ExperimentalUuidApi::class)
@@ -74,22 +90,33 @@ internal class AppleNotificationHandler(
     @OptIn(ExperimentalUuidApi::class)
     override suspend fun push(notification: Notification): NotificationHandle {
         val handle = AppleNotificationHandle()
-        if (Platform.isDebugBinary || !hasPermissions) return handle
+        if (!hasPermissions) return handle
 
         val content = UNMutableNotificationContent().apply {
             setTitle(notification.title ?: handle.uuid.toString())
+            setRelevanceScore(notification.priority.relevanceScore)
             notification.description?.let(::setBody)
-        }
-        UNUserNotificationCenter.currentNotificationCenter()
-            .addNotificationRequest(
-                UNNotificationRequest.requestWithIdentifier(
-                    handle.uuid.toString(), content, null
-                )
-            ) { error ->
-                error?.localizedDescription?.let {
-                    throw IllegalStateException("Could not request notification: $it")
-                }
+            if (notification.playSound) {
+                setSound(notification.soundPath?.let {
+                    UNNotificationSound.soundNamed(it)
+                } ?: UNNotificationSound.defaultSound)
             }
+            notification.group?.let {
+                ensureCategoryExists(it)
+                setCategoryIdentifier(it)
+            }
+        }
+
+        notificationCenter.addNotificationRequest(
+            UNNotificationRequest.requestWithIdentifier(
+                handle.uuid.toString(), content, null
+            )
+        ) { error ->
+            error?.localizedDescription?.let {
+                throw IllegalStateException("Could not request notification: $it")
+            }
+        }
+
         return handle
     }
 
@@ -97,26 +124,25 @@ internal class AppleNotificationHandler(
     @OptIn(ExperimentalUuidApi::class)
     override suspend fun pop(handle: NotificationHandle) {
         require(handle is AppleNotificationHandle) { "Handle is not an Apple notification handle" }
-        if (Platform.isDebugBinary || !hasPermissions) return
+        if (!hasPermissions) return
 
-        val center = UNUserNotificationCenter.currentNotificationCenter()
         val identifier = handle.uuid.toString()
         var found = false
         // First try to remove it from the pending notifications
-        center.getPendingNotificationRequestsWithCompletionHandler {
+        notificationCenter.getPendingNotificationRequestsWithCompletionHandler {
             for (request in it as List<UNNotificationRequest>) {
                 if (request.identifier != identifier) continue
-                center.removePendingNotificationRequestsWithIdentifiers(listOf(identifier))
+                notificationCenter.removePendingNotificationRequestsWithIdentifiers(listOf(identifier))
                 found = true
                 break
             }
         }
         if (found) return
         // Otherwise it was already delivered
-        center.getDeliveredNotificationsWithCompletionHandler {
+        notificationCenter.getDeliveredNotificationsWithCompletionHandler {
             for (notification in it as List<UNNotification>) {
                 if (notification.request.identifier != identifier) continue
-                center.removeDeliveredNotificationsWithIdentifiers(listOf(identifier))
+                notificationCenter.removeDeliveredNotificationsWithIdentifiers(listOf(identifier))
                 break
             }
         }

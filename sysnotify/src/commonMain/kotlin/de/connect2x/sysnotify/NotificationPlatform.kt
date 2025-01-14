@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 connect2x GmbH
+ * Copyright 2025 connect2x GmbH
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,4 +13,21 @@
  * limitations under the License.
  */
 
-rootProject.name = "sysnotify-sample"
+package de.connect2x.sysnotify
+
+/**
+ * @author Alexander Hinze
+ * @since 07/01/2025
+ *
+ * A complete list of all platforms supported by Sysnotify.
+ * The current platform can be queried from every [NotificationHandler] instance
+ * via the [NotificationHandler.platform] property.
+ */
+enum class NotificationPlatform {
+    UNKNOWN,
+    ANDROID,
+    APPLE, // This includes iOS and macOS
+    LINUX,
+    WINDOWS,
+    WEB,
+}
