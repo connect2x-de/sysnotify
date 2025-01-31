@@ -15,8 +15,8 @@ The support matrix below indicates which specific features are available on whic
 | Icon         | ✅       | ❌   | ✅       | ❌     | ✅    | ✅   |
 | Action       | ✅       | ❌   | ❌       | ❌     | ❌    | ❌   |
 | Pop          | ✅       | ✅   | ✅       | ✅     | ✅    | ✅   |
-| Sound        | ✅       | ✅   | ❌       | ✅     | ✅    | ✅   |
-| Custom Sound | ✅       | ✅   | ❌       | ✅     | ✅    | ❌   |
+| Sound        | ✅       | ✅   | ✅       | ✅     | ✅    | ✅   |
+| Custom Sound | ✅       | ✅   | ✅       | ✅     | ✅    | ❌   |
 | Grouping     | ✅       | ✅   | ❌       | ✅     | ❌    | ❌   |
 
 **For the JVM, the same features as the respective host-native implementation are available.**
