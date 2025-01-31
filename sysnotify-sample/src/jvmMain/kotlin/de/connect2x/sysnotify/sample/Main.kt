@@ -30,7 +30,11 @@ fun main() {
         val icon =
             this::class.java.getResourceAsStream("/assets/icons/app_icon.png")
                 .use { ImageIO.read(it) }
-        val notificationHandler = NotificationHandler.create("Sysnotify Sample", "Connect2x.Sysnotify")
+        val notificationHandler = NotificationHandler.create(
+            name = "Sysnotify Sample",
+            id = "Connect2x.Sysnotify.Sample",
+            activationCallback = { println(it.callbackData) } // TODO: Callback data is not global state
+        )
 
         Window(
             title = "Sysnotify Sample",

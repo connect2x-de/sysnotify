@@ -16,8 +16,29 @@
 package de.connect2x.sysnotify
 
 fun interface NativeActivationCallback {
-    fun invoke(notification: Long) {
-        // TODO: delegate invoke call to typed function
+    fun invoke(notification: Long) = with(Memory.instance) {
+        invoke(
+            Notification( // Offsets assuming 64-bit pointer size
+                // offset 0x00
+                title = getString(notification),
+                // offset 0x08
+                description = getString(notification + pointerSize),
+                // offset 0x10
+                // TODO: implement array data for icon, assume format
+                // offset 0x18
+                callbackData = getString(notification + pointerSize * 3),
+                // offset 0x20
+                dismissible = getBoolean(notification + pointerSize * 4),
+                // offset 0x21
+                priority = NotificationPriority.entries[getInt(notification + (pointerSize * 4) + 1)],
+                // offset 0x25
+                playSound = getBoolean(notification + (pointerSize * 4) + 5),
+                // offset 0x26
+                soundPath = getString(notification + (pointerSize * 4) + 6),
+                // offset 0x2E
+                group = getString(notification + (pointerSize * 5) + 6)
+            )
+        )
     }
 
     fun invoke(notification: Notification)
@@ -30,6 +51,9 @@ object NativeNotificationHandler {
 
     @JvmStatic
     external fun create(name: String, id: String, activationCallback: NativeActivationCallback): Long
+
+    @JvmStatic
+    external fun hasPermissions(handler: Long): Boolean
 
     @JvmStatic
     external fun getPlatform(handler: Long): Int

@@ -55,6 +55,10 @@ internal fun registerNatives() {
             parameter(typeNativeActivationCallback)
             returns(JvmBuiltinType.LONG)
         }
+        registerNativeFunction("hasPermissions", staticCFunction(::hasPermissions)) {
+            parameter(JvmBuiltinType.LONG)
+            returns(JvmBuiltinType.BOOLEAN)
+        }
         registerNativeFunction("destroy", staticCFunction(::destroy)) {
             parameter(JvmBuiltinType.LONG)
         }
@@ -100,15 +104,24 @@ internal fun registerNatives() {
 }
 
 private fun create(env: JNIEnvVar, clazz: jclass, name: jstring, id: jstring, activationCallback: jobject): jlong {
-    return StableRef.create(createNotificationHandler(name.toKString(), id.toKString(), {
-        // TODO: implement this
+    return StableRef.create(createNotificationHandler(name.toKString(), id.toKString(), { notification ->
+
     }, NotificationPriority.DEFAULT)).asCPointer().rawValue.toLong()
+}
+
+private fun hasPermissions(env: JNIEnvVar, clazz: jclass, handler: jlong): jboolean {
+    return requireNotNull(handler.toCPointer<CPointed>())
+        .asStableRef<NotificationHandler>()
+        .get().hasPermissions.toJBoolean()
 }
 
 private fun destroy(env: JNIEnvVar, clazz: jclass, handler: jlong) {
     requireNotNull(handler.toCPointer<CPointed>())
         .asStableRef<NotificationHandler>()
-        .dispose()
+        .apply {
+            get().close()
+            dispose()
+        }
 }
 
 private fun getPlatform(env: JNIEnvVar, clazz: jclass, handler: jlong): jint {

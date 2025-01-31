@@ -17,6 +17,8 @@
 
 package de.connect2x.sysnotify
 
+import de.connect2x.sysnotify.com.SYSNOTIFY_FALSE
+import de.connect2x.sysnotify.com.SYSNOTIFY_TRUE
 import de.connect2x.sysnotify.com.sn_notification_content
 import de.connect2x.sysnotify.com.sn_notification_handler
 import de.connect2x.sysnotify.com.sn_notification_handlerVar
@@ -29,11 +31,12 @@ import de.connect2x.sysnotify.com.sysnotify_handler_update
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.MemScope
 import kotlinx.cinterop.StableRef
-import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.alloc
+import kotlinx.cinterop.asStableRef
+import kotlinx.cinterop.cstr
 import kotlinx.cinterop.memScoped
-import kotlinx.cinterop.pin
 import kotlinx.cinterop.ptr
+import kotlinx.cinterop.staticCFunction
 import kotlinx.cinterop.value
 import kotlin.uuid.ExperimentalUuidApi
 
@@ -53,7 +56,7 @@ internal class WindowsNotificationHandler(
         requireNotNull(pointer.value) { "Could not create COM adaptor instance" }
     }
     override val platform: NotificationPlatform = NotificationPlatform.WINDOWS
-    override val hasPermissions: Boolean = false // TODO: Implement hasPermissions flag
+    override val hasPermissions: Boolean = true
 
     override val capabilities: NotificationCapabilities = NotificationCapabilities(
         isTitleSupported = true,
@@ -61,8 +64,8 @@ internal class WindowsNotificationHandler(
         isIconSupported = true,
         isActionSupported = true,
         isPopSupported = true,
-        isSoundSupported = true, // Supported via OS default right now
-        isCustomSoundSupported = false,
+        isSoundSupported = true,
+        isCustomSoundSupported = true,
         isGroupingSupported = false
     )
 
@@ -114,15 +117,20 @@ internal class WindowsNotificationHandler(
     @Suppress("NOTHING_TO_INLINE")
     private inline fun MemScope.allocNotification(notification: Notification): sn_notification_content {
         return alloc<sn_notification_content> {
-            title = allocCString(notification.title)
-            description = allocCString(notification.description)
-            val iconData = notification.icon?.data?.pin()?.apply {
-                icon = addressOf(0)
-            }
-            user_data = StableRef.create(Pair(notification, iconData)).asCPointer()
+            title = notification.title?.cstr?.ptr
+            description = notification.description?.cstr?.ptr
+            user_data = StableRef.create(Pair(notification, this)).asCPointer()
             icon_width = notification.icon?.width ?: 0
             icon_height = notification.icon?.height ?: 0
-            // TODO: add support for sounds and grouping
+            is_silent = if (notification.playSound) SYSNOTIFY_TRUE else SYSNOTIFY_FALSE
+            sound_path = notification.soundPath?.cstr?.ptr
+            activate_callback = staticCFunction { _, callbackData ->
+                callbackData?.asStableRef<Pair<Notification, WindowsNotificationHandler>>()?.apply {
+                    val (currentNotification, currentHandler) = get()
+                    currentHandler.activationCallback(currentNotification)
+                    dispose()
+                }
+            }
         }
     }
 }
