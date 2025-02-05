@@ -20,6 +20,7 @@ internal actual fun createNotificationHandler(
     id: String,
     activationCallback: (Notification) -> Unit,
     priority: NotificationPriority,
+    closeCallback: () -> Unit,
 ): NotificationHandler {
-    return AppleNotificationHandler(name, id, priority, activationCallback)
+    return AppleNotificationHandler(name, id, priority, activationCallback, closeCallback)
 }

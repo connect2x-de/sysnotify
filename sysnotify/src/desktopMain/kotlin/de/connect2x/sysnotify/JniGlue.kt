@@ -18,6 +18,7 @@
 
 package de.connect2x.sysnotify
 
+import de.connect2x.sysnotify.native.SNNotificationData
 import jni.JNIEnvVar
 import jni.jboolean
 import jni.jbyteArray
@@ -26,10 +27,19 @@ import jni.jint
 import jni.jlong
 import jni.jobject
 import jni.jstring
+import jni.jvalue
 import kotlinx.cinterop.CPointed
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.StableRef
+import kotlinx.cinterop.alloc
+import kotlinx.cinterop.allocArray
+import kotlinx.cinterop.allocArrayOf
 import kotlinx.cinterop.asStableRef
+import kotlinx.cinterop.cstr
+import kotlinx.cinterop.invoke
+import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.pointed
+import kotlinx.cinterop.ptr
 import kotlinx.cinterop.staticCFunction
 import kotlinx.cinterop.toCPointer
 import kotlinx.coroutines.runBlocking
@@ -38,7 +48,8 @@ internal expect fun createNotificationHandler(
     name: String,
     id: String,
     activationCallback: (Notification) -> Unit,
-    priority: NotificationPriority
+    priority: NotificationPriority,
+    closeCallback: () -> Unit = {}
 ): NotificationHandler
 
 private val typeNativeNotificationHandler =
@@ -52,6 +63,7 @@ internal fun registerNatives() {
         registerNativeFunction("create", staticCFunction(::create)) {
             parameter(typeString)
             parameter(typeString)
+            parameter(JvmBuiltinType.INT)
             parameter(typeNativeActivationCallback)
             returns(JvmBuiltinType.LONG)
         }
@@ -83,6 +95,7 @@ internal fun registerNatives() {
             parameter(JvmBuiltinType.BOOLEAN)
             parameter(typeString)
             parameter(typeString)
+            parameter(typeString)
             returns(JvmBuiltinType.LONG)
         }
         registerNativeFunction("update", staticCFunction(::update)) {
@@ -94,6 +107,7 @@ internal fun registerNatives() {
             parameter(JvmBuiltinType.INT)
             parameter(JvmBuiltinType.INT)
             parameter(typeString)
+            parameter(typeString)
             returns(JvmBuiltinType.LONG)
         }
         registerNativeFunction("pop", staticCFunction(::pop)) {
@@ -103,10 +117,42 @@ internal fun registerNatives() {
     }
 }
 
-private fun create(env: JNIEnvVar, clazz: jclass, name: jstring, id: jstring, activationCallback: jobject): jlong {
+private fun create(
+    env: JNIEnvVar,
+    clazz: jclass,
+    name: jstring,
+    id: jstring,
+    priority: jint,
+    activationCallback: jobject
+): jlong {
+    val globalCallback = activationCallback.newGlobalRef()
     return StableRef.create(createNotificationHandler(name.toKString(), id.toKString(), { notification ->
-
-    }, NotificationPriority.DEFAULT)).asCPointer().rawValue.toLong()
+        memScoped {
+            jvmEnvironment {
+                val data = alloc<SNNotificationData> {
+                    title = notification.title?.cstr?.ptr
+                    description = notification.description?.cstr?.ptr
+                    icon_data = notification.icon?.let { allocArrayOf(it.data) }
+                    icon_width = notification.icon?.width ?: 0
+                    icon_height = notification.icon?.height ?: 0
+                    callback_data = notification.callbackData?.cstr?.ptr
+                    dismissible = if (notification.dismissible) 1 else 0
+                    this.priority = notification.priority.ordinal
+                    play_sound = if (notification.playSound) 1 else 0
+                    sound_path = notification.soundPath?.cstr?.ptr
+                    group = notification.group?.cstr?.ptr
+                }
+                val method = typeNativeActivationCallback.jClass.getMethod("invoke") {
+                    parameter(JvmBuiltinType.LONG)
+                }
+                val args = allocArray<jvalue>(1) { _: Int -> j = data.ptr.rawValue.toLong() }
+                requireNotNull(pointed?.CallVoidMethodA)(ptr, globalCallback, method, args)
+            }
+        }
+    },
+        NotificationPriority.entries[priority],
+        { globalCallback.deleteGlobalRef() }
+    )).asCPointer().rawValue.toLong()
 }
 
 private fun hasPermissions(env: JNIEnvVar, clazz: jclass, handler: jlong): jboolean {
@@ -155,7 +201,8 @@ private fun push(
     iconHeight: jint,
     playSound: jboolean,
     soundPath: jstring?,
-    group: jstring?
+    group: jstring?,
+    callbackData: jstring?
 ): jlong {
     return runBlocking {
         requireNotNull(handler.toCPointer<CPointed>())
@@ -167,7 +214,8 @@ private fun push(
                     icon = icon?.let { NotificationIcon(it.toByteArray(), iconWidth, iconHeight) },
                     playSound = playSound.toKBoolean(),
                     soundPath = soundPath?.toKString(),
-                    group = group?.toKString()
+                    group = group?.toKString(),
+                    callbackData = callbackData?.toKString()
                 )
             )
     }?.let { StableRef.create(it).asCPointer().rawValue.toLong() } ?: 0
@@ -183,7 +231,8 @@ private fun update(
     icon: jbyteArray?,
     iconWidth: jint,
     iconHeight: jint,
-    group: jstring?
+    group: jstring?,
+    callbackData: jstring?
 ): jlong {
     val handle =
         requireNotNull(notification.toCPointer<CPointed>()).asStableRef<NotificationHandle>()
@@ -196,7 +245,8 @@ private fun update(
                     title = title?.toKString() ?: "Unknown",
                     description = description?.toKString(),
                     icon = icon?.let { NotificationIcon(it.toByteArray(), iconWidth, iconHeight) },
-                    group = group?.toKString()
+                    group = group?.toKString(),
+                    callbackData = callbackData?.toKString()
                 )
             )
     }?.let { StableRef.create(it).asCPointer().rawValue.toLong() } ?: 0

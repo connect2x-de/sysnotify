@@ -33,7 +33,7 @@ fun main() {
         val notificationHandler = NotificationHandler.create(
             name = "Sysnotify Sample",
             id = "Connect2x.Sysnotify.Sample",
-            activationCallback = { println(it.callbackData) } // TODO: Callback data is not global state
+            activationCallback = { println("Activated notification: ${it.callbackData}") }
         )
 
         Window(

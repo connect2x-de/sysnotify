@@ -19,11 +19,15 @@ private class JvmNotificationHandler(
     override val name: String,
     override val id: String,
     override val priority: NotificationPriority,
-    private val activationCallback: (Notification) -> Unit,
+    activationCallback: (Notification) -> Unit,
 ) : NotificationHandler {
-    private val address: Long = NativeNotificationHandler.create(name, id, {
-        activationCallback(it) // Delegate the call to the closure
-    })
+    private val address: Long = NativeNotificationHandler.create(
+        name,
+        id,
+        priority.ordinal,
+        NativeActivationCallback.create(activationCallback)
+    )
+
     override val platform: NotificationPlatform =
         NotificationPlatform.entries[NativeNotificationHandler.getPlatform(address)]
     override val hasPermissions: Boolean = NativeNotificationHandler.hasPermissions(address)
@@ -53,7 +57,8 @@ private class JvmNotificationHandler(
             iconHeight = notification.icon?.height ?: 0,
             playSound = notification.playSound,
             soundPath = notification.soundPath,
-            group = notification.group
+            group = notification.group,
+            callbackData = notification.callbackData
         )
         return if (handle != 0L) JvmNotificationHandle(handle)
         else null
@@ -72,7 +77,8 @@ private class JvmNotificationHandler(
             icon = notification.icon?.data,
             iconWidth = notification.icon?.width ?: 0,
             iconHeight = notification.icon?.height ?: 0,
-            group = notification.group
+            group = notification.group,
+            callbackData = notification.callbackData
         )
         return if (newHandle != 0L) JvmNotificationHandle(newHandle)
         else null

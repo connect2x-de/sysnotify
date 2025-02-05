@@ -1,0 +1,3 @@
+package = de.connect2x.sysnotify.native
+headers = notificationdata.h
+compilerOpts = -Isrc/c

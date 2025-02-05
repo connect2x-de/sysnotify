@@ -20,6 +20,7 @@ internal actual fun createNotificationHandler(
     id: String,
     activationCallback: (Notification) -> Unit,
     priority: NotificationPriority,
+    closeCallback: () -> Unit
 ): NotificationHandler {
-    return LinuxNotificationHandler(name, id, priority, activationCallback)
+    return LinuxNotificationHandler(name, id, priority, activationCallback, closeCallback)
 }

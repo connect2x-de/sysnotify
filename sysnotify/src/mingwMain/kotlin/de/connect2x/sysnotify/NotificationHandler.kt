@@ -13,7 +13,8 @@
  * limitations under the License.
  */
 
-@file:OptIn(ExperimentalForeignApi::class)
+@file:OptIn(ExperimentalForeignApi::class, ExperimentalUuidApi::class)
+@file:Suppress("NOTHING_TO_INLINE")
 
 package de.connect2x.sysnotify
 
@@ -37,6 +38,7 @@ import kotlinx.cinterop.cstr
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.staticCFunction
+import kotlinx.cinterop.toCValues
 import kotlinx.cinterop.value
 import kotlin.uuid.ExperimentalUuidApi
 
@@ -45,6 +47,7 @@ internal class WindowsNotificationHandler(
     override val id: String,
     override val priority: NotificationPriority,
     private val activationCallback: (Notification) -> Unit,
+    private val closeCallback: () -> Unit,
 ) : NotificationHandler {
     internal val address: sn_notification_handler = memScoped {
         val pointer = alloc<sn_notification_handlerVar>()
@@ -71,12 +74,12 @@ internal class WindowsNotificationHandler(
 
     override fun close() {
         sysnotify_handler_destroy(address).check()
+        closeCallback()
     }
 
     override fun create(notification: Notification): NotificationHandle =
         InvalidNotificationHandle // TODO: implement this
 
-    @OptIn(ExperimentalUuidApi::class)
     override suspend fun push(notification: Notification): NotificationHandle {
         return memScoped {
             val handle = alloc<sn_notification_tag>()
@@ -86,7 +89,6 @@ internal class WindowsNotificationHandler(
         }
     }
 
-    @OptIn(ExperimentalUuidApi::class)
     override suspend fun update(
         handle: NotificationHandle,
         notification: Notification
@@ -105,7 +107,6 @@ internal class WindowsNotificationHandler(
         return handle
     }
 
-    @OptIn(ExperimentalUuidApi::class)
     override suspend fun pop(handle: NotificationHandle) {
         require(handle is WindowsNotificationHandle) { "Handle is not a Windows notification handle" }
         require(handle.isValid) { "Handle is not valid" }
@@ -114,18 +115,18 @@ internal class WindowsNotificationHandler(
         }
     }
 
-    @Suppress("NOTHING_TO_INLINE")
     private inline fun MemScope.allocNotification(notification: Notification): sn_notification_content {
         return alloc<sn_notification_content> {
             title = notification.title?.cstr?.ptr
             description = notification.description?.cstr?.ptr
-            user_data = StableRef.create(Pair(notification, this)).asCPointer()
+            user_data = StableRef.create(Pair(notification, this@WindowsNotificationHandler)).asCPointer()
             icon_width = notification.icon?.width ?: 0
             icon_height = notification.icon?.height ?: 0
+            icon = notification.icon?.data?.toCValues()?.ptr
             is_silent = if (notification.playSound) SYSNOTIFY_TRUE else SYSNOTIFY_FALSE
             sound_path = notification.soundPath?.cstr?.ptr
-            activate_callback = staticCFunction { _, callbackData ->
-                callbackData?.asStableRef<Pair<Notification, WindowsNotificationHandler>>()?.apply {
+            activate_callback = staticCFunction { _, userData ->
+                userData?.asStableRef<Pair<Notification, WindowsNotificationHandler>>()?.apply {
                     val (currentNotification, currentHandler) = get()
                     currentHandler.activationCallback(currentNotification)
                     dispose()
@@ -140,4 +141,5 @@ fun NotificationHandler.Companion.create(
     id: String = name,
     activationCallback: (Notification) -> Unit = {},
     priority: NotificationPriority = NotificationPriority.DEFAULT,
-): NotificationHandler = WindowsNotificationHandler(name, id, priority, activationCallback)
+    closeCallback: () -> Unit,
+): NotificationHandler = WindowsNotificationHandler(name, id, priority, activationCallback, closeCallback)

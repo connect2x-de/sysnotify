@@ -20,6 +20,7 @@ internal actual fun createNotificationHandler(
     id: String,
     activationCallback: (Notification) -> Unit,
     priority: NotificationPriority,
+    closeCallback: () -> Unit,
 ): NotificationHandler {
-    return WindowsNotificationHandler(name, id, priority, activationCallback)
+    return WindowsNotificationHandler(name, id, priority, activationCallback, closeCallback)
 }

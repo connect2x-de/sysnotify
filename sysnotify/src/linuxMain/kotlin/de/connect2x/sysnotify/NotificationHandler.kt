@@ -35,6 +35,7 @@ internal class LinuxNotificationHandler(
     override val id: String,
     override val priority: NotificationPriority,
     private val activationCallback: (Notification) -> Unit,
+    private val closeCallback: () -> Unit,
 ) : NotificationHandler {
     companion object {
         private const val DEFAULT_ICON: String = "dialog-information"
@@ -62,6 +63,7 @@ internal class LinuxNotificationHandler(
 
     override fun close() {
         LibNotify.notify_uninit()
+        closeCallback()
     }
 
     @Suppress("NOTHING_TO_INLINE")
@@ -159,4 +161,5 @@ fun NotificationHandler.Companion.create(
     id: String = name,
     activationCallback: (Notification) -> Unit = {},
     priority: NotificationPriority = NotificationPriority.DEFAULT,
-): NotificationHandler = LinuxNotificationHandler(name, id, priority, activationCallback)
+    closeCallback: () -> Unit
+): NotificationHandler = LinuxNotificationHandler(name, id, priority, activationCallback, closeCallback)

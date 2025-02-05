@@ -90,6 +90,11 @@ kotlin {
     }
     listOf(macosX64(), macosArm64()).forEach { target ->
         target.apply {
+            compilations.getByName("main") {
+                cinterops {
+                    val notificationdata by creating
+                }
+            }
             binaries {
                 sharedLib()
                 framework()
@@ -111,6 +116,7 @@ kotlin {
                     val libnotify by creating {
                         includePlatformBinaries(target)
                     }
+                    val notificationdata by creating
                 }
             }
             binaries {
@@ -122,8 +128,9 @@ kotlin {
         compilations.getByName("main") {
             cinterops {
                 val sysnotifycom by creating {
-                    includePlatformBinaries(target)
+                    //includePlatformBinaries(target)
                 }
+                val notificationdata by creating
             }
         }
         binaries {

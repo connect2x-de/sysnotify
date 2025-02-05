@@ -37,6 +37,7 @@ internal class AppleNotificationHandler(
     override val id: String,
     override val priority: NotificationPriority,
     private val activationCallback: (Notification) -> Unit,
+    private val closeCallback: () -> Unit,
 ) : NotificationHandler {
     override val platform: NotificationPlatform = NotificationPlatform.APPLE
     override var hasPermissions: Boolean by atomic(false)
@@ -147,6 +148,10 @@ internal class AppleNotificationHandler(
             }
         }
     }
+
+    override fun close() {
+        closeCallback()
+    }
 }
 
 fun NotificationHandler.Companion.create(
@@ -154,4 +159,5 @@ fun NotificationHandler.Companion.create(
     id: String = name,
     activationCallback: (Notification) -> Unit = {},
     priority: NotificationPriority = NotificationPriority.DEFAULT,
-): NotificationHandler = AppleNotificationHandler(name, id, priority, activationCallback)
+    closeCallback: () -> Unit,
+): NotificationHandler = AppleNotificationHandler(name, id, priority, activationCallback, closeCallback)

@@ -33,9 +33,16 @@ internal interface Memory {
     fun getByte(address: Long): Byte
     fun getInt(address: Long): Int
 
-    fun getBoolean(address: Long): Boolean = getByte(address) == 1.toByte()
+    fun getByteArray(address: Long, size: Int): ByteArray {
+        return ByteArray(size) { getByte(address + it) }
+    }
+
+    fun getBoolean(address: Long): Boolean {
+        return getInt(address) == 1
+    }
 
     fun getStringLength(address: Long): Long {
+        if (address == 0L) return 0L
         var currentAddress = address
         while (getByte(currentAddress) != 0.toByte()) {
             ++currentAddress
@@ -43,9 +50,10 @@ internal interface Memory {
         return currentAddress - address
     }
 
-    fun getString(address: Long): String {
-        return ByteArray(getStringLength(address).toInt()) { index ->
-            getByte(address + index)
+    fun getString(address: Long): String? {
+        return if (address == 0L) null
+        else ByteArray(getStringLength(address).toInt()) {
+            getByte(address + it)
         }.decodeToString()
     }
 }
@@ -88,8 +96,7 @@ internal class ForeignMemory : Memory {
     override val pointerSize: Long = systemBitness shr 3
 
     private fun Long.asGlobalSegment(): MemorySegment {
-        return MemoryAddress.ofLong(this)
-            .asSegment(pointerSize, ResourceScope.globalScope())
+        return MemoryAddress.ofLong(this).asSegment(pointerSize, ResourceScope.globalScope())
     }
 
     override fun getPointer(address: Long): Long {

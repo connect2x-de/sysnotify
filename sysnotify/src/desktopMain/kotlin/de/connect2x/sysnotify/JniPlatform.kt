@@ -43,6 +43,7 @@ import kotlinx.cinterop.pointed
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.reinterpret
 import kotlinx.cinterop.toKString
+import kotlinx.cinterop.toKStringFromUtf16
 import kotlinx.cinterop.usePinned
 import platform.posix.memcpy
 import kotlin.experimental.ExperimentalNativeApi
@@ -57,19 +58,8 @@ private var environment: JNIEnvVar? = null
 @CName("JNI_OnLoad")
 fun jniOnLoad(vm: JavaVMVar, reserved: COpaquePointer): jint {
     virtualMachine = vm
-    return vm.pointed?.let {
-        memScoped {
-            val address = allocPointerTo<JNIEnvVar>()
-            requireNotNull(it.GetEnv)(
-                vm.ptr,
-                address.ptr.reinterpret(),
-                JNI_VERSION_1_8
-            )
-            environment = requireNotNull(address.pointed)
-        }
-        registerNatives()
-        return@let JNI_VERSION_1_8
-    } ?: JNI_ERR
+    registerNatives()
+    return JNI_VERSION_1_8
 }
 
 /**
@@ -101,7 +91,7 @@ internal inline fun <reified R> jvmEnvironment(scope: JNIEnvVar.() -> R): R {
 
 internal inline fun <reified O : jobject> O.newGlobalRef(): O {
     return jvmEnvironment {
-        requireNotNull(requireNotNull(pointed?.NewGlobalRef)(ptr, this@newGlobalRef)) as O
+        requireNotNull(pointed?.NewGlobalRef)(ptr, this@newGlobalRef) as O
     }
 }
 
@@ -121,14 +111,14 @@ internal inline fun jboolean.toKBoolean(): Boolean = this == 1U.toUByte()
 internal inline fun jstring.toKString(): String {
     return jvmEnvironment {
         val data = requireNotNull(
-            requireNotNull(pointed?.GetStringUTFChars) { "Could not access JNI:GetStringUTFChars function" }(
+            requireNotNull(pointed?.GetStringCritical) { "Could not access JNI:GetStringUTFChars function" }(
                 ptr,
                 this@toKString,
                 null
             )
         ) { "Could not retrieve string base address" }
-        val result = data.toKString()
-        requireNotNull(pointed?.ReleaseStringUTFChars) { "Could not access JNI:ReleaseStringUTFChars function" }(
+        val result = data.toKStringFromUtf16()
+        requireNotNull(pointed?.ReleaseStringCritical) { "Could not access JNI:ReleaseStringUTFChars function" }(
             ptr,
             this@toKString,
             data
@@ -147,13 +137,11 @@ internal inline fun jbyteArray.toByteArray(): ByteArray {
         ByteArray(size).apply {
             usePinned { pinnedArray ->
                 val data =
-                    requireNotNull(
-                        requireNotNull(pointed?.GetByteArrayElements) { "Could not access JNI:GetPrimitiveArrayCritical function" }(
-                            this@jvmEnvironment.ptr,
-                            this@toByteArray.reinterpret(),
-                            null
-                        )
-                    ) { "Could not retrieve array base address" }
+                    requireNotNull(pointed?.GetByteArrayElements) { "Could not access JNI:GetPrimitiveArrayCritical function" }(
+                        this@jvmEnvironment.ptr,
+                        this@toByteArray.reinterpret(),
+                        null
+                    )
                 memcpy(pinnedArray.addressOf(0), data, size.toULong())
                 requireNotNull(pointed?.ReleaseByteArrayElements) { "Could not access JNI:ReleasePrimitiveArrayCritical function" }(
                     this@jvmEnvironment.ptr,

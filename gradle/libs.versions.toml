@@ -1,5 +1,5 @@
 [versions]
-sysnotify = "1.7.0"
+sysnotify = "1.7.1"
 jvmTarget = "17"
 android-minSdk = "28"
 android-compileSdk = "34"
