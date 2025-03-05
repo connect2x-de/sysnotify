@@ -128,7 +128,7 @@ kotlin {
         compilations.getByName("main") {
             cinterops {
                 val sysnotifycom by creating {
-                    //includePlatformBinaries(target)
+                    includePlatformBinaries(target)
                 }
                 val notificationdata by creating
             }

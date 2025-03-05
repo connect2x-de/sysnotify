@@ -13,18 +13,13 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                implementation(libs.kotest.engine)
                 implementation(project(":sysnotify"))
             }
         }
-        jvmMain {
+        commonTest {
             dependencies {
-                implementation(libs.kotest.runner.jvm)
+                implementation(kotlin("test"))
             }
         }
     }
-}
-
-tasks.withType<Test>().configureEach {
-    useJUnitPlatform()
 }

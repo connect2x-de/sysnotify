@@ -1,16 +1,13 @@
 [versions]
-sysnotify = "1.7.1"
+sysnotify = "1.8.0"
 jvmTarget = "17"
 android-minSdk = "28"
 android-compileSdk = "34"
-agp = "8.5.2" # https://developer.android.com/build/releases/gradle-plugin
-kotlin = "2.1.0" # https://github.com/JetBrains/kotlin/releases
-kotlinx-coroutines = "1.9.0" # https://github.com/Kotlin/kotlinx.coroutines/releases
-core = "1.13.1" # https://developer.android.com/jetpack/androidx/releases/core
+agp = "8.7.3" # https://developer.android.com/build/releases/gradle-plugin
+kotlin = "2.1.10" # https://github.com/JetBrains/kotlin/releases
+kotlinx-coroutines = "1.10.1" # https://github.com/Kotlin/kotlinx.coroutines/releases
+core = "1.15.0" # https://developer.android.com/jetpack/androidx/releases/core
 stately = "2.1.0" # https://github.com/touchlab/Stately/releases
-
-# For tests
-kotest = "5.9.1" # https://github.com/kotest/kotest/releases
 
 # For sample
 compose = "1.7.3" # https://github.com/JetBrains/compose-multiplatform/releases
@@ -18,10 +15,7 @@ androidx-activityCompose = "1.9.3" # https://developer.android.com/jetpack/andro
 androidx-ui-tooling = "1.7.6" # https://developer.android.com/jetpack/androidx/releases/compose-ui
 
 kmpJni = "1.0.1" # https://gitlab.com/connect2x/kmp-jni/-/packages
-sysnotifyBinaries = "v1.0.4" # https://gitlab.com/connect2x/sysnotify-platform-binaries/-/packages/
-glib = "2.83.0" # https://github.com/GNOME/glib/tags
-gdkPixbuf = "2.42.12" # https://github.com/GNOME/gdk-pixbuf/tags
-libnotify = "0.8.3" # https://github.com/GNOME/libnotify/tags
+sysnotifyBinaries = "v1.1.2" # https://gitlab.com/connect2x/sysnotify-platform-binaries/-/packages/
 
 [libraries]
 kotlinx-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
@@ -29,10 +23,6 @@ androidx-core = { module = "androidx.core:core", version.ref = "core" }
 kmpJni = { module = "de.connect2x:kmp-jni", version.ref = "kmpJni" }
 stately-common = { module = "co.touchlab:stately-common", version.ref = "stately" }
 stately-collections = { module = "co.touchlab:stately-collections", version.ref = "stately" }
-
-# For tests
-kotest-engine = { module = "io.kotest:kotest-framework-engine", version.ref = "kotest" }
-kotest-runner-jvm = { module = "io.kotest:kotest-runner-junit5-jvm", version.ref = "kotest" }
 
 # For sample
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activityCompose" }
