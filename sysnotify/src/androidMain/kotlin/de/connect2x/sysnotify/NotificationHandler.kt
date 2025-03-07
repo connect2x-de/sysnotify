@@ -266,6 +266,16 @@ val NotificationHandler.nativeChannel: AndroidNotificationChannel
     }
 
 /**
+ * Create a default [SysNotifyIntent] from the activity associated with this context.
+ *
+ * @return A new [SysNotifyIntent] which invokes the current activity.
+ */
+fun Context.getDefaultNotificationIntent(): (Context, Notification) -> Intent = { context, notification ->
+    require(this is Activity) { "An activity is required for a notification intent" }
+    SysNotifyIntent(context, this::class.java, notification)
+}
+
+/**
  * Creates a new Android notification handler instance with the given name and ID.
  * The internal ID of the handler should ideally match the app's package group.
  *
@@ -287,7 +297,9 @@ fun NotificationHandler.Companion.create(
     id: String = name,
     contextGetter: () -> Context,
     activityGetter: () -> Activity? = { contextGetter() as? Activity },
-    activationIntent: (Context, Notification) -> Intent,
+    activationIntent: (Context, Notification) -> Intent = { ctx, not ->
+        contextGetter().getDefaultNotificationIntent()(ctx, not)
+    },
     permissionCallback: (Activity, Boolean) -> Unit = { _, _ -> },
     priority: NotificationPriority = NotificationPriority.DEFAULT,
 ): NotificationHandler =

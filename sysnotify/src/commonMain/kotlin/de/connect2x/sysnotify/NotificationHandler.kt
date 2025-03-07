@@ -83,7 +83,7 @@ interface NotificationHandler : AutoCloseable {
 
     /**
      * Requests the permissions to show notifications from the underlying platform
-     * when possible. Otherwise this function returns without any side effects.
+     * when possible. Otherwise, this function returns without any side effects.
      */
     suspend fun requestPermissions() {}
 

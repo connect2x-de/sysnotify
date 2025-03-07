@@ -159,5 +159,5 @@ fun NotificationHandler.Companion.create(
     id: String = name,
     activationCallback: (Notification) -> Unit = {},
     priority: NotificationPriority = NotificationPriority.DEFAULT,
-    closeCallback: () -> Unit,
+    closeCallback: () -> Unit = {},
 ): NotificationHandler = AppleNotificationHandler(name, id, priority, activationCallback, closeCallback)

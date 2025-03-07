@@ -35,5 +35,4 @@ plugins {
 }
 
 include(":sysnotify")
-include(":sysnotify-tests")
 include(":sysnotify-sample")

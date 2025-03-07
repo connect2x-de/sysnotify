@@ -1,6 +1,5 @@
 import de.connect2x.sysnotify.NotificationHandler
 import de.connect2x.sysnotify.create
-import kotlin.test.Test
 
 /*
  * Copyright 2025 connect2x GmbH
@@ -17,11 +16,6 @@ import kotlin.test.Test
  * limitations under the License.
  */
 
-class NotificationHandlerTests {
-    @Test
-    fun `Create and destroy`() {
-        NotificationHandler.create("Test").use {
-            /* We do nothing here */
-        }
-    }
+internal actual fun createHandler(name: String): NotificationHandler {
+    return NotificationHandler.create(name)
 }

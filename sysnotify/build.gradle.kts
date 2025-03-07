@@ -146,6 +146,11 @@ kotlin {
                 implementation(libs.stately.collections)
             }
         }
+        commonTest {
+            dependencies {
+                implementation(kotlin("test"))
+            }
+        }
         androidMain {
             dependencies {
                 implementation(libs.androidx.core)
@@ -155,6 +160,7 @@ kotlin {
             // Include JVM natives for desktop targets
             resources.srcDir("build/generatedResources")
         }
+
         val desktopMain by creating {
             dependsOn(nativeMain.get())
             dependencies {
@@ -164,7 +170,20 @@ kotlin {
         macosMain { dependsOn(desktopMain) }
         linuxMain { dependsOn(desktopMain) }
         mingwMain { dependsOn(desktopMain) }
+
+        val sharedTest by creating {
+            dependsOn(commonTest.get())
+        }
+        appleTest { dependsOn(sharedTest) }
+        linuxTest { dependsOn(sharedTest) }
+        mingwTest { dependsOn(sharedTest) }
+        jvmTest { dependsOn(sharedTest) }
+        jsTest { dependsOn(sharedTest) }
     }
+}
+
+dependencies {
+    androidTestImplementation(libs.androidx.test)
 }
 
 android {
