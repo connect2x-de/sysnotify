@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 connect2x GmbH
+ * Copyright 2025 connect2x GmbH
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -72,16 +72,6 @@ interface NotificationHandler : AutoCloseable {
     val priority: NotificationPriority
 
     /**
-     * Creates a new notification which has a valid associated system notification,
-     * but is not pushed to be displayed. This can be useful on certain systems like
-     * Android to create Notification instances without explicitly pushing them.
-     *
-     * @param notification The notification contents to create the new notification from.
-     * @return A new notification with the given content.
-     */
-    fun create(notification: Notification): NotificationHandle
-
-    /**
      * Requests the permissions to show notifications from the underlying platform
      * when possible. Otherwise, this function returns without any side effects.
      */
@@ -141,7 +131,6 @@ object NoopNotificationHandler : NotificationHandler {
     override val capabilities: NotificationCapabilities = NotificationCapabilities(0U)
     override val priority: NotificationPriority = NotificationPriority.DEFAULT
 
-    override fun create(notification: Notification): NotificationHandle = InvalidNotificationHandle
     override suspend fun push(notification: Notification): NotificationHandle = InvalidNotificationHandle
 
     override suspend fun update(

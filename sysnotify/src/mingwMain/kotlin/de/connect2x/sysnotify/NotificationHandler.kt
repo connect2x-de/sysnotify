@@ -77,9 +77,6 @@ internal class WindowsNotificationHandler(
         closeCallback()
     }
 
-    override fun create(notification: Notification): NotificationHandle =
-        InvalidNotificationHandle // TODO: implement this
-
     override suspend fun push(notification: Notification): NotificationHandle {
         return memScoped {
             val handle = alloc<sn_notification_tag>()

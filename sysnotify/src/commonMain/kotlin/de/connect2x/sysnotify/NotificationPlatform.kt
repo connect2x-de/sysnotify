@@ -16,9 +16,6 @@
 package de.connect2x.sysnotify
 
 /**
- * @author Alexander Hinze
- * @since 07/01/2025
- *
  * A complete list of all platforms supported by Sysnotify.
  * The current platform can be queried from every [NotificationHandler] instance
  * via the [NotificationHandler.platform] property.

@@ -48,7 +48,7 @@ private class WebNotificationHandler(
     }
 
     @OptIn(ExperimentalEncodingApi::class)
-    override fun create(notification: Notification): NotificationHandle {
+    override suspend fun push(notification: Notification): NotificationHandle {
         val icon = notification.icon?.data?.let { Base64.encode(it) }
         return WebNotificationHandle(
             instance = JsNotification(
@@ -61,10 +61,6 @@ private class WebNotificationHandler(
                 )
             )
         )
-    }
-
-    override suspend fun push(notification: Notification): NotificationHandle {
-        return create(notification)
     }
 
     override suspend fun pop(handle: NotificationHandle) {

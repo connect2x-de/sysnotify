@@ -16,9 +16,6 @@
 package de.connect2x.sysnotify
 
 /**
- * @author Alexander Hinze
- * @since 07/01/2025
- *
  * Describes the priority of a given notification.
  * This usually impacts the order in which notifications
  * are shown by the underlying platform when presenting

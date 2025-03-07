@@ -16,9 +16,6 @@
 package de.connect2x.sysnotify
 
 /**
- * @author Alexander Hinze
- * @since 08/01/2025
- *
  * A raw bitmap type for storing icon data and its width/height.
  * Data is expected to be in RGBA8888 format. Use per-platform helpers for creating instances.
  */

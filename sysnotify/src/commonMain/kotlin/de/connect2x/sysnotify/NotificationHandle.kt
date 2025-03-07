@@ -16,11 +16,6 @@
 package de.connect2x.sysnotify
 
 /**
- * @author Alexander Hinze
- * @since 07/01/2025
- */
-
-/**
  * This interface describes a notification that was created by an [NotificationHandler] instance
  * on any given platform.
  */

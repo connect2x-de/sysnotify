@@ -48,11 +48,13 @@ internal class AndroidNotificationHandler(
     internal val channel: AndroidNotificationChannel = AndroidNotificationChannel(
         id, name, priority.nativeImportance
     ).apply { manager.createNotificationChannel(this) }
+
     internal val manager: NotificationManagerCompat
         get() = NotificationManagerCompat.from(contextGetter())
 
     override val platform: NotificationPlatform = NotificationPlatform.ANDROID
     override val capabilities: NotificationCapabilities = NotificationCapabilities(NotificationCapabilities.ALL)
+
     override val hasPermissions: Boolean
         get() = hasNotificationPermissions(contextGetter())
 
@@ -116,8 +118,6 @@ internal class AndroidNotificationHandler(
             }.build()
         }
     }
-
-    override fun create(notification: Notification): NotificationHandle = createImpl(notification)
 
     @OptIn(ExperimentalUuidApi::class)
     @SuppressLint("MissingPermission") // It is the callers responsibility to make sure perms are defined

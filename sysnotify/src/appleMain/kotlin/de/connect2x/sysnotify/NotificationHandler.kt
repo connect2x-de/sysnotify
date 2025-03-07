@@ -83,12 +83,6 @@ internal class AppleNotificationHandler(
     }
 
     @OptIn(ExperimentalUuidApi::class)
-    override fun create(notification: Notification): NotificationHandle {
-        return if (hasPermissions) AppleNotificationHandle()
-        else InvalidNotificationHandle
-    }
-
-    @OptIn(ExperimentalUuidApi::class)
     override suspend fun push(notification: Notification): NotificationHandle {
         val handle = AppleNotificationHandle()
         if (!hasPermissions) return handle

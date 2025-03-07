@@ -18,9 +18,6 @@ package de.connect2x.sysnotify
 import kotlin.jvm.JvmInline
 
 /**
- * @author Alexander Hinze
- * @since 07/01/2025
- *
  * A value class describing the capabilities of a given [NotificationHandler] instance.
  * Each flag indicates whether a feature is supported.
  * The [isSupported] flag indicates if notifications are supported on the current platform at all.
