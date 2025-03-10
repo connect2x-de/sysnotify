@@ -20,5 +20,5 @@ import kotlin.uuid.Uuid
 
 @OptIn(ExperimentalUuidApi::class)
 internal data class AppleNotificationHandle(
-    val uuid: Uuid = Uuid.random()
+    override val tag: String = Uuid.random().toHexString()
 ) : NotificationHandle

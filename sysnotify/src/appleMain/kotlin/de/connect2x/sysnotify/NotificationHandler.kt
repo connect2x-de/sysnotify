@@ -36,8 +36,7 @@ internal class AppleNotificationHandler(
     override val name: String,
     override val id: String,
     override val priority: NotificationPriority,
-    private val activationCallback: (Notification) -> Unit,
-    private val closeCallback: () -> Unit,
+    private val permissionCallback: PermissionCallback
 ) : NotificationHandler {
     override val platform: NotificationPlatform = NotificationPlatform.APPLE
     override var hasPermissions: Boolean by atomic(false)
@@ -54,7 +53,6 @@ internal class AppleNotificationHandler(
     )
 
     private val notificationCategories: SharedHashMap<String, UNNotificationCategory> = SharedHashMap()
-
     private val notificationCenter: UNUserNotificationCenter = UNUserNotificationCenter.currentNotificationCenter()
 
     private fun ensureCategoryExists(key: String) {
@@ -70,12 +68,18 @@ internal class AppleNotificationHandler(
         notificationCenter.setNotificationCategories(notificationCategories.values.toSet())
     }
 
+    override fun getHandle(tag: String): NotificationHandle {
+        require(tag.isNotEmpty()) { "Handle tag may not be empty" }
+        return AppleNotificationHandle(tag)
+    }
+
     override suspend fun requestPermissions() {
         if (hasPermissions) return
         UNUserNotificationCenter.currentNotificationCenter().requestAuthorizationWithOptions(
             UNAuthorizationOptionSound or UNAuthorizationOptionBadge or UNAuthorizationOptionAlert
         ) { granted, error ->
             if (granted) hasPermissions = true
+            permissionCallback(this, granted)
             error?.localizedDescription?.let {
                 throw IllegalStateException("Could not request permission: $it")
             }
@@ -84,11 +88,11 @@ internal class AppleNotificationHandler(
 
     @OptIn(ExperimentalUuidApi::class)
     override suspend fun push(notification: Notification): NotificationHandle {
+        if (!hasPermissions) return NotificationHandle.INVALID
         val handle = AppleNotificationHandle()
-        if (!hasPermissions) return handle
 
         val content = UNMutableNotificationContent().apply {
-            setTitle(notification.title ?: handle.uuid.toString())
+            setTitle(notification.title ?: handle.tag)
             setRelevanceScore(notification.priority.relevanceScore)
             notification.description?.let(::setBody)
             if (notification.playSound) {
@@ -104,7 +108,7 @@ internal class AppleNotificationHandler(
 
         notificationCenter.addNotificationRequest(
             UNNotificationRequest.requestWithIdentifier(
-                handle.uuid.toString(), content, null
+                handle.tag, content, null
             )
         ) { error ->
             error?.localizedDescription?.let {
@@ -118,10 +122,11 @@ internal class AppleNotificationHandler(
     @Suppress("UNCHECKED_CAST")
     @OptIn(ExperimentalUuidApi::class)
     override suspend fun pop(handle: NotificationHandle) {
-        require(handle is AppleNotificationHandle) { "Handle is not an Apple notification handle" }
         if (!hasPermissions) return
+        require(handle is AppleNotificationHandle) { "Handle is not an Apple notification handle" }
+        require(handle.isValid) { "Handle must be valid" }
 
-        val identifier = handle.uuid.toString()
+        val identifier = handle.tag
         var found = false
         // First try to remove it from the pending notifications
         notificationCenter.getPendingNotificationRequestsWithCompletionHandler {
@@ -144,14 +149,15 @@ internal class AppleNotificationHandler(
     }
 
     override fun close() {
-        closeCallback()
+        notificationCategories.clear()
     }
 }
 
-fun NotificationHandler.Companion.create(
+actual fun NotificationHandler( // @formatter:off
     name: String,
-    id: String = name,
-    activationCallback: (Notification) -> Unit = {},
-    priority: NotificationPriority = NotificationPriority.DEFAULT,
-    closeCallback: () -> Unit = {},
-): NotificationHandler = AppleNotificationHandler(name, id, priority, activationCallback, closeCallback)
+    id: String,
+    priority: NotificationPriority,
+    permissionCallback: PermissionCallback
+): NotificationHandler { // @formatter:on
+    return AppleNotificationHandler(name, id, priority, permissionCallback)
+}
