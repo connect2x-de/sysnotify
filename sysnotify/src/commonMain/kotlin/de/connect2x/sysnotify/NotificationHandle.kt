@@ -20,11 +20,18 @@ package de.connect2x.sysnotify
  * on any given platform.
  */
 interface NotificationHandle {
-    companion object
-}
+    // TODO: document this
+    val tag: String
 
-/**
- * This object is used to represent handles which are non-null but not valid for use with any
- * other functions that accept them as their parameters.
- */
-object InvalidNotificationHandle : NotificationHandle
+    // TODO: document this
+    val isValid: Boolean
+        get() = tag.isNotEmpty()
+
+    /**
+     * This object is used to represent handles which are non-null but not valid for use with any
+     * other functions that accept them as their parameters.
+     */
+    object INVALID : NotificationHandle {
+        override val tag: String = ""
+    }
+}

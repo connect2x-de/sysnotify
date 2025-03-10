@@ -15,6 +15,8 @@
 
 package de.connect2x.sysnotify
 
+typealias PermissionCallback = (NotificationHandler, Boolean) -> Unit
+
 /**
  * This interface provides platform-agnostic functions to interact with the OSs notifications.
  * It allows pushing, updating and popping notifications based on the supported platform feature set.
@@ -71,6 +73,9 @@ interface NotificationHandler : AutoCloseable {
      */
     val priority: NotificationPriority
 
+    // TODO: document this
+    fun getHandle(tag: String): NotificationHandle = NotificationHandle.INVALID
+
     /**
      * Requests the permissions to show notifications from the underlying platform
      * when possible. Otherwise, this function returns without any side effects.
@@ -119,10 +124,17 @@ interface NotificationHandler : AutoCloseable {
      * **Always call this when you're done using the notification handler!**
      */
     override fun close() {}
-
-    companion object // Used for create implementations
 }
 
+// TODO: document this
+expect fun NotificationHandler(
+    name: String,
+    id: String = name,
+    priority: NotificationPriority = NotificationPriority.DEFAULT,
+    permissionCallback: PermissionCallback = { _, _ -> }
+): NotificationHandler
+
+// TODO: document this
 object NoopNotificationHandler : NotificationHandler {
     override val name: String = "NOOP"
     override val id: String = "no.op.noop"
@@ -131,12 +143,14 @@ object NoopNotificationHandler : NotificationHandler {
     override val capabilities: NotificationCapabilities = NotificationCapabilities(0U)
     override val priority: NotificationPriority = NotificationPriority.DEFAULT
 
-    override suspend fun push(notification: Notification): NotificationHandle = InvalidNotificationHandle
+    override fun getHandle(tag: String): NotificationHandle = NotificationHandle.INVALID
+
+    override suspend fun push(notification: Notification): NotificationHandle = NotificationHandle.INVALID
 
     override suspend fun update(
         handle: NotificationHandle,
         notification: Notification
-    ): NotificationHandle = InvalidNotificationHandle
+    ): NotificationHandle = NotificationHandle.INVALID
 
     override suspend fun pop(handle: NotificationHandle) {}
 }
