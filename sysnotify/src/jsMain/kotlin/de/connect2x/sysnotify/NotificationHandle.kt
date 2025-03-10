@@ -15,8 +15,20 @@
 
 package de.connect2x.sysnotify
 
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 import org.w3c.notifications.Notification as JsNotification
 
+@OptIn(ExperimentalUuidApi::class)
 internal class WebNotificationHandle(
-    val instance: JsNotification
-) : NotificationHandle
+    override val tag: String = Uuid.random().toHexString(),
+    val instance: JsNotification? = null
+) : NotificationHandle {
+    override fun equals(other: Any?): Boolean {
+        return if (other !is WebNotificationHandle) false
+        else tag == other.tag
+    }
+
+    override fun hashCode(): Int = tag.hashCode()
+    override fun toString(): String = tag
+}
