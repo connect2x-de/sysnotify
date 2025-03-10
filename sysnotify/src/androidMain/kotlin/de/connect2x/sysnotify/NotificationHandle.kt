@@ -21,33 +21,25 @@ import kotlin.uuid.Uuid
 
 @OptIn(ExperimentalUuidApi::class)
 internal class AndroidNotificationHandle(
-    val tag: Uuid = Uuid.random(),
-    var value: Notification? = null,
+    override val tag: String = Uuid.random().toHexString()
 ) : NotificationHandle {
+    var value: Notification? = null
+
     override fun equals(other: Any?): Boolean {
         return if (other !is AndroidNotificationHandle) false
         else tag == other.tag
     }
 
     override fun hashCode(): Int = tag.hashCode()
-    override fun toString(): String = tag.toString()
+    override fun toString(): String = tag
 }
 
 /**
  * The native AndroidNotification instance associated with this notification handle.
  */
-val NotificationHandle.nativeNotification: Notification
+val NotificationHandle.notification: Notification
     get() {
         require(this is AndroidNotificationHandle) { "Handle is not an Android notification handle" }
+        require(isValid) { "Handle must be valid" }
         return requireNotNull(value) { "Handle does not contain a valid Android Notification reference" }
     }
-
-/**
- * Creates a new notification handle for the given tag
- * which can be used to query or invalidate existing
- * notifications.
- * @param tag The tag of the notification associated with this handle.
- * @return A new [NotificationHandle] instance containing the given tag.
- */
-@OptIn(ExperimentalUuidApi::class)
-fun NotificationHandle.Companion.create(tag: Uuid): NotificationHandle = AndroidNotificationHandle(tag)
