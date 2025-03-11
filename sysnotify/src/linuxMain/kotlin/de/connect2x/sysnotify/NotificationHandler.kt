@@ -34,13 +34,11 @@ internal class LinuxNotificationHandler(
     override val name: String,
     override val id: String,
     override val priority: NotificationPriority,
-    private val activationCallback: (Notification) -> Unit,
-    private val closeCallback: () -> Unit,
+    private val closeCallback: () -> Unit = {}
 ) : NotificationHandler {
     companion object {
         private const val DEFAULT_ICON: String = "dialog-information"
         private const val DEFAULT_SOUND: String = "/usr/share/sounds/freedesktop/stereo/message.oga"
-        private const val ACTION_ACTIVATE: String = "default"
     }
 
     override val platform: NotificationPlatform = NotificationPlatform.LINUX
@@ -58,12 +56,7 @@ internal class LinuxNotificationHandler(
     )
 
     init {
-        require(LibNotify.notify_init(name) != 0) { "Could not initialize libnotify" }
-    }
-
-    override fun close() {
-        LibNotify.notify_uninit()
-        closeCallback()
+        check(LibNotify.notify_init(name) != 0) { "Could not initialize libnotify" }
     }
 
     @Suppress("NOTHING_TO_INLINE")
@@ -96,27 +89,16 @@ internal class LinuxNotificationHandler(
         return true
     }
 
-    override suspend fun push(notification: Notification): NotificationHandle? {
+    override suspend fun push(notification: Notification, tag: String): NotificationHandle {
         val notificationAddress = LibNotify.notify_notification_new(
-            summary = notification.title, body = notification.description, icon = DEFAULT_ICON
-        ) ?: return null
+            summary = notification.title,
+            body = notification.description,
+            icon = DEFAULT_ICON
+        ) ?: return NotificationHandle.INVALID
 
         LibNotify.notify_notification_set_app_name(notificationAddress, name)
         LibNotify.notify_notification_set_timeout(notificationAddress, 5000) // 5 seconds by default
         LibNotify.notify_notification_set_urgency(notificationAddress, notification.priority.urgency)
-
-        //notify_notification_add_action(notificationAddress, ACTION_ACTIVATE, name,
-        //    staticCFunction { _: CPointer<NotifyNotification>?, action: CPointer<ByteVar>?, userData: gpointer? ->
-        //        requireNotNull(userData).asStableRef<Notification>().apply {
-        //            get().onActivated?.invoke()
-        //        }
-        //        Unit
-        //    }, StableRef.create(notification).asCPointer(),
-        //    staticCFunction { userData: gpointer? ->
-        //        userData?.asStableRef<Notification>()?.dispose()
-        //        Unit
-        //    }
-        //)
 
         if (notification.playSound) {
             LibNotify.notify_notification_set_hint_string(
@@ -124,12 +106,13 @@ internal class LinuxNotificationHandler(
             )
         }
         setIcon(notificationAddress, notification)
-        return if (show(notificationAddress)) LinuxNotificationHandle(notificationAddress) else null
+        return if (show(notificationAddress)) LinuxNotificationHandle(address = notificationAddress)
+        else NotificationHandle.INVALID
     }
 
-    override suspend fun update(handle: NotificationHandle, notification: Notification): NotificationHandle? {
-        require(handle is LinuxNotificationHandle) { "Handle is not a Linux notification handle" }
-        val notificationAddress = handle.address
+    override suspend fun update(handle: NotificationHandle, notification: Notification): NotificationHandle {
+        handle.check<LinuxNotificationHandle>()
+        val notificationAddress = requireNotNull(handle.address) { "Handle does not contain a valid address" }
         LibNotify.notify_notification_update(
             notification = notificationAddress,
             summary = notification.title,
@@ -137,11 +120,12 @@ internal class LinuxNotificationHandler(
             icon = DEFAULT_ICON
         )
         setIcon(notificationAddress, notification)
-        return if (show(notificationAddress)) handle else null
+        return if (show(notificationAddress)) handle
+        else NotificationHandle.INVALID
     }
 
     override suspend fun pop(handle: NotificationHandle) {
-        require(handle is LinuxNotificationHandle) { "Handle is not a Linux notification handle" }
+        handle.check<LinuxNotificationHandle>()
         memScoped {
             val errorAddress = allocPointerTo<GError>()
             if (LibNotify.notify_notification_close(handle.address, errorAddress.ptr) == 0) {
@@ -149,14 +133,17 @@ internal class LinuxNotificationHandler(
                 return
             }
         }
-        LibGlib.g_object_unref(handle.address.reinterpret())
+        LibGlib.g_object_unref(handle.address?.reinterpret())
+    }
+
+    override fun close() {
+        closeCallback()
+        LibNotify.notify_uninit()
     }
 }
 
-fun NotificationHandler.Companion.create(
+actual fun NotificationHandler(
     name: String,
-    id: String = name,
-    activationCallback: (Notification) -> Unit = {},
-    priority: NotificationPriority = NotificationPriority.DEFAULT,
-    closeCallback: () -> Unit = {}
-): NotificationHandler = LinuxNotificationHandler(name, id, priority, activationCallback, closeCallback)
+    id: String,
+    priority: NotificationPriority
+): NotificationHandler = LinuxNotificationHandler(name, id, priority)

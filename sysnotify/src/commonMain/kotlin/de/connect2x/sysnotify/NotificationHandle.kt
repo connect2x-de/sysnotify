@@ -13,7 +13,13 @@
  * limitations under the License.
  */
 
+@file:JvmName("NotificationHandle$") // Work around duplicate JVM class error
+
 package de.connect2x.sysnotify
+
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
+import kotlin.jvm.JvmName
 
 /**
  * This interface describes a notification that was created by an [NotificationHandler] instance
@@ -34,4 +40,10 @@ interface NotificationHandle {
     object INVALID : NotificationHandle {
         override val tag: String = ""
     }
+}
+
+@OptIn(ExperimentalContracts::class)
+internal inline fun <reified H : NotificationHandle> NotificationHandle.check() {
+    contract { returns() implies (this@check is H) }
+    check(isValid) { "Notification handle must be valid" }
 }

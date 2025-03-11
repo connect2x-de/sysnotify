@@ -19,16 +19,13 @@ package de.connect2x.sysnotify
 
 import jni.JNIEnvVar
 import jni.JNINativeMethod
-import jni.JNI_ERR
 import jni.JNI_OK
 import jni.JNI_VERSION_1_8
 import jni.JavaVMVar
 import jni.jboolean
 import jni.jbyteArray
 import jni.jclass
-import jni.jfieldID
 import jni.jint
-import jni.jmethodID
 import jni.jobject
 import jni.jstring
 import kotlinx.cinterop.COpaquePointer
@@ -42,7 +39,6 @@ import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.pointed
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.reinterpret
-import kotlinx.cinterop.toKString
 import kotlinx.cinterop.toKStringFromUtf16
 import kotlinx.cinterop.usePinned
 import platform.posix.memcpy
@@ -157,7 +153,7 @@ internal inline fun jbyteArray.toByteArray(): ByteArray {
 internal inline fun jclass.registerNativeFunction(
     name: String,
     address: COpaquePointer,
-    signature: JvmSignature.() -> Unit
+    signature: JvmSignatureBuilder.() -> Unit
 ) = memScoped {
     val method = alloc<JNINativeMethod>()
     method.name = name.cstr.ptr
@@ -184,53 +180,3 @@ internal inline val JvmRefType.jClass: jclass
             ) { "Could not find class '$typeName'" }
         }
     }
-
-@Suppress("NOTHING_TO_INLINE")
-internal inline fun jclass.getMethod(
-    name: String,
-    isStatic: Boolean = false,
-    signature: JvmSignature.() -> Unit
-): jmethodID {
-    val signatureData = JvmSignature.of(signature)
-    return jvmEnvironment {
-        memScoped {
-            requireNotNull(
-                if (isStatic) requireNotNull(pointed?.GetStaticMethodID)(
-                    this@jvmEnvironment.ptr,
-                    this@getMethod,
-                    name.cstr.ptr,
-                    signatureData.signatureString.cstr.ptr
-                )
-                else requireNotNull(pointed?.GetMethodID)(
-                    this@jvmEnvironment.ptr,
-                    this@getMethod,
-                    name.cstr.ptr,
-                    signatureData.signatureString.cstr.ptr
-                )
-            ) { "Could not find method $name${signatureData.signatureString}" }
-        }
-    }
-}
-
-@Suppress("NOTHING_TO_INLINE")
-internal inline fun jclass.getField(name: String, isStatic: Boolean, type: JvmType): jfieldID {
-    val typeString = type.objectName
-    return jvmEnvironment {
-        memScoped {
-            requireNotNull(
-                if (isStatic) requireNotNull(pointed?.GetStaticFieldID)(
-                    this@jvmEnvironment.ptr,
-                    this@getField,
-                    name.cstr.ptr,
-                    typeString.cstr.ptr
-                )
-                else requireNotNull(pointed?.GetFieldID)(
-                    this@jvmEnvironment.ptr,
-                    this@getField,
-                    name.cstr.ptr,
-                    typeString.cstr.ptr
-                )
-            ) { "Could not find field $name : $typeString" }
-        }
-    }
-}

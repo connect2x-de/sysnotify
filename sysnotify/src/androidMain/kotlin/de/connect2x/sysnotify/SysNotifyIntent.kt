@@ -27,7 +27,11 @@ data class ParcelableNotification(
     val description: String?,
     val callbackData: String?,
 ) : Parcelable {
-    constructor(notification: Notification) : this(notification.title, notification.description, notification.callbackData)
+    constructor(notification: Notification) : this(
+        notification.title,
+        notification.description,
+        notification.callbackData
+    )
 
     override fun describeContents(): Int = 0
 

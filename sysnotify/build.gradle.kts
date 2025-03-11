@@ -151,6 +151,7 @@ kotlin {
                 api(libs.kotlinx.coroutines)
                 implementation(libs.stately.common)
                 implementation(libs.stately.collections)
+                implementation(libs.kotlinx.atomicfu)
             }
         }
         commonTest {
@@ -161,6 +162,7 @@ kotlin {
         androidMain {
             dependencies {
                 implementation(libs.androidx.core)
+                implementation(libs.androidx.activity.ktx)
             }
         }
         jvmMain {

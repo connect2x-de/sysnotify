@@ -15,38 +15,59 @@
 
 package de.connect2x.sysnotify
 
+import kotlinx.coroutines.runBlocking
+
 private class JvmNotificationHandler(
     override val name: String,
     override val id: String,
-    override val priority: NotificationPriority,
-    activationCallback: (Notification) -> Unit,
+    override val priority: NotificationPriority
 ) : NotificationHandler {
-    private val address: Long = NativeNotificationHandler.create(
-        name,
-        id,
-        priority.ordinal,
-        NativeActivationCallback.create(activationCallback)
-    )
+    var activationHandler: ActivationHandler? = null
 
-    override val platform: NotificationPlatform =
+    private val address: Long by lazy {
+        NativeNotificationHandler.create(
+            name,
+            id,
+            priority.ordinal,
+            NativeActivationCallback.create {
+                activationHandler?.invoke(it)
+            }
+        )
+    }
+
+    override val platform: NotificationPlatform by lazy {
         NotificationPlatform.entries[NativeNotificationHandler.getPlatform(address)]
-    override val hasPermissions: Boolean = NativeNotificationHandler.hasPermissions(address)
+    }
 
-    override val capabilities: NotificationCapabilities = NotificationCapabilities(
-        NativeNotificationHandler.getCapabilities(address).toUInt()
-    )
+    override val hasPermissions: Boolean by lazy {
+        NativeNotificationHandler.hasPermissions(address)
+    }
+
+    override val capabilities: NotificationCapabilities by lazy {
+        NotificationCapabilities(NativeNotificationHandler.getCapabilities(address).toUInt())
+    }
 
     override fun close() {
         NativeNotificationHandler.destroy(address)
     }
 
-    override suspend fun requestPermissions() {
-        NativeNotificationHandler.requestPermissions(address)
+    override fun getHandle(tag: String): NotificationHandle {
+        require(tag.isNotEmpty()) { "Handle tag may not be empty" }
+        return JvmNotificationHandle(tag)
     }
 
-    override suspend fun push(notification: Notification): NotificationHandle? {
+    override suspend fun requestPermissions(callback: PermissionCallback) {
+        NativeNotificationHandler.requestPermissions(address) {
+            runBlocking {
+                callback(this@JvmNotificationHandler, it)
+            }
+        }
+    }
+
+    override suspend fun push(notification: Notification, tag: String): NotificationHandle {
         val handle = NativeNotificationHandler.push(
             handler = address,
+            tag = tag,
             title = notification.title ?: "Unknown",
             description = notification.description,
             icon = notification.icon?.data,
@@ -57,15 +78,15 @@ private class JvmNotificationHandler(
             group = notification.group,
             callbackData = notification.callbackData
         )
-        return if (handle != 0L) JvmNotificationHandle(handle)
-        else null
+        return if (handle != 0L) JvmNotificationHandle(tag, address)
+        else NotificationHandle.INVALID
     }
 
     override suspend fun update(
         handle: NotificationHandle,
         notification: Notification
-    ): NotificationHandle? {
-        require(handle is JvmNotificationHandle)
+    ): NotificationHandle {
+        handle.check<JvmNotificationHandle>()
         val newHandle = NativeNotificationHandler.update(
             handler = address,
             notification = handle.address,
@@ -77,8 +98,8 @@ private class JvmNotificationHandler(
             group = notification.group,
             callbackData = notification.callbackData
         )
-        return if (newHandle != 0L) JvmNotificationHandle(newHandle)
-        else null
+        return if (newHandle != 0L) JvmNotificationHandle(address = newHandle)
+        else NotificationHandle.INVALID
     }
 
     override suspend fun pop(handle: NotificationHandle) {
@@ -87,9 +108,17 @@ private class JvmNotificationHandler(
     }
 }
 
-fun NotificationHandler.Companion.create(
+// TODO: document this
+fun NotificationHandler.withActivationHandler(handler: ActivationHandler): NotificationHandler {
+    check<JvmNotificationHandler>()
+    activationHandler = handler
+    return this
+}
+
+actual fun NotificationHandler( // @formatter:off
     name: String,
-    id: String = name,
-    activationCallback: (Notification) -> Unit = {},
-    priority: NotificationPriority = NotificationPriority.DEFAULT,
-): NotificationHandler = JvmNotificationHandler(name, id, priority, activationCallback)
+    id: String,
+    priority: NotificationPriority
+): NotificationHandler { // @formatter:on
+    return JvmNotificationHandler(name, id, priority)
+}

@@ -20,14 +20,9 @@ package de.connect2x.sysnotify
 
 import de.connect2x.sysnotify.com.SYSNOTIFY_OK
 import de.connect2x.sysnotify.com.sn_error
-import de.connect2x.sysnotify.com.sn_notification_tag
 import de.connect2x.sysnotify.com.sysnotify_get_last_error
 import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.MemScope
-import kotlinx.cinterop.alloc
 import kotlinx.cinterop.toKStringFromUtf8
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
 
 internal inline fun sn_error.check() {
     if (this == SYSNOTIFY_OK) return
@@ -37,18 +32,5 @@ internal inline fun sn_error.check() {
 internal inline fun throwLastError() {
     sysnotify_get_last_error()?.apply {
         throw IllegalStateException(toKStringFromUtf8())
-    }
-}
-
-@OptIn(ExperimentalUuidApi::class)
-internal inline fun sn_notification_tag.toUuid(): Uuid = Uuid.fromULongs(lower, upper)
-
-@OptIn(ExperimentalUuidApi::class)
-internal inline fun MemScope.allocNotificationTag(tag: Uuid): sn_notification_tag {
-    return tag.toULongs { mostSignificantBits, leastSignificantBits ->
-        alloc<sn_notification_tag> {
-            lower = leastSignificantBits
-            upper = mostSignificantBits
-        }
     }
 }

@@ -22,5 +22,6 @@ internal actual fun createNotificationHandler(
     priority: NotificationPriority,
     closeCallback: () -> Unit,
 ): NotificationHandler {
-    return AppleNotificationHandler(name, id, priority, activationCallback, closeCallback)
+    // TODO: re-implement activation callbacks
+    return AppleNotificationHandler(name, id, priority, closeCallback)
 }

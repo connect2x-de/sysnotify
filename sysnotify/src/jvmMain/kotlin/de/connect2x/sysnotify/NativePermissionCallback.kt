@@ -1,6 +1,3 @@
-import de.connect2x.sysnotify.NotificationHandler
-import de.connect2x.sysnotify.create
-
 /*
  * Copyright 2025 connect2x GmbH
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +13,8 @@ import de.connect2x.sysnotify.create
  * limitations under the License.
  */
 
-internal actual fun createHandler(name: String): NotificationHandler {
-    return NotificationHandler.create(name)
+package de.connect2x.sysnotify
+
+fun interface NativePermissionCallback {
+    fun invoke(granted: Boolean)
 }

@@ -16,11 +16,14 @@
 package de.connect2x.sysnotify.sample
 
 import androidx.compose.ui.window.Window
-import de.connect2x.sysnotify.NotificationHandler
-import de.connect2x.sysnotify.create
+import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.staticCFunction
+import platform.posix.atexit
 
-fun main() = Window {
-    NotificationHandler.create("Sysnotify Sample", "de.connect2x.sysnotify.sample").use {
-        App(it)
+@OptIn(ExperimentalForeignApi::class)
+fun main() {
+    atexit(staticCFunction(::onAppExit))
+    Window("SysNotify Sample") {
+        App()
     }
 }

@@ -16,11 +16,14 @@
 package de.connect2x.sysnotify.sample
 
 import androidx.compose.ui.window.ComposeUIViewController
-import de.connect2x.sysnotify.NotificationHandler
-import de.connect2x.sysnotify.create
+import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.staticCFunction
+import platform.posix.atexit
 
-internal val notificationHandler: NotificationHandler = NotificationHandler.create("Sysnotify Sample", "Connect2x.Sysnotify")
-
-fun MainViewController() = ComposeUIViewController {
-    App(notificationHandler)
+@OptIn(ExperimentalForeignApi::class)
+fun MainViewController() {
+    atexit(staticCFunction(::onAppExit))
+    ComposeUIViewController {
+        App()
+    }
 }

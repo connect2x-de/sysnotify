@@ -36,20 +36,26 @@ import de.connect2x.sysnotify.NotificationHandler
 import de.connect2x.sysnotify.NotificationIcon
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 internal val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.Default)
 
+internal val notificationHandler: NotificationHandler = NotificationHandler(
+    name = "SysNotify Sample",
+    id = "de.connect2x.sysnotify"
+)
+
+fun onAppExit() {
+    coroutineScope.cancel()
+    notificationHandler.close()
+}
+
 @Composable
 fun App(
-    notificationHandler: NotificationHandler,
     icon: NotificationIcon? = null,
     launchUserData: String? = null
 ) {
-    coroutineScope.launch {
-        notificationHandler.requestPermissions() // Request permissions in-place because we are lazy here
-    }
-
     var title by remember { mutableStateOf("Hello") }
     var description by remember { mutableStateOf("World!") }
     var callbackData by remember { mutableStateOf("This is some user data to attach to the notification") }

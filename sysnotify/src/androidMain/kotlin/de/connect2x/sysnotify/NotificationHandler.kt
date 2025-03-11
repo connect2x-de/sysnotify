@@ -28,20 +28,21 @@ import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.graphics.drawable.IconCompat
+import co.touchlab.stately.collections.SharedLinkedList
 import kotlinx.atomicfu.atomic
+import kotlinx.coroutines.runBlocking
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import android.app.NotificationChannel as AndroidNotificationChannel
 
 internal typealias ContextGetter = () -> Context
 internal typealias ActivityGetter = () -> Activity?
-internal typealias ActivationFactory = (Context, Notification) -> Intent
+internal typealias ActivationFactory = (context: Context, notification: Notification) -> Intent
 
 internal class AndroidNotificationHandler( // @formatter:off
     override val name: String,
     override val id: String,
-    override val priority: NotificationPriority,
-    internal val permissionCallback: PermissionCallback
+    override val priority: NotificationPriority
 ) : NotificationHandler { // @formatter:on
     companion object {
         const val PERMISSION_REQUEST_CODE: Int = 0xBEEF
@@ -58,6 +59,8 @@ internal class AndroidNotificationHandler( // @formatter:off
     override val platform: NotificationPlatform = NotificationPlatform.ANDROID
     override val capabilities: NotificationCapabilities = NotificationCapabilities(NotificationCapabilities.ALL)
 
+    internal val permissionRequests: SharedLinkedList<PermissionCallback> = SharedLinkedList()
+
     internal val manager: NotificationManagerCompat
         get() = NotificationManagerCompat.from(context)
 
@@ -66,6 +69,7 @@ internal class AndroidNotificationHandler( // @formatter:off
 
     override fun close() {
         manager.deleteNotificationChannel(id)
+        permissionRequests.clear()
     }
 
     override fun getHandle(tag: String): NotificationHandle {
@@ -73,9 +77,9 @@ internal class AndroidNotificationHandler( // @formatter:off
         return AndroidNotificationHandle(tag)
     }
 
-    override suspend fun requestPermissions() {
-        if (hasPermissions) return
+    override suspend fun requestPermissions(callback: PermissionCallback) {
         // If we are API level T or above, request permission to push notifications
+        permissionRequests += callback
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             ActivityCompat.requestPermissions(
                 requireNotNull(activity) { "No current activity with set context, use withActivity() to set it" },
@@ -135,10 +139,10 @@ internal class AndroidNotificationHandler( // @formatter:off
 
     @OptIn(ExperimentalUuidApi::class)
     @SuppressLint("MissingPermission") // It is the callers responsibility to make sure perms are defined
-    override suspend fun push(notification: Notification): NotificationHandle {
-        if (!hasPermissions) return AndroidNotificationHandle()
-        return createImpl(notification).apply {
-            manager.notify(hashCode(), requireNotNull(value) { "Invalid notification handle" })
+    override suspend fun push(notification: Notification, tag: String): NotificationHandle {
+        if (!hasPermissions) return NotificationHandle.INVALID
+        return createImpl(notification, AndroidNotificationHandle(tag)).apply {
+            manager.notify(this.tag, 0, requireNotNull(value) { "Invalid notification handle" })
         }
     }
 
@@ -147,39 +151,37 @@ internal class AndroidNotificationHandler( // @formatter:off
         handle: NotificationHandle,
         notification: Notification
     ): NotificationHandle {
-        if (!hasPermissions) return handle
-        require(handle is AndroidNotificationHandle) { "Handle is not an Android notification handle" }
-        require(handle.isValid) { "Handle must be valid" }
+        if (!hasPermissions) return NotificationHandle.INVALID
+        handle.check<AndroidNotificationHandle>()
         return createImpl(notification, handle).apply {
-            manager.notify(hashCode(), requireNotNull(value) { "Invalid notification handle" })
+            manager.notify(tag, 0, requireNotNull(value) { "Invalid notification handle" })
         }
     }
 
     override suspend fun pop(handle: NotificationHandle) {
         if (!hasPermissions) return
-        require(handle is AndroidNotificationHandle) { "Handle is not an Android notification handle" }
-        require(handle.isValid) { "Handle must be valid" }
-        manager.cancel(handle.hashCode())
+        handle.check<AndroidNotificationHandle>()
+        manager.cancel(handle.tag, 0)
     }
 }
 
 // TODO: document this
 val NotificationHandler.context: Context
     get() {
-        require(this is AndroidNotificationHandler) { "Handle is not an Android notification handle" }
+        check<AndroidNotificationHandler>()
         return requireNotNull(contextGetter) { "No context associated with NotificationHandler, use withContext() to set it" }()
     }
 
 // TODO: document this
 val NotificationHandler.activity: Activity?
     get() {
-        require(this is AndroidNotificationHandler) { "Handle is not an Android notification handle" }
+        check<AndroidNotificationHandler>()
         return requireNotNull(activityGetter) { "No activity associated with NotificationHandler, use withActivity() to set it" }()
     }
 
 // TODO: document this
 fun NotificationHandler.withContext(getter: () -> Context): NotificationHandler {
-    require(this is AndroidNotificationHandler) { "Handle is not an Android notification handle" }
+    check<AndroidNotificationHandler>()
     contextGetter = getter
     return this
 }
@@ -193,7 +195,7 @@ fun NotificationHandler.withContext(getter: () -> Context): NotificationHandler 
  * @return This notification handler instance.
  */
 fun NotificationHandler.withActivity(getter: () -> Activity): NotificationHandler {
-    require(this is AndroidNotificationHandler) { "Handle is not an Android notification handle" }
+    check<AndroidNotificationHandler>()
     activityGetter = getter
     return this
 }
@@ -205,8 +207,12 @@ fun NotificationHandler.create(
     tag: String = Uuid.random().toHexString(),
     callback: NotificationCompat.Builder.() -> Unit,
 ): NotificationHandle {
-    require(this is AndroidNotificationHandler) { "Handle is not an Android notification handle" }
-    return createImpl(notification, AndroidNotificationHandle(tag), callback)
+    check<AndroidNotificationHandler>()
+    return createImpl(
+        notification = notification,
+        handle = AndroidNotificationHandle(tag),
+        callback = callback
+    )
 }
 
 /**
@@ -220,14 +226,14 @@ fun NotificationHandler.push(
     tag: String = Uuid.random().toHexString(),
     callback: NotificationCompat.Builder.() -> Unit,
 ): NotificationHandle {
-    require(this is AndroidNotificationHandler) { "Handle is not an Android notification handle" }
-    if (!hasPermissions) return AndroidNotificationHandle()
+    if (!hasPermissions) return NotificationHandle.INVALID
+    check<AndroidNotificationHandler>()
     return createImpl(
         notification = notification,
         callback = callback,
         handle = AndroidNotificationHandle(tag)
     ).apply {
-        manager.notify(hashCode(), requireNotNull(value) { "Invalid notification handle" })
+        manager.notify(this.tag, 0, requireNotNull(value) { "Invalid notification handle" })
     }
 }
 
@@ -242,15 +248,15 @@ fun NotificationHandler.update(
     notification: Notification,
     callback: NotificationCompat.Builder.() -> Unit,
 ): NotificationHandle {
-    if (!hasPermissions) return handle // TODO: maybe log an error/warning?
-    require(this is AndroidNotificationHandler && handle is AndroidNotificationHandle) { "Handle is not an Android notification handle" }
-    require(handle.isValid) { "Handle must be valid" }
+    if (!hasPermissions) return NotificationHandle.INVALID
+    check<AndroidNotificationHandler>()
+    handle.check<AndroidNotificationHandle>()
     return createImpl(
         notification = notification,
         callback = callback,
         handle = handle,
     ).apply {
-        manager.notify(hashCode(), requireNotNull(value) { "Invalid notification handle" })
+        manager.notify(tag, 0, requireNotNull(value) { "Invalid notification handle" })
     }
 }
 
@@ -264,12 +270,18 @@ fun NotificationHandler.update(
  */
 fun NotificationHandler.handlePermissionRequest(requestCode: Int, grantResults: IntArray) {
     if (requestCode != AndroidNotificationHandler.PERMISSION_REQUEST_CODE || grantResults.isEmpty()) return
-    require(this is AndroidNotificationHandler) { "Handle is not an Android notification handle" }
+    check<AndroidNotificationHandler>()
     if (grantResults.first() == PackageManager.PERMISSION_DENIED) {
-        permissionCallback(this, false)
+        for (request in permissionRequests) {
+            runBlocking { request(this@handlePermissionRequest, false) }
+        }
+        permissionRequests.clear()
         return
     }
-    permissionCallback(this, true)
+    for (request in permissionRequests) {
+        runBlocking { request(this@handlePermissionRequest, true) }
+    }
+    permissionRequests.clear()
 }
 
 /**
@@ -280,10 +292,10 @@ fun NotificationHandler.handlePermissionRequest(requestCode: Int, grantResults: 
  */
 @Suppress("DEPRECATION")
 fun NotificationHandler.getLaunchNotification(): ParcelableNotification? {
-    require(this is AndroidNotificationHandler) { "Handle is not an Android notification handle" }
-    return activity?.intent?.let {
-        return@let if (!it.hasExtra(SysNotifyIntent.EXTRA_LAUNCH_NOTIFICATION)) null
-        else it.getParcelableExtra(SysNotifyIntent.EXTRA_LAUNCH_NOTIFICATION)
+    check<AndroidNotificationHandler>()
+    return activity?.intent?.let { intent ->
+        return@let if (!intent.hasExtra(SysNotifyIntent.EXTRA_LAUNCH_NOTIFICATION)) null
+        else intent.getParcelableExtra(SysNotifyIntent.EXTRA_LAUNCH_NOTIFICATION)
     }
 }
 
@@ -292,7 +304,7 @@ fun NotificationHandler.getLaunchNotification(): ParcelableNotification? {
  */
 val NotificationHandler.channel: AndroidNotificationChannel
     get() {
-        require(this is AndroidNotificationHandler) { "Handler is not an Android notification handler" }
+        check<AndroidNotificationHandler>()
         return channel
     }
 
@@ -302,15 +314,14 @@ val NotificationHandler.channel: AndroidNotificationChannel
  * @return A new [SysNotifyIntent] which invokes the current activity.
  */
 fun Context.getDefaultActivationFactory(): ActivationFactory = { context, notification ->
-    require(this is Activity) { "An activity is required for a notification intent" }
+    check(this is Activity) { "An activity is required for a notification intent" }
     SysNotifyIntent(context, this::class.java, notification)
 }
 
 actual fun NotificationHandler( // @formatter:off
     name: String,
     id: String,
-    priority: NotificationPriority,
-    permissionCallback: PermissionCallback
+    priority: NotificationPriority
 ): NotificationHandler { // @formatter:on
-    return AndroidNotificationHandler(name, id, priority, permissionCallback)
+    return AndroidNotificationHandler(name, id, priority)
 }

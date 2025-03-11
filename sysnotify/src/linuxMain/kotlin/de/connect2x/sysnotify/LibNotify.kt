@@ -87,15 +87,12 @@ private typealias _notify_notification_close = (
 
 @Suppress("FunctionName")
 internal object LibNotify {
-    private val library: SharedLibrary? = SharedLibrary.open("libnotify.so")?.also {
-        println("Loaded libnotify successfully")
-    }
+    private val library: SharedLibrary? = SharedLibrary.open("libnotify.so")
 
     init {
         atexit(staticCFunction<Unit> {
             // Must use explicit object ref to avoid non-capturing limitations
             LibNotify.library?.close()
-            println("Unloaded libnotify successfully")
         })
     }
 

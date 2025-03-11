@@ -13,9 +13,21 @@
  * limitations under the License.
  */
 
+@file:JvmName("NotificationHandler$") // Work around duplicate JVM class error
+
 package de.connect2x.sysnotify
 
-typealias PermissionCallback = (NotificationHandler, Boolean) -> Unit
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
+import kotlin.jvm.JvmName
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
+
+// TODO: document this
+typealias PermissionCallback = suspend (handler: NotificationHandler, granted: Boolean) -> Unit
+
+// TODO: document this
+typealias ActivationHandler = (Notification) -> Unit
 
 /**
  * This interface provides platform-agnostic functions to interact with the OSs notifications.
@@ -80,7 +92,7 @@ interface NotificationHandler : AutoCloseable {
      * Requests the permissions to show notifications from the underlying platform
      * when possible. Otherwise, this function returns without any side effects.
      */
-    suspend fun requestPermissions() {}
+    suspend fun requestPermissions(callback: PermissionCallback = { _, _ -> }) {}
 
     /**
      * Clears all notifications that were created by this notification handler instance.
@@ -92,10 +104,15 @@ interface NotificationHandler : AutoCloseable {
      * be displayed by the underlying platform.
      *
      * @param notification The notification contents to create the new notification from.
+     * @param tag A unique string identifying this particular notification. Must be application-unique.
      * @return A new notification with the given content which has been shown by the system
      *  when successful, null otherwise.
      */
-    suspend fun push(notification: Notification): NotificationHandle?
+    @OptIn(ExperimentalUuidApi::class)
+    suspend fun push(
+        notification: Notification,
+        tag: String = Uuid.random().toHexString()
+    ): NotificationHandle
 
     /**
      * Hides and removes the given notification if it is valid and if it exists.
@@ -103,6 +120,9 @@ interface NotificationHandler : AutoCloseable {
      * @param handle A handle to the notification to hide and remove.
      */
     suspend fun pop(handle: NotificationHandle)
+
+    // TODO: document this
+    suspend fun pop(tag: String) = pop(getHandle(tag))
 
     /**
      * Updates the given existing notification with the given content if it is valid.
@@ -113,10 +133,16 @@ interface NotificationHandler : AutoCloseable {
     suspend fun update(
         handle: NotificationHandle,
         notification: Notification,
-    ): NotificationHandle? {
+    ): NotificationHandle {
         pop(handle)
         return push(notification)
     }
+
+    // TODO: document this
+    suspend fun update(
+        tag: String,
+        notification: Notification
+    ): NotificationHandle = update(getHandle(tag), notification)
 
     /**
      * Frees all underlying resources allocated by this notification handler if any
@@ -126,12 +152,16 @@ interface NotificationHandler : AutoCloseable {
     override fun close() {}
 }
 
+@OptIn(ExperimentalContracts::class)
+internal inline fun <reified H : NotificationHandler> NotificationHandler.check() {
+    contract { returns() implies (this@check is H) }
+}
+
 // TODO: document this
 expect fun NotificationHandler(
     name: String,
     id: String = name,
-    priority: NotificationPriority = NotificationPriority.DEFAULT,
-    permissionCallback: PermissionCallback = { _, _ -> }
+    priority: NotificationPriority = NotificationPriority.DEFAULT
 ): NotificationHandler
 
 // TODO: document this
@@ -145,7 +175,10 @@ object NoopNotificationHandler : NotificationHandler {
 
     override fun getHandle(tag: String): NotificationHandle = NotificationHandle.INVALID
 
-    override suspend fun push(notification: Notification): NotificationHandle = NotificationHandle.INVALID
+    override suspend fun push(
+        notification: Notification,
+        tag: String
+    ): NotificationHandle = NotificationHandle.INVALID
 
     override suspend fun update(
         handle: NotificationHandle,

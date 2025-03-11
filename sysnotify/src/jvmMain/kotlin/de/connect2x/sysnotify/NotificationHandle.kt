@@ -15,6 +15,19 @@
 
 package de.connect2x.sysnotify
 
-internal data class JvmNotificationHandle(
-    val address: Long,
-) : NotificationHandle
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
+
+@OptIn(ExperimentalUuidApi::class)
+internal class JvmNotificationHandle(
+    override val tag: String = Uuid.random().toHexString(),
+    val address: Long = 0L,
+) : NotificationHandle {
+    override fun equals(other: Any?): Boolean {
+        return if (other !is JvmNotificationHandle) false
+        else tag == other.tag
+    }
+
+    override fun hashCode(): Int = tag.hashCode()
+    override fun toString(): String = tag
+}

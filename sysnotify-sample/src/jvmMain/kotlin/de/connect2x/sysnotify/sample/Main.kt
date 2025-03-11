@@ -19,31 +19,21 @@ import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
-import de.connect2x.sysnotify.NotificationHandler
 import de.connect2x.sysnotify.NotificationIcon
-import de.connect2x.sysnotify.create
 import de.connect2x.sysnotify.fromBufferedImage
 import javax.imageio.ImageIO
 
 fun main() {
     application {
-        val icon =
-            this::class.java.getResourceAsStream("/assets/icons/app_icon.png")
-                .use { ImageIO.read(it) }
-        val notificationHandler = NotificationHandler.create(
-            name = "Sysnotify Sample",
-            id = "Connect2x.Sysnotify.Sample",
-            activationCallback = { println("Activated notification: ${it.callbackData}") }
-        )
-
+        val icon = this::class.java.getResourceAsStream("/assets/icons/app_icon.png").use { ImageIO.read(it) }
         Window(
-            title = "Sysnotify Sample",
+            title = "SysNotify Sample",
             icon = BitmapPainter(icon.toComposeImageBitmap()),
             onCloseRequest = {
-                notificationHandler.close()
+                onAppExit()
                 exitApplication()
             }) {
-            App(notificationHandler, NotificationIcon.fromBufferedImage(icon))
+            App(NotificationIcon.fromBufferedImage(icon))
         }
     }
 }

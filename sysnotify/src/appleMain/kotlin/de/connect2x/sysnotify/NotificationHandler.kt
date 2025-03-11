@@ -17,6 +17,7 @@ package de.connect2x.sysnotify
 
 import co.touchlab.stately.collections.SharedHashMap
 import kotlinx.atomicfu.atomic
+import kotlinx.coroutines.runBlocking
 import platform.UserNotifications.UNAuthorizationOptionAlert
 import platform.UserNotifications.UNAuthorizationOptionBadge
 import platform.UserNotifications.UNAuthorizationOptionSound
@@ -36,7 +37,7 @@ internal class AppleNotificationHandler(
     override val name: String,
     override val id: String,
     override val priority: NotificationPriority,
-    private val permissionCallback: PermissionCallback
+    private val closeCallback: () -> Unit = {}
 ) : NotificationHandler {
     override val platform: NotificationPlatform = NotificationPlatform.APPLE
     override var hasPermissions: Boolean by atomic(false)
@@ -73,13 +74,13 @@ internal class AppleNotificationHandler(
         return AppleNotificationHandle(tag)
     }
 
-    override suspend fun requestPermissions() {
+    override suspend fun requestPermissions(callback: PermissionCallback) {
         if (hasPermissions) return
         UNUserNotificationCenter.currentNotificationCenter().requestAuthorizationWithOptions(
             UNAuthorizationOptionSound or UNAuthorizationOptionBadge or UNAuthorizationOptionAlert
         ) { granted, error ->
             if (granted) hasPermissions = true
-            permissionCallback(this, granted)
+            runBlocking { callback(this@AppleNotificationHandler, granted) }
             error?.localizedDescription?.let {
                 throw IllegalStateException("Could not request permission: $it")
             }
@@ -87,9 +88,9 @@ internal class AppleNotificationHandler(
     }
 
     @OptIn(ExperimentalUuidApi::class)
-    override suspend fun push(notification: Notification): NotificationHandle {
+    override suspend fun push(notification: Notification, tag: String): NotificationHandle {
         if (!hasPermissions) return NotificationHandle.INVALID
-        val handle = AppleNotificationHandle()
+        val handle = AppleNotificationHandle(tag)
 
         val content = UNMutableNotificationContent().apply {
             setTitle(notification.title ?: handle.tag)
@@ -123,8 +124,7 @@ internal class AppleNotificationHandler(
     @OptIn(ExperimentalUuidApi::class)
     override suspend fun pop(handle: NotificationHandle) {
         if (!hasPermissions) return
-        require(handle is AppleNotificationHandle) { "Handle is not an Apple notification handle" }
-        require(handle.isValid) { "Handle must be valid" }
+        handle.check<AppleNotificationHandle>()
 
         val identifier = handle.tag
         var found = false
@@ -149,6 +149,7 @@ internal class AppleNotificationHandler(
     }
 
     override fun close() {
+        closeCallback()
         notificationCategories.clear()
     }
 }
@@ -156,8 +157,7 @@ internal class AppleNotificationHandler(
 actual fun NotificationHandler( // @formatter:off
     name: String,
     id: String,
-    priority: NotificationPriority,
-    permissionCallback: PermissionCallback
+    priority: NotificationPriority
 ): NotificationHandler { // @formatter:on
-    return AppleNotificationHandler(name, id, priority, permissionCallback)
+    return AppleNotificationHandler(name, id, priority)
 }

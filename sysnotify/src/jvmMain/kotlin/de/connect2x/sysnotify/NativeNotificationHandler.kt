@@ -21,7 +21,12 @@ object NativeNotificationHandler {
     }
 
     @JvmStatic
-    external fun create(name: String, id: String, priority: Int, activationCallback: NativeActivationCallback): Long
+    external fun create( // @formatter:off
+        name: String,
+        id: String,
+        priority: Int,
+        activationCallback: NativeActivationCallback
+    ): Long // @formatter:on
 
     @JvmStatic
     external fun hasPermissions(handler: Long): Boolean
@@ -33,11 +38,15 @@ object NativeNotificationHandler {
     external fun getCapabilities(handler: Long): Int
 
     @JvmStatic
-    external fun requestPermissions(handler: Long)
+    external fun requestPermissions( // @formatter:off
+        handler: Long,
+        callback: NativePermissionCallback
+    ) // @formatter:on
 
     @JvmStatic
     external fun push(
         handler: Long,
+        tag: String,
         title: String,
         description: String?,
         icon: ByteArray?,

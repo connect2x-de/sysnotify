@@ -23,7 +23,6 @@ import org.w3c.notifications.NotificationOptions
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
 import org.w3c.notifications.Notification as JsNotification
 import org.w3c.notifications.NotificationPermission as JsNotificationPermission
 
@@ -31,8 +30,7 @@ import org.w3c.notifications.NotificationPermission as JsNotificationPermission
 private class WebNotificationHandler(
     override val name: String,
     override val id: String,
-    override val priority: NotificationPriority,
-    private val permissionCallback: PermissionCallback,
+    override val priority: NotificationPriority
 ) : NotificationHandler {
     private val notifications: SharedHashMap<String, JsNotification> = SharedHashMap()
 
@@ -56,21 +54,20 @@ private class WebNotificationHandler(
         return WebNotificationHandle(tag, notifications[tag])
     }
 
-    override suspend fun requestPermissions() {
+    override suspend fun requestPermissions(callback: PermissionCallback) {
         if (hasPermissions) {
-            permissionCallback(this, true)
+            callback(this, true)
             return
         }
         // https://developer.mozilla.org/en-US/docs/Web/API/Notification/requestPermission_static
         val perms = JsNotification.requestPermission().await()
         hasPermissions = perms === JsNotificationPermission.GRANTED
-        permissionCallback(this, hasPermissions)
+        callback(this, hasPermissions)
     }
 
     @OptIn(ExperimentalEncodingApi::class, ExperimentalUuidApi::class)
-    override suspend fun push(notification: Notification): NotificationHandle {
+    override suspend fun push(notification: Notification, tag: String): NotificationHandle {
         val icon = notification.icon?.data?.let { Base64.encode(it) }
-        val tag = Uuid.random().toHexString()
         return WebNotificationHandle(
             instance = JsNotification(
                 title = notification.title ?: "",
@@ -95,8 +92,7 @@ private class WebNotificationHandler(
     }
 
     override suspend fun pop(handle: NotificationHandle) {
-        require(handle is WebNotificationHandle) { "Handle is not a web notification handle" }
-        require(handle.isValid) { "Handle must be valid" }
+        handle.check<WebNotificationHandle>()
         handle.instance?.close()
         notifications -= handle.tag
     }
@@ -105,8 +101,7 @@ private class WebNotificationHandler(
 actual fun NotificationHandler( // @formatter:off
     name: String,
     id: String,
-    priority: NotificationPriority,
-    permissionCallback: PermissionCallback
+    priority: NotificationPriority
 ): NotificationHandler { // @formatter:on
-    return WebNotificationHandler(name, id, priority, permissionCallback)
+    return WebNotificationHandler(name, id, priority)
 }

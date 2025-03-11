@@ -39,15 +39,12 @@ private typealias _g_object_unref = (obj: CPointer<GObject>?) -> Unit
 
 @Suppress("FunctionName")
 internal object LibGlib {
-    private val library: SharedLibrary? = SharedLibrary.open("libglib-2.0.so")?.also {
-        println("Loaded libglib-2.0 successfully")
-    }
+    private val library: SharedLibrary? = SharedLibrary.open("libglib-2.0.so")
 
     init {
         atexit(staticCFunction<Unit> {
             // Must use explicit object ref to avoid non-capturing limitations
             LibGlib.library?.close()
-            println("Unloaded libglib-2.0 successfully")
         })
     }
 

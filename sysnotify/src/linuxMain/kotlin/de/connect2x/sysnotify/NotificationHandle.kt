@@ -20,7 +20,11 @@ package de.connect2x.sysnotify
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
 import libnotify.NotifyNotification
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
+@OptIn(ExperimentalUuidApi::class)
 internal class LinuxNotificationHandle(
-    internal val address: CPointer<NotifyNotification>,
+    override val tag: String = Uuid.random().toHexString(),
+    internal val address: CPointer<NotifyNotification>? = null,
 ) : NotificationHandle

@@ -16,11 +16,9 @@
 import de.connect2x.sysnotify.NotificationHandler
 import kotlin.test.Test
 
-internal expect fun createHandler(name: String = "test"): NotificationHandler
-
 class NotificationHandlerTest {
     @Test
     fun `Create and dispose a notification handler`() {
-        createHandler().close()
+        NotificationHandler("Test").close()
     }
 }

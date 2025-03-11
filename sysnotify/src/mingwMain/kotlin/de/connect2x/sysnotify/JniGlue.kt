@@ -22,5 +22,6 @@ internal actual fun createNotificationHandler(
     priority: NotificationPriority,
     closeCallback: () -> Unit,
 ): NotificationHandler {
-    return WindowsNotificationHandler(name, id, priority, activationCallback, closeCallback)
+    // TODO: re-implement activation callbacks
+    return WindowsNotificationHandler(name, id, priority, closeCallback)
 }
