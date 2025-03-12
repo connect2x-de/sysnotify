@@ -22,7 +22,7 @@ import kotlin.contracts.contract
 import kotlin.jvm.JvmName
 
 /**
- * This interface describes a notification that was created by an [NotificationHandler] instance
+ * This interface describes a notification that was created by a [NotificationHandler] instance
  * on any given platform.
  */
 interface NotificationHandle {

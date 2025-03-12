@@ -53,7 +53,8 @@ interface NotificationHandler : AutoCloseable {
     /**
      * The internal ID of the notification handler.
      * This usually follows the underlying platform's naming conventions;
-     * Package group on JVM and Android, AUMID on Windows etc.
+     * A standard convention of <tld>.<company>.<product> must be used
+     * to guarantee correct platform-specific conversion under the hood.
      */
     val id: String
 

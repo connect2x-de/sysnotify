@@ -163,6 +163,10 @@ internal class AndroidNotificationHandler( // @formatter:off
         handle.check<AndroidNotificationHandle>()
         manager.cancel(handle.tag, 0)
     }
+
+    override suspend fun clearAll() {
+        manager.cancelAll()
+    }
 }
 
 // TODO: document this
