@@ -75,5 +75,8 @@ object NativeNotificationHandler {
     external fun pop(handler: Long, notification: Long)
 
     @JvmStatic
+    external fun clearAll(handler: Long)
+
+    @JvmStatic
     external fun destroy(handler: Long)
 }

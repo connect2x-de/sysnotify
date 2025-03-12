@@ -117,6 +117,10 @@ internal class WindowsNotificationHandler(
             }
         }
     }
+
+    override suspend fun clearAll() {
+
+    }
 }
 
 actual fun NotificationHandler(

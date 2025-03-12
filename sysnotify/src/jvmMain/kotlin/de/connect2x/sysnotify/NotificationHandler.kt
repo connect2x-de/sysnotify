@@ -65,6 +65,7 @@ private class JvmNotificationHandler(
     }
 
     override suspend fun push(notification: Notification, tag: String): NotificationHandle {
+        if (!hasPermissions) return NotificationHandle.INVALID
         val handle = NativeNotificationHandler.push(
             handler = address,
             tag = tag,
@@ -86,6 +87,7 @@ private class JvmNotificationHandler(
         handle: NotificationHandle,
         notification: Notification
     ): NotificationHandle {
+        if (!hasPermissions) return NotificationHandle.INVALID
         handle.check<JvmNotificationHandle>()
         val newHandle = NativeNotificationHandler.update(
             handler = address,
@@ -103,8 +105,14 @@ private class JvmNotificationHandler(
     }
 
     override suspend fun pop(handle: NotificationHandle) {
-        require(handle is JvmNotificationHandle)
+        if (!hasPermissions) return
+        handle.check<JvmNotificationHandle>()
         NativeNotificationHandler.pop(address, handle.address)
+    }
+
+    override suspend fun clearAll() {
+        if (!hasPermissions) return
+        NativeNotificationHandler.clearAll(address)
     }
 }
 

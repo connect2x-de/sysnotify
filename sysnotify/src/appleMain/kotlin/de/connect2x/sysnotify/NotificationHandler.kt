@@ -148,7 +148,14 @@ internal class AppleNotificationHandler(
         }
     }
 
+    override suspend fun clearAll() {
+        if (!hasPermissions) return
+        notificationCenter.removeAllPendingNotificationRequests()
+        notificationCenter.removeAllDeliveredNotifications()
+    }
+
     override fun close() {
+        if (!hasPermissions) return
         closeCallback()
         notificationCategories.clear()
     }

@@ -17,6 +17,9 @@
 
 package de.connect2x.sysnotify
 
+import co.touchlab.stately.collections.SharedHashMap
+import co.touchlab.stately.collections.SharedLinkedList
+import kotlinx.atomicfu.atomic
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
@@ -26,9 +29,23 @@ import kotlinx.cinterop.ptr
 import kotlinx.cinterop.reinterpret
 import kotlinx.cinterop.usePinned
 import kotlinx.cinterop.value
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.yield
 import libnotify.GError
 import libnotify.GdkColorspace
 import libnotify.NotifyNotification
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.TimeSource
 
 internal class LinuxNotificationHandler(
     override val name: String,
@@ -54,6 +71,32 @@ internal class LinuxNotificationHandler(
         isCustomSoundSupported = true,
         isGroupingSupported = false
     )
+
+    private val coroutineScope: CoroutineScope =
+        CoroutineScope(Dispatchers.Default + SupervisorJob() + CoroutineExceptionHandler { _, throwable ->
+            println("NotificationHandler coroutine could not complete: $throwable")
+        })
+
+    private val pendingNotifications: SharedLinkedList<Pair<String, Notification>> = SharedLinkedList()
+    private val notifications: SharedHashMap<String, LinuxNotificationHandle> = SharedHashMap()
+    private var lastPushTime: TimeSource.Monotonic.ValueTimeMark? by atomic(null)
+    private val dequeueSemaphore: Semaphore = Semaphore(1)
+
+    private var isDequeueJobRunning: Boolean by atomic(true)
+    private val dequeueJob: Job = coroutineScope.launch {
+        while (isDequeueJobRunning) {
+            while (pendingNotifications.isNotEmpty()) {
+                dequeueSemaphore.acquire()
+                val (tag, notification) = pendingNotifications.removeFirst()
+                val handle = create(tag, notification)
+                handle.check<LinuxNotificationHandle>()
+                notifications[tag] = handle
+                dequeueSemaphore.release()
+                delay(500.milliseconds) // Minimum required DBus timeout to prevent dropping notifications
+            }
+            yield()
+        }
+    }
 
     init {
         check(LibNotify.notify_init(name) != 0) { "Could not initialize libnotify" }
@@ -89,7 +132,8 @@ internal class LinuxNotificationHandler(
         return true
     }
 
-    override suspend fun push(notification: Notification, tag: String): NotificationHandle {
+    @Suppress("NOTHING_TO_INLINE")
+    private suspend inline fun create(tag: String, notification: Notification): NotificationHandle {
         val notificationAddress = LibNotify.notify_notification_new(
             summary = notification.title,
             body = notification.description,
@@ -106,39 +150,103 @@ internal class LinuxNotificationHandler(
             )
         }
         setIcon(notificationAddress, notification)
-        return if (show(notificationAddress)) LinuxNotificationHandle(address = notificationAddress)
+        return if (show(notificationAddress)) LinuxNotificationHandle(tag).apply {
+            setAddress(notificationAddress)
+        }
         else NotificationHandle.INVALID
     }
 
-    override suspend fun update(handle: NotificationHandle, notification: Notification): NotificationHandle {
-        handle.check<LinuxNotificationHandle>()
-        val notificationAddress = requireNotNull(handle.address) { "Handle does not contain a valid address" }
-        LibNotify.notify_notification_update(
-            notification = notificationAddress,
-            summary = notification.title,
-            body = notification.description,
-            icon = DEFAULT_ICON
-        )
-        setIcon(notificationAddress, notification)
-        return if (show(notificationAddress)) handle
-        else NotificationHandle.INVALID
-    }
-
-    override suspend fun pop(handle: NotificationHandle) {
-        handle.check<LinuxNotificationHandle>()
-        memScoped {
-            val errorAddress = allocPointerTo<GError>()
-            if (LibNotify.notify_notification_close(handle.address, errorAddress.ptr) == 0) {
-                errorAddress.value?.freeAndThrow()
-                return
+    override suspend fun push(notification: Notification, tag: String): NotificationHandle {
+        // If this notification is already pending or active, return early
+        if (tag in notifications || pendingNotifications.any { it.first == tag }) return NotificationHandle.INVALID
+        val lastPushTime = this.lastPushTime
+        if (lastPushTime != null) {
+            val currentTime = TimeSource.Monotonic.markNow()
+            val elapsedTime = currentTime.minus(lastPushTime)
+            if (elapsedTime >= 500.milliseconds) {
+                pendingNotifications += Pair(tag, notification)
+                this.lastPushTime = TimeSource.Monotonic.markNow()
+                return LinuxNotificationHandle(tag) // Early return so we don't block
             }
         }
-        LibGlib.g_object_unref(handle.address?.reinterpret())
+        // Handle immediate notification creation
+        val handle = create(tag, notification)
+        handle.check<LinuxNotificationHandle>()
+        notifications[tag] = handle
+        this.lastPushTime = TimeSource.Monotonic.markNow()
+        return handle
     }
 
-    override fun close() {
-        closeCallback()
-        LibNotify.notify_uninit()
+    override suspend fun update(handle: NotificationHandle, notification: Notification): NotificationHandle =
+        dequeueSemaphore.withPermit {
+            handle.check<LinuxNotificationHandle>()
+            val tag = handle.tag
+            // If the notification is already active, just update it immediately
+            if (tag in notifications) {
+                val notificationAddress =
+                    requireNotNull(handle.getAddress()) { "Handle does not contain a valid address" }
+                LibNotify.notify_notification_update(
+                    notification = notificationAddress,
+                    summary = notification.title,
+                    body = notification.description,
+                    icon = DEFAULT_ICON
+                )
+                setIcon(notificationAddress, notification)
+                return@withPermit if (show(notificationAddress)) handle
+                else NotificationHandle.INVALID
+            }
+            // Otherwise update the pending notification associated with the given tag
+            val outdatedEntry =
+                pendingNotifications.find { it.first == tag } ?: return@withPermit NotificationHandle.INVALID
+            val outdatedIndex = pendingNotifications.indexOf(outdatedEntry)
+            if (outdatedIndex == -1) return@withPermit NotificationHandle.INVALID
+            pendingNotifications[outdatedIndex] = Pair(tag, notification)
+            handle
+        }
+
+    override suspend fun pop(handle: NotificationHandle) = dequeueSemaphore.withPermit {
+        handle.check<LinuxNotificationHandle>()
+        val tag = handle.tag
+        // If the notification is already active, close it
+        if (tag in notifications) {
+            val address = handle.getAddress()
+            memScoped {
+                val errorAddress = allocPointerTo<GError>()
+                if (LibNotify.notify_notification_close(address, errorAddress.ptr) == 0) {
+                    errorAddress.value?.freeAndThrow()
+                    return
+                }
+            }
+            LibGlib.g_object_unref(address?.reinterpret())
+        }
+        // Otherwise dequeue the pending notification early
+        val outdatedEntry = pendingNotifications.find { it.first == tag } ?: return
+        pendingNotifications -= outdatedEntry
+    }
+
+    override suspend fun clearAll() = dequeueSemaphore.withPermit {
+        pendingNotifications.clear() // Make sure all pending notifications are cleared first
+        for ((_, notification) in notifications) {
+            memScoped {
+                val errorAddress = allocPointerTo<GError>()
+                if (LibNotify.notify_notification_close(notification.getAddress(), errorAddress.ptr) == 0) {
+                    errorAddress.value?.freeAndThrow()
+                }
+            }
+        }
+        notifications.clear()
+    }
+
+    override fun close() = runBlocking {
+        dequeueSemaphore.withPermit {
+            closeCallback()
+            isDequeueJobRunning = false
+            dequeueJob.join()
+            coroutineScope.cancel()
+            pendingNotifications.clear()
+            notifications.clear()
+            LibNotify.notify_uninit()
+        }
     }
 }
 

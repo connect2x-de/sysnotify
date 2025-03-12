@@ -67,6 +67,7 @@ private class WebNotificationHandler(
 
     @OptIn(ExperimentalEncodingApi::class, ExperimentalUuidApi::class)
     override suspend fun push(notification: Notification, tag: String): NotificationHandle {
+        if (!hasPermissions) return NotificationHandle.INVALID
         val icon = notification.icon?.data?.let { Base64.encode(it) }
         return WebNotificationHandle(
             instance = JsNotification(
@@ -92,9 +93,18 @@ private class WebNotificationHandler(
     }
 
     override suspend fun pop(handle: NotificationHandle) {
+        if (!hasPermissions) return
         handle.check<WebNotificationHandle>()
         handle.instance?.close()
         notifications -= handle.tag
+    }
+
+    override suspend fun clearAll() {
+        if (!hasPermissions) return
+        for ((_, notification) in notifications) {
+            notification.close()
+        }
+        notifications.clear()
     }
 }
 

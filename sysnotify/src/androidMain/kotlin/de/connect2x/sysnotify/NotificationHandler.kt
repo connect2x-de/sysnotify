@@ -165,6 +165,7 @@ internal class AndroidNotificationHandler( // @formatter:off
     }
 
     override suspend fun clearAll() {
+        if (!hasPermissions) return
         manager.cancelAll()
     }
 }
