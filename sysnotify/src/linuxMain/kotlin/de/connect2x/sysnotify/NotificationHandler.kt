@@ -45,6 +45,7 @@ import libnotify.GError
 import libnotify.GdkColorspace
 import libnotify.NotifyNotification
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
 
 internal class LinuxNotificationHandler(
@@ -77,22 +78,24 @@ internal class LinuxNotificationHandler(
             println("NotificationHandler coroutine could not complete: $throwable")
         })
 
-    private val pendingNotifications: SharedLinkedList<Pair<String, Notification>> = SharedLinkedList()
+    private val pendingNotifications: SharedLinkedList<Triple<String, Boolean, Notification>> = SharedLinkedList()
     private val notifications: SharedHashMap<String, LinuxNotificationHandle> = SharedHashMap()
     private var lastPushTime: TimeSource.Monotonic.ValueTimeMark? by atomic(null)
     private val dequeueSemaphore: Semaphore = Semaphore(1)
+    private var lastNotification: Notification? by atomic(null)
 
     private var isDequeueJobRunning: Boolean by atomic(true)
     private val dequeueJob: Job = coroutineScope.launch {
         while (isDequeueJobRunning) {
             while (pendingNotifications.isNotEmpty()) {
                 dequeueSemaphore.acquire()
-                val (tag, notification) = pendingNotifications.removeFirst()
+                val (tag, isSameContent, notification) = pendingNotifications.removeFirst()
                 val handle = create(tag, notification)
                 handle.check<LinuxNotificationHandle>()
                 notifications[tag] = handle
                 dequeueSemaphore.release()
-                delay(500.milliseconds) // Minimum required DBus timeout to prevent dropping notifications
+                // Minimum required DBus timeouts to prevent dropping notifications
+                delay(if (isSameContent) 1.seconds else 500.milliseconds)
             }
             yield()
         }
@@ -161,11 +164,13 @@ internal class LinuxNotificationHandler(
         if (tag in notifications || pendingNotifications.any { it.first == tag }) return NotificationHandle.INVALID
         val lastPushTime = this.lastPushTime
         if (lastPushTime != null) {
+            val isSameContent = lastNotification == notification
             val currentTime = TimeSource.Monotonic.markNow()
             val elapsedTime = currentTime.minus(lastPushTime)
             if (elapsedTime >= 500.milliseconds) {
-                pendingNotifications += Pair(tag, notification)
+                pendingNotifications += Triple(tag, isSameContent, notification)
                 this.lastPushTime = TimeSource.Monotonic.markNow()
+                lastNotification = notification
                 return LinuxNotificationHandle(tag) // Early return so we don't block
             }
         }
@@ -174,6 +179,7 @@ internal class LinuxNotificationHandler(
         handle.check<LinuxNotificationHandle>()
         notifications[tag] = handle
         this.lastPushTime = TimeSource.Monotonic.markNow()
+        lastNotification = notification
         return handle
     }
 
@@ -200,7 +206,9 @@ internal class LinuxNotificationHandler(
                 pendingNotifications.find { it.first == tag } ?: return@withPermit NotificationHandle.INVALID
             val outdatedIndex = pendingNotifications.indexOf(outdatedEntry)
             if (outdatedIndex == -1) return@withPermit NotificationHandle.INVALID
-            pendingNotifications[outdatedIndex] = Pair(tag, notification)
+            val isSameContent = lastNotification == notification
+            pendingNotifications[outdatedIndex] = Triple(tag, isSameContent, notification)
+            lastNotification = notification
             handle
         }
 
