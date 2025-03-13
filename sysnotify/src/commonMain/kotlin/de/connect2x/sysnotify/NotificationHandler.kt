@@ -153,6 +153,7 @@ interface NotificationHandler : AutoCloseable {
     override fun close() {}
 }
 
+@PublishedApi
 @OptIn(ExperimentalContracts::class)
 internal inline fun <reified H : NotificationHandler> NotificationHandler.check() {
     contract { returns() implies (this@check is H) }

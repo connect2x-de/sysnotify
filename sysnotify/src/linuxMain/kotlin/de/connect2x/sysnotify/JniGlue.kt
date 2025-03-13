@@ -22,6 +22,6 @@ internal actual fun createNotificationHandler(
     priority: NotificationPriority,
     closeCallback: () -> Unit
 ): NotificationHandler {
-    // TODO: re-implement activation callbacks
     return LinuxNotificationHandler(name, id, priority, closeCallback)
+        .withActivationHandler(activationCallback)
 }

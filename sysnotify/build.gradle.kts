@@ -61,11 +61,11 @@ fun DefaultCInteropSettings.includePlatformBinaries(target: KotlinNativeTarget) 
 }
 
 kotlin {
+    withSourcesJar(true)
     val kotlinJvmVersion = libs.versions.jvmTarget.get()
     val kotlinJvmTarget = JvmTarget.fromTarget(kotlinJvmVersion)
     jvmToolchain(JavaLanguageVersion.of(kotlinJvmVersion).asInt())
     jvm {
-        withSourcesJar(true)
         compilations.all {
             compileTaskProvider {
                 compilerOptions {
@@ -75,14 +75,12 @@ kotlin {
         }
     }
     androidTarget {
-        withSourcesJar(true)
         publishLibraryVariants("release")
         compilerOptions {
             jvmTarget = kotlinJvmTarget
         }
     }
     js(IR) {
-        withSourcesJar(true)
         browser {
             testTask {
                 enabled = false
@@ -93,7 +91,6 @@ kotlin {
     }
     listOf(macosX64(), macosArm64()).forEach { target ->
         target.apply {
-            withSourcesJar(true)
             compilations.getByName("main") {
                 cinterops {
                     val notificationdata by creating
@@ -107,7 +104,6 @@ kotlin {
     }
     listOf(iosX64(), iosArm64(), iosSimulatorArm64()).forEach { target ->
         target.apply {
-            withSourcesJar(true)
             binaries {
                 sharedLib()
                 framework()
@@ -116,7 +112,6 @@ kotlin {
     }
     listOf(linuxX64(), linuxArm64()).forEach {
         it.apply {
-            withSourcesJar(true)
             compilations.getByName("main") {
                 cinterops {
                     val libnotify by creating {
@@ -131,7 +126,6 @@ kotlin {
         }
     }
     mingwX64 {
-        withSourcesJar(true)
         compilations.getByName("main") {
             cinterops {
                 val sysnotifycom by creating {

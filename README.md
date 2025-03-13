@@ -13,7 +13,7 @@ The support matrix below indicates which specific features are available on whic
 | Title        | ✅       | ✅   | ✅       | ✅     | ✅    | ✅   |
 | Description  | ✅       | ✅   | ✅       | ✅     | ✅    | ✅   |
 | Icon         | ✅       | ❌   | ✅       | ❌     | ✅    | ✅   |
-| Action       | ✅       | ❌   | ✅       | ❌     | ❌    | ❌   |
+| Action       | ✅       | ❌   | ✅       | ❌     | ✅    | ❌   |
 | Pop          | ✅       | ✅   | ✅       | ✅     | ✅    | ✅   |
 | Sound        | ✅       | ✅   | ✅       | ✅     | ✅    | ✅   |
 | Custom Sound | ✅       | ✅   | ✅       | ✅     | ✅    | ❌   |

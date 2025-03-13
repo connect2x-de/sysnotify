@@ -24,7 +24,10 @@ import kotlinx.cinterop.invoke
 import kotlinx.cinterop.staticCFunction
 import libnotify.GBytes
 import libnotify.GError
+import libnotify.GMainContext
+import libnotify.GMainLoop
 import libnotify.GObject
+import libnotify.gboolean
 import libnotify.gsize
 import platform.posix.atexit
 
@@ -37,34 +40,73 @@ private typealias _g_error_free = (error: CPointer<GError>?) -> Unit
 private typealias _g_bytes_unref = (data: CPointer<GBytes>?) -> Unit
 private typealias _g_object_unref = (obj: CPointer<GObject>?) -> Unit
 
+private typealias _g_main_loop_new = (
+    context: CPointer<GMainContext>?,
+    isRunning: gboolean
+) -> CPointer<GMainLoop>?
+
+private typealias _g_main_loop_unref = (loop: CPointer<GMainLoop>?) -> Unit
+private typealias _g_main_loop_get_context = (loop: CPointer<GMainLoop>?) -> CPointer<GMainContext>?
+
+private typealias _g_main_context_iteration = (
+    context: CPointer<GMainContext>?,
+    mayBlock: gboolean
+) -> gboolean
+
 @Suppress("FunctionName")
-internal object LibGlib {
+internal object LibGLib {
     private val library: SharedLibrary? = SharedLibrary.open("libglib-2.0.so")
 
     init {
         atexit(staticCFunction<Unit> {
-            // Must use explicit object ref to avoid non-capturing limitations
-            LibGlib.library?.close()
+            // Need a fully qualified reference to avoid capturing implicitly
+            LibGLib.library?.close()
         })
     }
 
     fun g_bytes_new_static(address: COpaquePointer?, size: gsize): CPointer<GBytes>? {
-        return library?.findFunctionOrNull<_g_bytes_new_static>("g_bytes_new_static")
+        return library?.findFunction<_g_bytes_new_static>("g_bytes_new_static")
             ?.invoke(address, size)
     }
 
     fun g_error_free(error: CPointer<GError>?) {
-        library?.findFunctionOrNull<_g_error_free>("g_error_free")
+        library?.findFunction<_g_error_free>("g_error_free")
             ?.invoke(error)
     }
 
     fun g_bytes_unref(data: CPointer<GBytes>?) {
-        library?.findFunctionOrNull<_g_bytes_unref>("g_bytes_unref")
+        library?.findFunction<_g_bytes_unref>("g_bytes_unref")
             ?.invoke(data)
     }
 
     fun g_object_unref(obj: CPointer<GObject>?) {
-        library?.findFunctionOrNull<_g_object_unref>("g_object_unref")
+        library?.findFunction<_g_object_unref>("g_object_unref")
             ?.invoke(obj)
+    }
+
+    fun g_main_loop_new(
+        context: CPointer<GMainContext>?,
+        isRunning: gboolean
+    ): CPointer<GMainLoop>? {
+        return library?.findFunction<_g_main_loop_new>("g_main_loop_new")
+            ?.invoke(context, isRunning)
+    }
+
+    fun g_main_loop_unref(loop: CPointer<GMainLoop>?) {
+        library?.findFunction<_g_main_loop_unref>("g_main_loop_unref")
+            ?.invoke(loop)
+    }
+
+    fun g_main_loop_get_context(loop: CPointer<GMainLoop>?): CPointer<GMainContext>? {
+        return library?.findFunction<_g_main_loop_get_context>("g_main_loop_get_context")
+            ?.invoke(loop)
+    }
+
+    fun g_main_context_iteration(
+        context: CPointer<GMainContext>?,
+        mayBlock: gboolean
+    ): gboolean {
+        return library?.findFunction<_g_main_context_iteration>("g_main_context_iteration")
+            ?.invoke(context, mayBlock) ?: 0
     }
 }

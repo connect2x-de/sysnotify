@@ -74,7 +74,7 @@ internal class SharedLibrary(
     }
 
     inline fun <reified T : Function<*>> findFunction(name: String): CPointer<CFunction<T>> {
-        return requireNotNull(findFunctionOrNull(name)) { "Could not find function ${this.name}:$name" }.reinterpret()
+        return requireNotNull(findFunctionOrNull<T>(name)) { "Could not find function ${this.name}:$name" }
     }
 }
 

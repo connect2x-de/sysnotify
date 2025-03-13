@@ -18,6 +18,7 @@
 package de.connect2x.sysnotify
 
 import kotlinx.cinterop.ByteVar
+import kotlinx.cinterop.COpaquePointer
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.CPointerVar
 import kotlinx.cinterop.CValues
@@ -26,7 +27,9 @@ import kotlinx.cinterop.cstr
 import kotlinx.cinterop.invoke
 import kotlinx.cinterop.staticCFunction
 import libnotify.GError
+import libnotify.GFreeFunc
 import libnotify.GdkPixbuf
+import libnotify.NotifyActionCallback
 import libnotify.NotifyNotification
 import libnotify.NotifyUrgency
 import libnotify.gboolean
@@ -69,8 +72,8 @@ private typealias _notify_notification_set_urgency = (
 
 private typealias _notify_notification_set_hint_string = (
     notification: CPointer<NotifyNotification>?,
-    name: CValues<ByteVar>?,
-    path: CValues<ByteVar>?
+    key: CValues<ByteVar>?,
+    value: CValues<ByteVar>?
 ) -> Unit
 
 private typealias _notify_notification_update = (
@@ -85,24 +88,33 @@ private typealias _notify_notification_close = (
     error: CPointer<CPointerVar<GError>>?
 ) -> gboolean
 
+private typealias _notify_notification_add_action = (
+    notification: CPointer<NotifyNotification>?,
+    action: CValues<ByteVar>?,
+    label: CValues<ByteVar>?,
+    callback: NotifyActionCallback?,
+    userData: COpaquePointer?,
+    freeFunc: GFreeFunc?
+) -> Unit
+
 @Suppress("FunctionName")
 internal object LibNotify {
     private val library: SharedLibrary? = SharedLibrary.open("libnotify.so")
 
     init {
         atexit(staticCFunction<Unit> {
-            // Must use explicit object ref to avoid non-capturing limitations
+            // Need a fully qualified reference to avoid capturing implicitly
             LibNotify.library?.close()
         })
     }
 
     fun notify_init(name: String): Int {
-        return library?.findFunctionOrNull<_notify_init>("notify_init")
+        return library?.findFunction<_notify_init>("notify_init")
             ?.invoke(name.cstr) ?: -1
     }
 
     fun notify_uninit() {
-        library?.findFunctionOrNull<_notify_uninit>("notify_uninit")
+        library?.findFunction<_notify_uninit>("notify_uninit")
             ?.invoke()
     }
 
@@ -110,7 +122,7 @@ internal object LibNotify {
         notification: CPointer<NotifyNotification>?,
         buffer: CPointer<GdkPixbuf>?
     ) {
-        library?.findFunctionOrNull<_notify_notification_set_icon_from_pixbuf>("notify_notification_set_icon_from_pixbuf")
+        library?.findFunction<_notify_notification_set_icon_from_pixbuf>("notify_notification_set_icon_from_pixbuf")
             ?.invoke(notification, buffer)
     }
 
@@ -118,7 +130,7 @@ internal object LibNotify {
         notification: CPointer<NotifyNotification>?,
         error: CPointer<CPointerVar<GError>>?
     ): gboolean {
-        return library?.findFunctionOrNull<_notify_notification_show>("notify_notification_show")
+        return library?.findFunction<_notify_notification_show>("notify_notification_show")
             ?.invoke(notification, error) ?: 0
     }
 
@@ -127,7 +139,7 @@ internal object LibNotify {
         body: String?,
         icon: String?
     ): CPointer<NotifyNotification>? {
-        return library?.findFunctionOrNull<_notify_notification_new>("notify_notification_new")
+        return library?.findFunction<_notify_notification_new>("notify_notification_new")
             ?.invoke(summary?.cstr, body?.cstr, icon?.cstr)
     }
 
@@ -135,7 +147,7 @@ internal object LibNotify {
         notification: CPointer<NotifyNotification>?,
         name: String?
     ) {
-        library?.findFunctionOrNull<_notify_notification_set_app_name>("notify_notification_set_app_name")
+        library?.findFunction<_notify_notification_set_app_name>("notify_notification_set_app_name")
             ?.invoke(notification, name?.cstr)
     }
 
@@ -143,7 +155,7 @@ internal object LibNotify {
         notification: CPointer<NotifyNotification>?,
         timeout: gint
     ) {
-        library?.findFunctionOrNull<_notify_notification_set_timeout>("notify_notification_set_timeout")
+        library?.findFunction<_notify_notification_set_timeout>("notify_notification_set_timeout")
             ?.invoke(notification, timeout)
     }
 
@@ -151,17 +163,17 @@ internal object LibNotify {
         notification: CPointer<NotifyNotification>?,
         urgency: NotifyUrgency
     ) {
-        library?.findFunctionOrNull<_notify_notification_set_urgency>("notify_notification_set_urgency")
+        library?.findFunction<_notify_notification_set_urgency>("notify_notification_set_urgency")
             ?.invoke(notification, urgency)
     }
 
     fun notify_notification_set_hint_string(
         notification: CPointer<NotifyNotification>?,
-        name: String?,
-        path: String?
+        key: String?,
+        value: String?
     ) {
-        library?.findFunctionOrNull<_notify_notification_set_hint_string>("notify_notification_set_hint_string")
-            ?.invoke(notification, name?.cstr, path?.cstr)
+        library?.findFunction<_notify_notification_set_hint_string>("notify_notification_set_hint_string")
+            ?.invoke(notification, key?.cstr, value?.cstr)
     }
 
     fun notify_notification_update(
@@ -170,7 +182,7 @@ internal object LibNotify {
         body: String?,
         icon: String?
     ): gboolean {
-        return library?.findFunctionOrNull<_notify_notification_update>("notify_notification_update")
+        return library?.findFunction<_notify_notification_update>("notify_notification_update")
             ?.invoke(notification, summary?.cstr, body?.cstr, icon?.cstr) ?: 0
     }
 
@@ -178,7 +190,19 @@ internal object LibNotify {
         notification: CPointer<NotifyNotification>?,
         error: CPointer<CPointerVar<GError>>?
     ): gboolean {
-        return library?.findFunctionOrNull<_notify_notification_close>("notify_notification_close")
+        return library?.findFunction<_notify_notification_close>("notify_notification_close")
             ?.invoke(notification, error) ?: 0
+    }
+
+    fun notify_notification_add_action(
+        notification: CPointer<NotifyNotification>?,
+        action: String?,
+        label: String?,
+        callback: NotifyActionCallback?,
+        userData: COpaquePointer?,
+        freeFunc: GFreeFunc?
+    ) {
+        library?.findFunction<_notify_notification_add_action>("notify_notification_add_action")
+            ?.invoke(notification, action?.cstr, label?.cstr, callback, userData, freeFunc)
     }
 }

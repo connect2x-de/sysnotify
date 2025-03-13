@@ -46,7 +46,7 @@ internal object LibGdkPixbuf {
 
     init {
         atexit(staticCFunction<Unit> {
-            // Must use explicit object ref to avoid non-capturing limitations
+            // Need a fully qualified reference to avoid capturing implicitly
             LibGdkPixbuf.library?.close()
         })
     }
@@ -60,12 +60,12 @@ internal object LibGdkPixbuf {
         height: gint,
         rowStride: gint
     ): CPointer<GdkPixbuf>? {
-        return library?.findFunctionOrNull<_gdk_pixbuf_new_from_bytes>("gdk_pixbuf_new_from_bytes")
+        return library?.findFunction<_gdk_pixbuf_new_from_bytes>("gdk_pixbuf_new_from_bytes")
             ?.invoke(data, colorSpace, hasAlpha, bitsPerSample, width, height, rowStride)
     }
 
     fun gdk_pixbuf_unref(buffer: CPointer<GdkPixbuf>?) {
-        library?.findFunctionOrNull<_gdk_pixbuf_unref>("gdk_pixbuf_unref")
+        library?.findFunction<_gdk_pixbuf_unref>("gdk_pixbuf_unref")
             ?.invoke(buffer)
     }
 }
