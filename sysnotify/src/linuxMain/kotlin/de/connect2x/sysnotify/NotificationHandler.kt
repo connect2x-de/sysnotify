@@ -74,6 +74,7 @@ internal class LinuxNotificationHandler(
             state.handler.apply {
                 pendingNotifications.removeAll { it.first == state.tag }
                 notifications -= state.tag
+                activationStates -= state.tag
             }
         }
 
@@ -150,6 +151,7 @@ internal class LinuxNotificationHandler(
         LibGLib.g_main_loop_unref(eventLoop)
     }
 
+    private val activationStates: SharedHashMap<String, StableRef<NotificationActivationState>> = SharedHashMap()
     internal var activationHandler: ActivationHandler? by atomic(null)
 
     private fun setIcon(nativeNotification: CPointer<NotifyNotification>, notification: Notification) {
@@ -198,7 +200,8 @@ internal class LinuxNotificationHandler(
         setIcon(notificationAddress, notification)
 
         // We create a new state for this notification and create a stable reference to it
-        val handlerDataRef = StableRef.create(NotificationActivationState(this, tag, notification))
+        val stateRef = StableRef.create(NotificationActivationState(this, tag, notification))
+        activationStates[tag] = stateRef
 
         // Register activation callback
         LibNotify.notify_notification_add_action(
@@ -209,7 +212,7 @@ internal class LinuxNotificationHandler(
                 val stateRef = userData?.asStableRef<NotificationActivationState>() ?: return@staticCFunction
                 LinuxNotificationHandler.onNotificationActivated(stateRef.get())
             },
-            userData = handlerDataRef.asCPointer(),
+            userData = stateRef.asCPointer(),
             freeFunc = null
         )
 
@@ -220,9 +223,8 @@ internal class LinuxNotificationHandler(
             handler = staticCFunction<CPointer<NotifyNotification>, gpointer?, Unit> { _, userData ->
                 val stateRef = userData?.asStableRef<NotificationActivationState>() ?: return@staticCFunction
                 LinuxNotificationHandler.onNotificationClosed(stateRef.get())
-                stateRef.dispose()
             }.reinterpret(),
-            data = handlerDataRef.asCPointer(),
+            data = stateRef.asCPointer(),
             destroyData = null,
             connectFlags = 0U
         )
@@ -329,9 +331,8 @@ internal class LinuxNotificationHandler(
                 dequeueJob.join()
                 eventLoopJob.join()
                 coroutineScope.cancel()
-                pendingNotifications.clear()
-                notifications.clear()
             }
+            clearAll()
         }
         LibNotify.notify_uninit()
     }
