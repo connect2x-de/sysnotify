@@ -41,7 +41,9 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.yield
 import libnotify.GError
@@ -111,7 +113,7 @@ internal class LinuxNotificationHandler(
     private val activationStates: SharedHashMap<String, StableRef<NotificationActivationState>> = SharedHashMap()
     private val pendingNotifications: SharedLinkedList<Triple<String, Boolean, Notification>> = SharedLinkedList()
     private val notifications: SharedHashMap<String, LinuxNotificationHandle> = SharedHashMap()
-    private val dequeueSemaphore: Semaphore = Semaphore(1)
+    private val notificationMutex: Mutex = Mutex()
     private var isRunning: Boolean by atomic(true)
     private var lastNotification: Notification? by atomic(null)
     internal var activationHandler: ActivationHandler? by atomic(null)
@@ -119,16 +121,18 @@ internal class LinuxNotificationHandler(
     // Flushes notifications from the internal queue to the system periodically
     private val dequeueJob: Job = coroutineScope.launch {
         while (isRunning) {
-            while(pendingNotifications.isEmpty()) yield()
-            dequeueSemaphore.acquire()
-            val (tag, isSameContent, notification) = pendingNotifications.removeFirst()
-            val handle = create(tag, notification)
-            handle.check<LinuxNotificationHandle>()
-            notifications[tag] = handle
-            dequeueSemaphore.release()
-            // Minimum required DBus timeouts to prevent dropping notifications
-            val delay = if (isSameContent) timeout else minimumDelay
-            delay(delay)
+            notificationMutex.withLock {
+                while(pendingNotifications.isNotEmpty()) {
+                    val (tag, isSameContent, notification) = pendingNotifications.removeFirst()
+                    val handle = create(tag, notification)
+                    handle.check<LinuxNotificationHandle>()
+                    notifications[tag] = handle
+                    // Minimum required DBus timeouts to prevent dropping notifications
+                    val delay = if (isSameContent) timeout else minimumDelay
+                    delay(delay)
+                }
+            }
+            yield()
         }
     }
 
@@ -176,7 +180,7 @@ internal class LinuxNotificationHandler(
         return true
     }
 
-    private suspend fun create(tag: String, notification: Notification): NotificationHandle {
+    private fun create(tag: String, notification: Notification): NotificationHandle {
         val notificationAddress = LibNotify.notify_notification_new(
             summary = notification.title,
             body = notification.description,
@@ -225,7 +229,7 @@ internal class LinuxNotificationHandler(
         )
 
         return if (show(notificationAddress)) LinuxNotificationHandle(tag).apply {
-            setAddress(notificationAddress)
+            address = notificationAddress
         }
         else NotificationHandle.INVALID
     }
@@ -238,14 +242,14 @@ internal class LinuxNotificationHandler(
         return LinuxNotificationHandle(tag) // Early return so we don't block
     }
 
-    override suspend fun update(handle: NotificationHandle, notification: Notification): NotificationHandle =
-        dequeueSemaphore.withPermit {
-            handle.check<LinuxNotificationHandle>()
+    override suspend fun update(handle: NotificationHandle, notification: Notification): NotificationHandle {
+        handle.check<LinuxNotificationHandle>()
+        notificationMutex.withLock {
             val tag = handle.tag
             // If the notification is already active, just update it immediately
             if (tag in notifications) {
                 val notificationAddress =
-                    requireNotNull(handle.getAddress()) { "Handle does not contain a valid address" }
+                    requireNotNull(handle.address) { "Handle does not contain a valid address" }
                 LibNotify.notify_notification_update(
                     notification = notificationAddress,
                     summary = notification.title,
@@ -253,64 +257,67 @@ internal class LinuxNotificationHandler(
                     icon = DEFAULT_ICON
                 )
                 setIcon(notificationAddress, notification)
-                return@withPermit if (show(notificationAddress)) handle
+                return if (show(notificationAddress)) handle
                 else NotificationHandle.INVALID
             }
             // Otherwise update the pending notification associated with the given tag
             val outdatedEntry =
-                pendingNotifications.find { it.first == tag } ?: return@withPermit NotificationHandle.INVALID
+                pendingNotifications.find { it.first == tag } ?: return NotificationHandle.INVALID
             val outdatedIndex = pendingNotifications.indexOf(outdatedEntry)
-            if (outdatedIndex == -1) return@withPermit NotificationHandle.INVALID
+            if (outdatedIndex == -1) return NotificationHandle.INVALID
             val isSameContent = lastNotification == notification
             pendingNotifications[outdatedIndex] = Triple(tag, isSameContent, notification)
             lastNotification = notification
-            handle
         }
-
-    override suspend fun pop(handle: NotificationHandle) = dequeueSemaphore.withPermit {
-        handle.check<LinuxNotificationHandle>()
-        val tag = handle.tag
-        // If the notification is already active, close it
-        if (tag in notifications) {
-            val address = handle.getAddress()
-            memScoped {
-                val errorAddress = allocPointerTo<GError>()
-                if (LibNotify.notify_notification_close(address, errorAddress.ptr) == 0) {
-                    errorAddress.value?.freeAndThrow()
-                    return@withPermit
-                }
-            }
-            LibGLib.g_object_unref(address?.reinterpret())
-            notifications -= tag
-            return@withPermit
-        }
-        // Otherwise dequeue the pending notification early
-        val outdatedEntry = pendingNotifications.find { it.first == tag } ?: return@withPermit
-        pendingNotifications -= outdatedEntry
+        return handle
     }
 
-    override suspend fun clearAll() = dequeueSemaphore.withPermit {
-        pendingNotifications.clear() // Make sure all pending notifications are cleared first
-        for ((_, notification) in notifications) {
-            memScoped {
-                val errorAddress = allocPointerTo<GError>()
-                if (LibNotify.notify_notification_close(notification.getAddress(), errorAddress.ptr) == 0) {
-                    errorAddress.value?.freeAndThrow()
+    override suspend fun pop(handle: NotificationHandle) {
+        handle.check<LinuxNotificationHandle>()
+        notificationMutex.withLock {
+            val tag = handle.tag
+            // If the notification is already active, close it
+            if (tag in notifications) {
+                val address = handle.address
+                memScoped {
+                    val errorAddress = allocPointerTo<GError>()
+                    if (LibNotify.notify_notification_close(address, errorAddress.ptr) == 0) {
+                        errorAddress.value?.freeAndThrow()
+                        return
+                    }
+                }
+                LibGLib.g_object_unref(address?.reinterpret())
+                notifications -= tag
+                return
+            }
+            // Otherwise dequeue the pending notification early
+            val outdatedEntry = pendingNotifications.find { it.first == tag } ?: return
+            pendingNotifications -= outdatedEntry
+        }
+    }
+
+    override suspend fun clearAll() {
+        notificationMutex.withLock { // Wait until current batch is done being processed
+            pendingNotifications.clear() // Make sure all pending notifications are cleared first
+            for ((_, notification) in notifications) {
+                memScoped {
+                    val errorAddress = allocPointerTo<GError>()
+                    if (LibNotify.notify_notification_close(notification.address, errorAddress.ptr) == 0) {
+                        errorAddress.value?.freeAndThrow()
+                    }
                 }
             }
+            notifications.clear()
         }
-        notifications.clear()
     }
 
     override fun close() {
         runBlocking {
-            dequeueSemaphore.withPermit {
-                closeCallback()
-                isRunning = false
-                dequeueJob.join()
-                eventLoopJob.join()
-                coroutineScope.cancel()
-            }
+            closeCallback()
+            isRunning = false
+            dequeueJob.join()
+            eventLoopJob.join()
+            coroutineScope.cancel()
             clearAll()
         }
         LibNotify.notify_uninit()

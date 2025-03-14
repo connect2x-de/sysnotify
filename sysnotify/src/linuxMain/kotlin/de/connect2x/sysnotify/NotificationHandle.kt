@@ -17,10 +17,9 @@
 
 package de.connect2x.sysnotify
 
+import kotlinx.atomicfu.atomic
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import libnotify.NotifyNotification
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -29,14 +28,5 @@ import kotlin.uuid.Uuid
 internal class LinuxNotificationHandle(
     override val tag: String = Uuid.random().toHexString()
 ) : NotificationHandle {
-    private val addressMutex: Mutex = Mutex()
-    private var address: CPointer<NotifyNotification>? = null
-
-    suspend fun setAddress(address: CPointer<NotifyNotification>) = addressMutex.withLock {
-        this.address = address
-    }
-
-    suspend fun getAddress(): CPointer<NotifyNotification>? = addressMutex.withLock {
-        address
-    }
+    var address: CPointer<NotifyNotification>? by atomic(null)
 }
