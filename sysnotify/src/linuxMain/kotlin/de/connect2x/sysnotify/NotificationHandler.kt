@@ -336,8 +336,7 @@ internal class LinuxNotificationHandler(
     }
 }
 
-// TODO: document this
-fun NotificationHandler.withActivationHandler(handler: ActivationHandler): NotificationHandler {
+actual fun NotificationHandler.withActivationHandler(handler: ActivationHandler): NotificationHandler {
     check<LinuxNotificationHandler>()
     activationHandler = handler
     return this

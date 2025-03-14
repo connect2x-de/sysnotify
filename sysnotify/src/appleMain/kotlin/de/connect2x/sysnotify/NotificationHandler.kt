@@ -17,6 +17,14 @@ package de.connect2x.sysnotify
 
 import co.touchlab.stately.collections.SharedHashMap
 import kotlinx.atomicfu.atomic
+import kotlinx.cinterop.ByteVar
+import kotlinx.cinterop.CPointer
+import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.alloc
+import kotlinx.cinterop.allocArray
+import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.ptr
+import kotlinx.cinterop.toKStringFromUtf8
 import kotlinx.coroutines.runBlocking
 import platform.UserNotifications.UNAuthorizationOptionAlert
 import platform.UserNotifications.UNAuthorizationOptionBadge
@@ -29,9 +37,10 @@ import platform.UserNotifications.UNNotificationCategoryOptionNone
 import platform.UserNotifications.UNNotificationRequest
 import platform.UserNotifications.UNNotificationSound
 import platform.UserNotifications.UNUserNotificationCenter
+import platform.posix.PATH_MAX
+import platform.posix.uint32_tVar
 import kotlin.experimental.ExperimentalNativeApi
 import kotlin.uuid.ExperimentalUuidApi
-import platform.Foundation.NSBundle
 
 @OptIn(ExperimentalNativeApi::class)
 internal class AppleNotificationHandler(
@@ -163,12 +172,35 @@ internal class AppleNotificationHandler(
     }
 }
 
+actual fun NotificationHandler.withActivationHandler(handler: ActivationHandler): NotificationHandler {
+    // TODO: implement activation handlers for iOS/macOS
+    return this
+}
+
+// This gets linked to libproc automatically, but isn't included in the Darwin platform bindings..
+// See https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man3/dyld.3.html
+@OptIn(ExperimentalForeignApi::class, ExperimentalNativeApi::class)
+@CName("_NSGetExecutablePath")
+private external fun getExecutablePath(buffer: CPointer<ByteVar>, bufferSize: CPointer<uint32_tVar>): Int
+
+// True on macOS, false on iOS. Used for bundle checking
+internal expect val isDesktop: Boolean
+
+@OptIn(ExperimentalForeignApi::class)
 actual fun NotificationHandler( // @formatter:off
     name: String,
     id: String,
     priority: NotificationPriority
 ): NotificationHandler { // @formatter:on
-    val bundlePath = NSBundle.mainBundle.bundlePath
-    return if(bundlePath.endsWith(".app")) AppleNotificationHandler(name, id, priority)
-    else NoopNotificationHandler // If we are not bundled, we return a noop implementation
+    // Check if we are running from a bundle on macOS only, and if so, initialize the actual implementation
+    if(!isDesktop) return AppleNotificationHandler(name, id, priority)
+    memScoped {
+        val buffer = allocArray<ByteVar>(PATH_MAX)
+        val size = alloc<uint32_tVar>()
+        getExecutablePath(buffer, size.ptr)
+        if("Contents/MacOS" in buffer.toKStringFromUtf8()) {
+            return AppleNotificationHandler(name, id, priority)
+        }
+    }
+    return NoopNotificationHandler
 }

@@ -13,12 +13,14 @@
  * limitations under the License.
  */
 
-@file:JvmName("NotificationHandler$") // Work around duplicate JVM class error
+@file:JvmMultifileClass
+@file:JvmName("NotificationHandler$")
 
 package de.connect2x.sysnotify
 
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
+import kotlin.jvm.JvmMultifileClass
 import kotlin.jvm.JvmName
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid

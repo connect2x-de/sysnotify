@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+@file:JvmName("NotificationHandler\$Impl")
+
 package de.connect2x.sysnotify
 
 import kotlinx.atomicfu.atomic
@@ -118,8 +120,7 @@ private class JvmNotificationHandler(
     }
 }
 
-// TODO: document this
-fun NotificationHandler.withActivationHandler(handler: ActivationHandler): NotificationHandler {
+actual fun NotificationHandler.withActivationHandler(handler: ActivationHandler): NotificationHandler {
     check<JvmNotificationHandler>()
     activationHandler = handler
     return this

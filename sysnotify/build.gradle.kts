@@ -182,6 +182,14 @@ kotlin {
         mingwTest { dependsOn(sharedTest) }
         jvmTest { dependsOn(sharedTest) }
         jsTest { dependsOn(sharedTest) }
+
+        val activatableMain by creating {
+            dependsOn(commonMain.get())
+        }
+        linuxMain { dependsOn(activatableMain) }
+        mingwMain { dependsOn(activatableMain) }
+        appleMain { dependsOn(activatableMain) }
+        jvmMain { dependsOn(activatableMain) }
     }
 }
 

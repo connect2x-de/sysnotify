@@ -128,8 +128,7 @@ internal class WindowsNotificationHandler(
     }
 }
 
-// TODO: document this
-fun NotificationHandler.withActivationHandler(handler: ActivationHandler): NotificationHandler {
+actual fun NotificationHandler.withActivationHandler(handler: ActivationHandler): NotificationHandler {
     check<WindowsNotificationHandler>()
     activationHandler = handler
     return this
