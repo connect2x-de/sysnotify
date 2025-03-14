@@ -52,7 +52,6 @@ import libnotify.NotifyNotification
 import libnotify.gpointer
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
-import kotlin.time.TimeSource
 
 internal class LinuxNotificationHandler(
     override val name: String,
@@ -123,9 +122,8 @@ internal class LinuxNotificationHandler(
     private val dequeueSemaphore: Semaphore = Semaphore(1)
     private var isRunning: Boolean by atomic(true)
 
-    private var lastPushTime: TimeSource.Monotonic.ValueTimeMark? = null
     private var lastNotification: Notification? = null
-    private val lastStateMutex: Mutex = Mutex()
+    private val lastNotificationMutex: Mutex = Mutex()
 
     internal var activationHandler: ActivationHandler? = null
     internal val activationHandlerMutex: Mutex = Mutex()
@@ -247,29 +245,10 @@ internal class LinuxNotificationHandler(
     override suspend fun push(notification: Notification, tag: String): NotificationHandle {
         // If this notification is already pending or active, return early
         if (tag in notifications || pendingNotifications.any { it.first == tag }) return NotificationHandle.INVALID
-        val lastPushTime = lastStateMutex.withLock { this.lastPushTime }
-        if (lastPushTime != null) {
-            val currentTime = TimeSource.Monotonic.markNow()
-            val elapsedTime = currentTime - lastPushTime
-            if (elapsedTime < minimumDelay) {
-                val isSameContent = lastStateMutex.withLock { lastNotification == notification }
-                pendingNotifications += Triple(tag, isSameContent, notification)
-                lastStateMutex.withLock {
-                    this.lastPushTime = TimeSource.Monotonic.markNow()
-                    lastNotification = notification
-                }
-                return LinuxNotificationHandle(tag) // Early return so we don't block
-            }
-        }
-        // Handle immediate notification creation
-        val handle = create(tag, notification)
-        handle.check<LinuxNotificationHandle>()
-        notifications[tag] = handle
-        lastStateMutex.withLock {
-            this.lastPushTime = TimeSource.Monotonic.markNow()
-            lastNotification = notification
-        }
-        return handle
+        val isSameContent = lastNotificationMutex.withLock { lastNotification == notification }
+        pendingNotifications += Triple(tag, isSameContent, notification)
+        lastNotificationMutex.withLock { lastNotification = notification }
+        return LinuxNotificationHandle(tag) // Early return so we don't block
     }
 
     override suspend fun update(handle: NotificationHandle, notification: Notification): NotificationHandle =
