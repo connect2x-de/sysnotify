@@ -121,7 +121,7 @@ internal class LinuxNotificationHandler(
             dequeueSemaphore.acquire()
             val (tag, isSameContent, notification) = pendingNotifications.removeFirst()
             // Minimum required DBus timeouts to prevent dropping notifications
-            val delay = if (isSameContent) 2.seconds else 1.seconds
+            val delay = if (isSameContent) 5.seconds else 1.seconds
             delay(delay)
             val handle = create(tag, notification)
             handle.check<LinuxNotificationHandle>()
