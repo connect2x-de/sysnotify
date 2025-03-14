@@ -31,6 +31,7 @@ import platform.UserNotifications.UNNotificationSound
 import platform.UserNotifications.UNUserNotificationCenter
 import kotlin.experimental.ExperimentalNativeApi
 import kotlin.uuid.ExperimentalUuidApi
+import platform.Foundation.NSBundle
 
 @OptIn(ExperimentalNativeApi::class)
 internal class AppleNotificationHandler(
@@ -167,5 +168,7 @@ actual fun NotificationHandler( // @formatter:off
     id: String,
     priority: NotificationPriority
 ): NotificationHandler { // @formatter:on
-    return AppleNotificationHandler(name, id, priority)
+    val bundlePath = NSBundle.mainBundle.bundlePath
+    return if(bundlePath.endsWith(".app")) AppleNotificationHandler(name, id, priority)
+    else NoopNotificationHandler // If we are not bundled, we return a noop implementation
 }
