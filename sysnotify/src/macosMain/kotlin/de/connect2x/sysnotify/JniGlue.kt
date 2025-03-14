@@ -18,10 +18,10 @@ package de.connect2x.sysnotify
 internal actual fun createNotificationHandler(
     name: String,
     id: String,
-    activationCallback: (Notification) -> Unit,
     priority: NotificationPriority,
+    activationHandler: ActivationHandler,
     closeCallback: () -> Unit,
 ): NotificationHandler {
-    // TODO: re-implement activation callbacks
+    // TODO: implement activation callbacks
     return AppleNotificationHandler(name, id, priority, closeCallback)
 }

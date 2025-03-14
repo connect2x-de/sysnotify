@@ -30,13 +30,11 @@ import jni.jstring
 import kotlinx.cinterop.CPointed
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.StableRef
-import kotlinx.cinterop.alloc
 import kotlinx.cinterop.allocArrayOf
 import kotlinx.cinterop.asStableRef
 import kotlinx.cinterop.cValue
 import kotlinx.cinterop.cstr
 import kotlinx.cinterop.memScoped
-import kotlinx.cinterop.ptr
 import kotlinx.cinterop.staticCFunction
 import kotlinx.cinterop.toCPointer
 import kotlinx.coroutines.runBlocking
@@ -44,8 +42,8 @@ import kotlinx.coroutines.runBlocking
 internal expect fun createNotificationHandler(
     name: String,
     id: String,
-    activationCallback: (Notification) -> Unit,
     priority: NotificationPriority,
+    activationHandler: ActivationHandler,
     closeCallback: () -> Unit = {}
 ): NotificationHandler
 
@@ -128,7 +126,8 @@ private fun create(
 ): jlong {
     val globalCallback = activationCallback.newGlobalRef()
     val handler = createNotificationHandler(
-        name.toKString(), id.toKString(), { notification ->
+        name.toKString(), id.toKString(), NotificationPriority.entries[priority],
+        { notification ->
             jvmEnvironment { // Ensure thread is attached to JVM from the get-go
                 memScoped {
                     val data = cValue<SNNotificationData> {
@@ -152,7 +151,6 @@ private fun create(
                 }
             }
         },
-        NotificationPriority.entries[priority],
         { globalCallback.deleteGlobalRef() }
     )
     return StableRef.create(handler).asCPointer().rawValue.toLong()

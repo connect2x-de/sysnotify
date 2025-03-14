@@ -157,6 +157,7 @@ internal class AppleNotificationHandler(
     override fun close() {
         if (!hasPermissions) return
         closeCallback()
+        runBlocking { clearAll() }
         notificationCategories.clear()
     }
 }

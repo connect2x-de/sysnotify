@@ -28,9 +28,12 @@ import de.connect2x.sysnotify.com.sysnotify_handler_destroy
 import de.connect2x.sysnotify.com.sysnotify_handler_pop
 import de.connect2x.sysnotify.com.sysnotify_handler_push
 import de.connect2x.sysnotify.com.sysnotify_handler_update
+import kotlinx.atomicfu.atomic
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.MemScope
 import kotlinx.cinterop.alloc
+import kotlinx.cinterop.asStableRef
+import kotlinx.cinterop.StableRef
 import kotlinx.cinterop.cstr
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
@@ -65,6 +68,8 @@ internal class WindowsNotificationHandler(
         isGroupingSupported = false
     )
 
+    internal var activationHandler: ActivationHandler? by atomic(null)
+
     override fun close() {
         sysnotify_handler_destroy(address).check()
         closeCallback()
@@ -98,22 +103,22 @@ internal class WindowsNotificationHandler(
     }
 
     // TODO: re-implement activation callbacks
-    private inline fun MemScope.allocNotification(notification: Notification): sn_notification_content {
+    private fun MemScope.allocNotification(notification: Notification): sn_notification_content {
         return alloc<sn_notification_content> {
             title = notification.title?.cstr?.ptr
             description = notification.description?.cstr?.ptr
-            //user_data = StableRef.create(Pair(notification, this@WindowsNotificationHandler)).asCPointer()
+            user_data = StableRef.create(Pair(notification, this@WindowsNotificationHandler)).asCPointer()
             icon_width = notification.icon?.width ?: 0
             icon_height = notification.icon?.height ?: 0
             icon = notification.icon?.data?.toCValues()?.ptr
             is_silent = if (notification.playSound) SYSNOTIFY_TRUE else SYSNOTIFY_FALSE
             sound_path = notification.soundPath?.cstr?.ptr
             activate_callback = staticCFunction { _, userData ->
-                //userData?.asStableRef<Pair<Notification, WindowsNotificationHandler>>()?.apply {
-                //    val (currentNotification, currentHandler) = get()
-                //    currentHandler.activationCallback(currentNotification)
-                //    dispose()
-                //}
+                userData?.asStableRef<Pair<Notification, WindowsNotificationHandler>>()?.apply {
+                    val (currentNotification, currentHandler) = get()
+                    currentHandler.activationHandler?.invoke(currentNotification)
+                    dispose()
+                }
             }
         }
     }
@@ -121,6 +126,13 @@ internal class WindowsNotificationHandler(
     override suspend fun clearAll() {
 
     }
+}
+
+// TODO: document this
+fun NotificationHandler.withActivationHandler(handler: ActivationHandler): NotificationHandler {
+    check<WindowsNotificationHandler>()
+    activationHandler = handler
+    return this
 }
 
 actual fun NotificationHandler(

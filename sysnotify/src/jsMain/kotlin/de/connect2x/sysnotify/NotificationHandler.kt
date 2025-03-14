@@ -17,9 +17,15 @@ package de.connect2x.sysnotify
 
 import co.touchlab.stately.collections.SharedHashMap
 import kotlinx.atomicfu.atomic
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.await
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.w3c.notifications.GRANTED
 import org.w3c.notifications.NotificationOptions
+import kotlin.coroutines.coroutineContext
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.uuid.ExperimentalUuidApi
@@ -105,6 +111,11 @@ private class WebNotificationHandler(
             notification.close()
         }
         notifications.clear()
+    }
+
+    @OptIn(DelicateCoroutinesApi::class)
+    override fun close() {
+        GlobalScope.launch { clearAll() }
     }
 }
 

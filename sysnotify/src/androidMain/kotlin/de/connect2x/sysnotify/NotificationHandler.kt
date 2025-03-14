@@ -67,11 +67,6 @@ internal class AndroidNotificationHandler( // @formatter:off
     override val hasPermissions: Boolean
         get() = hasNotificationPermissions(context)
 
-    override fun close() {
-        manager.deleteNotificationChannel(id)
-        permissionRequests.clear()
-    }
-
     override fun getHandle(tag: String): NotificationHandle {
         require(tag.isNotEmpty()) { "Handle tag may not be empty" }
         return AndroidNotificationHandle(tag)
@@ -167,6 +162,12 @@ internal class AndroidNotificationHandler( // @formatter:off
     override suspend fun clearAll() {
         if (!hasPermissions) return
         manager.cancelAll()
+    }
+
+    override fun close() {
+        permissionRequests.clear()
+        manager.deleteNotificationChannel(id)
+        runBlocking { clearAll() }
     }
 }
 
