@@ -41,14 +41,16 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.yield
 import libnotify.GError
 import libnotify.GdkColorspace
 import libnotify.NotifyNotification
 import libnotify.gpointer
-import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
 
@@ -64,6 +66,8 @@ internal class LinuxNotificationHandler(
         private const val DEFAULT_SOUND: String = "/usr/share/sounds/freedesktop/stereo/message.oga"
         private const val ACTION_OPEN: String = "open"
         private const val SIGNAL_CLOSED: String = "closed"
+        private val minimumDelay: Duration = 1.seconds  // The minimum delay between any notification
+        private val timeout: Duration = 5.seconds       // The timeout until a notification expires
 
         private fun onNotificationClosed(
             state: NotificationActivationState
@@ -78,8 +82,14 @@ internal class LinuxNotificationHandler(
         private fun onNotificationActivated(
             state: NotificationActivationState
         ) {
-            state.activated = true // Notify close signal handler that we handles this notification already
-            state.handler.activationHandler?.invoke(state.notification)
+            state.activated = true // Notify close signal handler that we've handled this notification already
+            state.handler.apply {
+                runBlocking {
+                    activationHandlerMutex.withLock {
+                        activationHandler?.invoke(state.notification)
+                    }
+                }
+            }
         }
     }
 
@@ -107,12 +117,18 @@ internal class LinuxNotificationHandler(
             println("NotificationHandler coroutine could not complete: $throwable")
         })
 
+    private val activationStates: SharedHashMap<String, StableRef<NotificationActivationState>> = SharedHashMap()
     private val pendingNotifications: SharedLinkedList<Triple<String, Boolean, Notification>> = SharedLinkedList()
     private val notifications: SharedHashMap<String, LinuxNotificationHandle> = SharedHashMap()
-    private var lastPushTime: TimeSource.Monotonic.ValueTimeMark? by atomic(null)
     private val dequeueSemaphore: Semaphore = Semaphore(1)
-    private var lastNotification: Notification? by atomic(null)
     private var isRunning: Boolean by atomic(true)
+
+    private var lastPushTime: TimeSource.Monotonic.ValueTimeMark? = null
+    private var lastNotification: Notification? = null
+    private val lastStateMutex: Mutex = Mutex()
+
+    internal var activationHandler: ActivationHandler? = null
+    internal val activationHandlerMutex: Mutex = Mutex()
 
     // Flushes notifications from the internal queue to the system periodically
     private val dequeueJob: Job = coroutineScope.launch {
@@ -121,7 +137,7 @@ internal class LinuxNotificationHandler(
             dequeueSemaphore.acquire()
             val (tag, isSameContent, notification) = pendingNotifications.removeFirst()
             // Minimum required DBus timeouts to prevent dropping notifications
-            val delay = if (isSameContent) 5.seconds else 1.seconds
+            val delay = if (isSameContent) timeout else minimumDelay
             delay(delay)
             val handle = create(tag, notification)
             handle.check<LinuxNotificationHandle>()
@@ -145,9 +161,6 @@ internal class LinuxNotificationHandler(
         }
         LibGLib.g_main_loop_unref(eventLoop)
     }
-
-    private val activationStates: SharedHashMap<String, StableRef<NotificationActivationState>> = SharedHashMap()
-    internal var activationHandler: ActivationHandler? by atomic(null)
 
     private fun setIcon(nativeNotification: CPointer<NotifyNotification>, notification: Notification) {
         notification.icon?.let { icon ->
@@ -185,7 +198,7 @@ internal class LinuxNotificationHandler(
         ) ?: return NotificationHandle.INVALID
 
         LibNotify.notify_notification_set_app_name(notificationAddress, name)
-        LibNotify.notify_notification_set_timeout(notificationAddress, 5000) // 5 seconds by default
+        LibNotify.notify_notification_set_timeout(notificationAddress, timeout.inWholeMilliseconds.toInt())
         LibNotify.notify_notification_set_urgency(notificationAddress, notification.priority.urgency)
 
         if (notification.playSound) {
@@ -234,15 +247,17 @@ internal class LinuxNotificationHandler(
     override suspend fun push(notification: Notification, tag: String): NotificationHandle {
         // If this notification is already pending or active, return early
         if (tag in notifications || pendingNotifications.any { it.first == tag }) return NotificationHandle.INVALID
-        val lastPushTime = this.lastPushTime
+        val lastPushTime = lastStateMutex.withLock { this.lastPushTime }
         if (lastPushTime != null) {
-            val isSameContent = lastNotification == notification
             val currentTime = TimeSource.Monotonic.markNow()
             val elapsedTime = currentTime - lastPushTime
-            if (elapsedTime < 1.seconds) {
+            if (elapsedTime < minimumDelay) {
+                val isSameContent = lastStateMutex.withLock { lastNotification == notification }
                 pendingNotifications += Triple(tag, isSameContent, notification)
-                this.lastPushTime = TimeSource.Monotonic.markNow()
-                lastNotification = notification
+                lastStateMutex.withLock {
+                    this.lastPushTime = TimeSource.Monotonic.markNow()
+                    lastNotification = notification
+                }
                 return LinuxNotificationHandle(tag) // Early return so we don't block
             }
         }
@@ -250,8 +265,10 @@ internal class LinuxNotificationHandler(
         val handle = create(tag, notification)
         handle.check<LinuxNotificationHandle>()
         notifications[tag] = handle
-        this.lastPushTime = TimeSource.Monotonic.markNow()
-        lastNotification = notification
+        lastStateMutex.withLock {
+            this.lastPushTime = TimeSource.Monotonic.markNow()
+            lastNotification = notification
+        }
         return handle
     }
 
@@ -336,7 +353,11 @@ internal class LinuxNotificationHandler(
 
 actual fun NotificationHandler.withActivationHandler(handler: ActivationHandler): NotificationHandler {
     check<LinuxNotificationHandler>()
-    activationHandler = handler
+    runBlocking {
+        activationHandlerMutex.withLock {
+            activationHandler = handler
+        }
+    }
     return this
 }
 
