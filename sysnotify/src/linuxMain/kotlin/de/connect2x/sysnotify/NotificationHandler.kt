@@ -17,6 +17,8 @@
 
 package de.connect2x.sysnotify
 
+import co.touchlab.stately.collections.SharedHashMap
+import co.touchlab.stately.collections.SharedLinkedList
 import kotlinx.atomicfu.atomic
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -39,8 +41,8 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.yield
 import libnotify.GError
 import libnotify.GdkColorspace
@@ -68,12 +70,8 @@ internal class LinuxNotificationHandler(
             state: NotificationActivationState
         ) {
             state.handler.apply {
-                runBlocking {
-                    notificationMutex.withLock {
-                        notifications -= state.tag
-                        activationStates -= state.tag
-                    }
-                }
+                notifications -= state.tag
+                activationStates -= state.tag
             }
         }
 
@@ -109,10 +107,10 @@ internal class LinuxNotificationHandler(
             println("NotificationHandler coroutine could not complete: $throwable")
         })
 
-    private val activationStates: HashMap<String, StableRef<NotificationActivationState>> = HashMap()
-    private val pendingNotifications: ArrayList<Triple<String, Boolean, Notification>> = ArrayList()
-    private val notifications: HashMap<String, LinuxNotificationHandle> = HashMap()
-    private val notificationMutex: Mutex = Mutex()
+    private val activationStates: SharedHashMap<String, StableRef<NotificationActivationState>> = SharedHashMap()
+    private val pendingNotifications: SharedLinkedList<Triple<String, Boolean, Notification>> = SharedLinkedList()
+    private val notifications: SharedHashMap<String, LinuxNotificationHandle> = SharedHashMap()
+    private val notificationSemaphore: Semaphore = Semaphore(1)
 
     private var isRunning: Boolean by atomic(true)
     private var lastNotification: Notification? by atomic(null)
@@ -122,15 +120,15 @@ internal class LinuxNotificationHandler(
     private val dequeueJob: Job = coroutineScope.launch {
         while (isRunning) {
             while(pendingNotifications.isNotEmpty()) {
-                notificationMutex.withLock {
-                    val (tag, isSameContent, notification) = pendingNotifications.removeFirst()
-                    val handle = create(tag, notification)
-                    handle.check<LinuxNotificationHandle>()
-                    notifications[tag] = handle
-                    // Minimum required DBus timeouts to prevent dropping notifications
-                    val delay = if (isSameContent) timeout else minimumDelay
-                    delay(delay)
-                }
+                notificationSemaphore.acquire()
+                val (tag, isSameContent, notification) = pendingNotifications.removeFirst()
+                val handle = create(tag, notification)
+                handle.check<LinuxNotificationHandle>()
+                notifications[tag] = handle
+                // Minimum required DBus timeouts to prevent dropping notifications
+                val delay = if (isSameContent) timeout else minimumDelay
+                delay(delay)
+                notificationSemaphore.release()
             }
             yield()
         }
@@ -244,7 +242,7 @@ internal class LinuxNotificationHandler(
 
     override suspend fun update(handle: NotificationHandle, notification: Notification): NotificationHandle {
         handle.check<LinuxNotificationHandle>()
-        notificationMutex.withLock {
+        notificationSemaphore.withPermit {
             val tag = handle.tag
             // If the notification is already active, just update it immediately
             if (tag in notifications) {
@@ -274,7 +272,7 @@ internal class LinuxNotificationHandler(
 
     override suspend fun pop(handle: NotificationHandle) {
         handle.check<LinuxNotificationHandle>()
-        notificationMutex.withLock {
+        notificationSemaphore.withPermit {
             val tag = handle.tag
             // If the notification is already active, close it
             if (tag in notifications) {
@@ -297,7 +295,7 @@ internal class LinuxNotificationHandler(
     }
 
     override suspend fun clearAll() {
-        notificationMutex.withLock { // Wait until current batch is done being processed
+        notificationSemaphore.withPermit { // Wait until current batch is done being processed
             pendingNotifications.clear() // Make sure all pending notifications are cleared first
             for ((_, notification) in notifications) {
                 memScoped {
