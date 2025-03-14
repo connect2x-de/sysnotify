@@ -41,9 +41,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.yield
 import libnotify.GError
@@ -82,13 +80,7 @@ internal class LinuxNotificationHandler(
             state: NotificationActivationState
         ) {
             state.activated = true // Notify close signal handler that we've handled this notification already
-            state.handler.apply {
-                runBlocking {
-                    activationHandlerMutex.withLock {
-                        activationHandler?.invoke(state.notification)
-                    }
-                }
-            }
+            state.handler.activationHandler?.invoke(state.notification)
         }
     }
 
@@ -121,12 +113,8 @@ internal class LinuxNotificationHandler(
     private val notifications: SharedHashMap<String, LinuxNotificationHandle> = SharedHashMap()
     private val dequeueSemaphore: Semaphore = Semaphore(1)
     private var isRunning: Boolean by atomic(true)
-
-    private var lastNotification: Notification? = null
-    private val lastNotificationMutex: Mutex = Mutex()
-
-    internal var activationHandler: ActivationHandler? = null
-    internal val activationHandlerMutex: Mutex = Mutex()
+    private var lastNotification: Notification? by atomic(null)
+    internal var activationHandler: ActivationHandler? by atomic(null)
 
     // Flushes notifications from the internal queue to the system periodically
     private val dequeueJob: Job = coroutineScope.launch {
@@ -134,13 +122,13 @@ internal class LinuxNotificationHandler(
             while(pendingNotifications.isEmpty()) yield()
             dequeueSemaphore.acquire()
             val (tag, isSameContent, notification) = pendingNotifications.removeFirst()
-            // Minimum required DBus timeouts to prevent dropping notifications
-            val delay = if (isSameContent) timeout else minimumDelay
-            delay(delay)
             val handle = create(tag, notification)
             handle.check<LinuxNotificationHandle>()
             notifications[tag] = handle
             dequeueSemaphore.release()
+            // Minimum required DBus timeouts to prevent dropping notifications
+            val delay = if (isSameContent) timeout else minimumDelay
+            delay(delay)
         }
     }
 
@@ -245,9 +233,8 @@ internal class LinuxNotificationHandler(
     override suspend fun push(notification: Notification, tag: String): NotificationHandle {
         // If this notification is already pending or active, return early
         if (tag in notifications || pendingNotifications.any { it.first == tag }) return NotificationHandle.INVALID
-        val isSameContent = lastNotificationMutex.withLock { lastNotification == notification }
-        pendingNotifications += Triple(tag, isSameContent, notification)
-        lastNotificationMutex.withLock { lastNotification = notification }
+        pendingNotifications += Triple(tag, lastNotification == notification, notification)
+        lastNotification = notification
         return LinuxNotificationHandle(tag) // Early return so we don't block
     }
 
@@ -332,11 +319,7 @@ internal class LinuxNotificationHandler(
 
 actual fun NotificationHandler.withActivationHandler(handler: ActivationHandler): NotificationHandler {
     check<LinuxNotificationHandler>()
-    runBlocking {
-        activationHandlerMutex.withLock {
-            activationHandler = handler
-        }
-    }
+    activationHandler = handler
     return this
 }
 
