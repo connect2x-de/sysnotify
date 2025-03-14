@@ -117,18 +117,16 @@ internal class LinuxNotificationHandler(
     // Flushes notifications from the internal queue to the system periodically
     private val dequeueJob: Job = coroutineScope.launch {
         while (isRunning) {
-            while (pendingNotifications.isNotEmpty()) {
-                dequeueSemaphore.acquire()
-                val (tag, isSameContent, notification) = pendingNotifications.removeFirst()
-                // Minimum required DBus timeouts to prevent dropping notifications
-                val delay = if (isSameContent) 1.seconds else 500.milliseconds
-                delay(delay)
-                val handle = create(tag, notification)
-                handle.check<LinuxNotificationHandle>()
-                notifications[tag] = handle
-                dequeueSemaphore.release()
-            }
-            yield()
+            while(pendingNotifications.isEmpty()) yield()
+            dequeueSemaphore.acquire()
+            val (tag, isSameContent, notification) = pendingNotifications.removeFirst()
+            // Minimum required DBus timeouts to prevent dropping notifications
+            val delay = if (isSameContent) 2.seconds else 1.seconds
+            delay(delay)
+            val handle = create(tag, notification)
+            handle.check<LinuxNotificationHandle>()
+            notifications[tag] = handle
+            dequeueSemaphore.release()
         }
     }
 
@@ -240,8 +238,8 @@ internal class LinuxNotificationHandler(
         if (lastPushTime != null) {
             val isSameContent = lastNotification == notification
             val currentTime = TimeSource.Monotonic.markNow()
-            val elapsedTime = currentTime.minus(lastPushTime)
-            if (elapsedTime < 750.milliseconds) {
+            val elapsedTime = currentTime - lastPushTime
+            if (elapsedTime < 1.seconds) {
                 pendingNotifications += Triple(tag, isSameContent, notification)
                 this.lastPushTime = TimeSource.Monotonic.markNow()
                 lastNotification = notification
