@@ -68,9 +68,6 @@ internal class LinuxNotificationHandler(
         private fun onNotificationClosed(
             state: NotificationActivationState
         ) {
-            // Ignore close signal for already activated notifications
-            if(state.activated) return
-            // Remove this notification from the internal buffer/map
             state.handler.apply {
                 pendingNotifications.removeAll { it.first == state.tag }
                 notifications -= state.tag
@@ -223,6 +220,7 @@ internal class LinuxNotificationHandler(
             handler = staticCFunction<CPointer<NotifyNotification>, gpointer?, Unit> { _, userData ->
                 val stateRef = userData?.asStableRef<NotificationActivationState>() ?: return@staticCFunction
                 LinuxNotificationHandler.onNotificationClosed(stateRef.get())
+                stateRef.dispose()
             }.reinterpret(),
             data = stateRef.asCPointer(),
             destroyData = null,

@@ -17,27 +17,16 @@
 
 package de.connect2x.sysnotify
 
-import jni.JNIEnvVar
-import jni.JNINativeInterface_
-import jni.jboolean
-import jni.jbyte
-import jni.jchar
 import jni.jclass
-import jni.jdouble
-import jni.jfloat
-import jni.jint
-import jni.jlong
 import jni.jmethodID
 import jni.jobject
-import jni.jshort
 import jni.jvalue
 import kotlinx.cinterop.CArrayPointer
-import kotlinx.cinterop.CFunction
-import kotlinx.cinterop.CPointer
+import kotlinx.cinterop.CValue
 import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.NativePlacement
-import kotlinx.cinterop.alloc
+import kotlinx.cinterop.MemScope
 import kotlinx.cinterop.allocArray
+import kotlinx.cinterop.cValue
 import kotlinx.cinterop.convert
 import kotlinx.cinterop.cstr
 import kotlinx.cinterop.invoke
@@ -47,7 +36,6 @@ import kotlinx.cinterop.ptr
 import kotlinx.cinterop.sizeOf
 import platform.posix.memcpy
 import kotlin.experimental.ExperimentalNativeApi
-import kotlin.reflect.KProperty1
 
 internal data class JvmParameter(
     val name: String,
@@ -94,45 +82,43 @@ internal data class JvmSignature(
     }
 }
 
-internal class JvmArgumentBuffer(private val allocator: NativePlacement) {
-    val values: HashMap<String, jvalue> = HashMap()
-
+internal value class JvmArgumentBuffer(private val values: HashMap<String, CValue<jvalue>> = HashMap()) {
     fun put(name: String, value: Byte) {
-        values[name] = allocator.alloc<jvalue> { b = value }
+        values[name] = cValue<jvalue> { b = value }
     }
 
     fun put(name: String, value: Short) {
-        values[name] = allocator.alloc<jvalue> { s = value }
+        values[name] = cValue<jvalue> { s = value }
     }
 
     fun put(name: String, value: Int) {
-        values[name] = allocator.alloc<jvalue> { i = value }
+        values[name] = cValue<jvalue> { i = value }
     }
 
     fun put(name: String, value: Long) {
-        values[name] = allocator.alloc<jvalue> { j = value }
+        values[name] = cValue<jvalue> { j = value }
     }
 
     fun put(name: String, value: Float) {
-        values[name] = allocator.alloc<jvalue> { f = value }
+        values[name] = cValue<jvalue> { f = value }
     }
 
     fun put(name: String, value: Double) {
-        values[name] = allocator.alloc<jvalue> { d = value }
+        values[name] = cValue<jvalue> { d = value }
     }
 
     fun put(name: String, value: Boolean) {
-        values[name] = allocator.alloc<jvalue> { z = value.toJBoolean() }
+        values[name] = cValue<jvalue> { z = value.toJBoolean() }
     }
 
     fun put(name: String, value: jobject) {
-        values[name] = allocator.alloc<jvalue> { l = value }
+        values[name] = cValue<jvalue> { l = value }
     }
 
-    fun associate(signature: JvmSignature): CArrayPointer<jvalue> {
+    fun MemScope.associate(signature: JvmSignature): CArrayPointer<jvalue> {
         val sequentialParams = signature.parameters
         check(sequentialParams.size == values.size) { "Mismatched parameter count" }
-        return allocator.allocArray(values.size) { index ->
+        return allocArray(values.size) { index ->
             val param = requireNotNull(sequentialParams.getOrNull(index)) { "No parameter for index $index" }
             val name = param.name
             val value = requireNotNull(values[name]) { "No value for parameter $name ($index)" }
@@ -153,37 +139,18 @@ internal data class JvmMethod(
         argBuffer: JvmArgumentBuffer.() -> Unit
     ) = jvmEnvironment {
         memScoped {
-            val args = JvmArgumentBuffer(this).apply(argBuffer).associate(signature)
+            val args = JvmArgumentBuffer().apply(argBuffer)
+            val argsBaseAddress = with(args) { associate(signature) }
             val env = requireNotNull(pointed) { "Could not access JNI environment" }
             if (isStatic) {
                 requireNotNull(env.CallStaticVoidMethodA) {
                     "Could not access JNIEnv::CallStaticVoidMethodA"
-                }(ptr, owner, handle, args)
+                }(ptr, owner, handle, argsBaseAddress)
             } else {
                 require(instance != null) { "Calling non-static method requires valid instance" }
                 requireNotNull(env.CallVoidMethodA) {
                     "Could not access JNIEnv::CallVoidMethodA"
-                }(ptr, instance, handle, args)
-            }
-        }
-    }
-
-    fun callLong(
-        instance: jobject? = null,
-        argBuffer: JvmArgumentBuffer.() -> Unit
-    ): Long = jvmEnvironment {
-        memScoped {
-            val args = JvmArgumentBuffer(this).apply(argBuffer).associate(signature)
-            val env = requireNotNull(pointed) { "Could not access JNI environment" }
-            if (isStatic) {
-                requireNotNull(env.CallStaticLongMethodA) {
-                    "Could not access JNIEnv::CallStaticLongMethodA"
-                }(ptr, owner, handle, args)
-            } else {
-                require(instance != null) { "Calling non-static method requires valid instance" }
-                requireNotNull(env.CallLongMethodA) {
-                    "Could not access JNIEnv::CallLongMethodA"
-                }(ptr, instance, handle, args)
+                }(ptr, instance, handle, argsBaseAddress)
             }
         }
     }

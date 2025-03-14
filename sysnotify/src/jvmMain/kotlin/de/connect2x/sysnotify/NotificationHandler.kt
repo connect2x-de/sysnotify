@@ -15,6 +15,7 @@
 
 package de.connect2x.sysnotify
 
+import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.runBlocking
 
 private class JvmNotificationHandler(
@@ -22,7 +23,7 @@ private class JvmNotificationHandler(
     override val id: String,
     override val priority: NotificationPriority
 ) : NotificationHandler {
-    var activationHandler: ActivationHandler? = null
+    var activationHandler: ActivationHandler? by atomic(null)
 
     private val address: Long by lazy {
         NativeNotificationHandler.create(
@@ -30,6 +31,7 @@ private class JvmNotificationHandler(
             id,
             priority.ordinal,
             NativeActivationCallback.create {
+                // Wire activation through to instance activation handler
                 activationHandler?.invoke(it)
             }
         )
