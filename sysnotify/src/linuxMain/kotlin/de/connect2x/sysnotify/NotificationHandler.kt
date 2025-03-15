@@ -125,10 +125,10 @@ internal class LinuxNotificationHandler(
             val handle = create(tag, notification)
             handle.check<LinuxNotificationHandle>()
             notifications[tag] = handle
+            notificationSemaphore.release()
             // Minimum required DBus timeouts to prevent dropping notifications
             val delay = if (isSameContent) timeout else minimumDelay
             delay(delay)
-            notificationSemaphore.release()
         }
     }
 
