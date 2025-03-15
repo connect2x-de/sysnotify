@@ -97,10 +97,6 @@ internal class LinuxNotificationHandler(
         isGroupingSupported = false
     )
 
-    init {
-        check(LibNotify.notify_init(name) != 0) { "Could not initialize libnotify" }
-    }
-
     private val coroutineScope: CoroutineScope =
         CoroutineScope(Dispatchers.Default + SupervisorJob() + CoroutineExceptionHandler { _, throwable ->
             // TODO: implement proper logging
@@ -118,6 +114,8 @@ internal class LinuxNotificationHandler(
 
     // Flushes notifications from the internal queue to the system periodically
     private val dequeueJob: Job = coroutineScope.launch {
+        println("Initializing queue coroutine and libnotify")
+        check(LibNotify.notify_init(name) != 0) { "Could not initialize libnotify" }
         while (isRunning) {
             while (pendingNotifications.isEmpty()) yield()
             notificationSemaphore.acquire()
@@ -130,10 +128,13 @@ internal class LinuxNotificationHandler(
             val delay = if (isSameContent) timeout else minimumDelay
             delay(delay)
         }
+        println("Uninitializing libnotify")
+        LibNotify.notify_uninit()
     }
 
     // An out-of-band event pump so actions and signals work for our notifications
     private val eventLoopJob: Job = coroutineScope.launch {
+        println("Initializing GTK event coroutine")
         val eventLoop = requireNotNull(LibGLib.g_main_loop_new(null, 0)) {
             "Could not create GMainLoop instance"
         }
@@ -145,6 +146,7 @@ internal class LinuxNotificationHandler(
             while (LibGLib.g_main_context_iteration(loopContext, 0) == 1) {}
             yield()
         }
+        println("Deinitializing GTK event coroutine")
         LibGLib.g_main_loop_unref(eventLoop)
     }
 
@@ -294,7 +296,7 @@ internal class LinuxNotificationHandler(
 
     override suspend fun clearAll() {
         notificationSemaphore.withPermit { // Wait until current batch is done being processed
-            pendingNotifications.clear() // Make sure all pending notifications are cleared first
+            println("Clearing all notifications")
             for ((_, notification) in notifications) {
                 memScoped {
                     val errorAddress = allocPointerTo<GError>()
@@ -304,19 +306,23 @@ internal class LinuxNotificationHandler(
                 }
             }
             notifications.clear()
+            pendingNotifications.clear()
+            println("Cleared all notifications!")
         }
     }
 
     override fun close() {
+        println("Disposing notification handler")
+        closeCallback()
         runBlocking {
-            closeCallback()
             clearAll()
+            println("Joining coroutines")
             isRunning = false
             dequeueJob.join()
             eventLoopJob.join()
+            println("Cancelling coroutine scope")
             coroutineScope.cancel()
         }
-        LibNotify.notify_uninit()
     }
 }
 
