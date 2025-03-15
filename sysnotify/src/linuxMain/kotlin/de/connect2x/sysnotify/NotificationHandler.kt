@@ -33,7 +33,9 @@ import kotlinx.cinterop.staticCFunction
 import kotlinx.cinterop.usePinned
 import kotlinx.cinterop.value
 import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -97,8 +99,11 @@ internal class LinuxNotificationHandler(
         isGroupingSupported = false
     )
 
-    private val coroutineScope: CoroutineScope =
-        CoroutineScope(Dispatchers.Default + SupervisorJob() + CoroutineExceptionHandler { _, throwable ->
+    private val coroutineScope: CoroutineScope = CoroutineScope(
+        Dispatchers.Default
+                + CoroutineName("sysnotify-default")
+                + SupervisorJob()
+                + CoroutineExceptionHandler { _, throwable ->
             // TODO: implement proper logging
             println("NotificationHandler coroutine could not complete: $throwable")
         })
@@ -113,7 +118,7 @@ internal class LinuxNotificationHandler(
     internal var activationHandler: ActivationHandler? by atomic(null)
 
     // Flushes notifications from the internal queue to the system periodically
-    private val dequeueJob: Job = coroutineScope.launch {
+    private val dequeueJob: Job = coroutineScope.launch(start = CoroutineStart.ATOMIC) {
         println("Initializing queue coroutine and libnotify")
         check(LibNotify.notify_init(name) != 0) { "Could not initialize libnotify" }
         while (isRunning) {
@@ -133,7 +138,7 @@ internal class LinuxNotificationHandler(
     }
 
     // An out-of-band event pump so actions and signals work for our notifications
-    private val eventLoopJob: Job = coroutineScope.launch {
+    private val eventLoopJob: Job = coroutineScope.launch(start = CoroutineStart.ATOMIC) {
         println("Initializing GTK event coroutine")
         val eventLoop = requireNotNull(LibGLib.g_main_loop_new(null, 0)) {
             "Could not create GMainLoop instance"
@@ -146,8 +151,6 @@ internal class LinuxNotificationHandler(
             yield()
         }
         println("Deinitializing GTK event coroutine")
-        // Make sure event loop is stopped, since apparently KDE doesn't do that on its own
-        LibGLib.g_main_loop_quit(eventLoop)
         LibGLib.g_main_loop_unref(eventLoop)
     }
 
@@ -313,17 +316,17 @@ internal class LinuxNotificationHandler(
     }
 
     override fun close() {
+        isRunning = false
         println("Disposing notification handler")
-        closeCallback()
         runBlocking {
             clearAll()
             println("Joining coroutines")
-            isRunning = false
             dequeueJob.join()
             eventLoopJob.join()
-            println("Cancelling coroutine scope")
-            coroutineScope.cancel()
         }
+        println("Cancelling coroutine scope")
+        coroutineScope.cancel()
+        closeCallback()
     }
 }
 
