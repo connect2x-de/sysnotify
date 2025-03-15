@@ -116,10 +116,13 @@ internal class LinuxNotificationHandler(
     private var lastNotification: Notification? by atomic(null)
     internal var activationHandler: ActivationHandler? by atomic(null)
 
+    init {
+        check(LibNotify.notify_init(name) != 0) { "Could not initialize libnotify" }
+    }
+
     // Flushes notifications from the internal queue to the system periodically
     private val dequeueJob: Job = coroutineScope.launch(start = CoroutineStart.ATOMIC) {
-        println("Initializing queue coroutine and libnotify")
-        check(LibNotify.notify_init(name) != 0) { "Could not initialize libnotify" }
+        println("Initializing queue coroutine")
         while (shouldDispachNotifications) {
             while (pendingNotifications.isEmpty()) yield()
             val (tag, isSameContent, notification) = pendingNotifications.removeFirst()
@@ -130,8 +133,6 @@ internal class LinuxNotificationHandler(
             val delay = if (isSameContent) timeout else minimumDelay
             delay(delay)
         }
-        println("Uninitializing libnotify")
-        LibNotify.notify_uninit()
     }
 
     // An out-of-band event pump so actions and signals work for our notifications
@@ -320,6 +321,8 @@ internal class LinuxNotificationHandler(
         }
         println("Cancelling coroutine scope")
         coroutineScope.cancel()
+        println("Uninitializing libnotify")
+        LibNotify.notify_uninit()
         closeCallback()
     }
 }
