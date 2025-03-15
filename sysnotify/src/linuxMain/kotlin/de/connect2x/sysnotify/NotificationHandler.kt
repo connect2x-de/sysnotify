@@ -131,7 +131,8 @@ internal class LinuxNotificationHandler(
                 notifications[tag] = handle
                 // Minimum required DBus timeouts to prevent dropping notifications
                 val delay = if (isSameContent) timeout else minimumDelay
-                delay(delay)
+                // Only delay if the state hasn't changed since then
+                if(shouldDispachNotifications) delay(delay)
             }
             yield()
         }
