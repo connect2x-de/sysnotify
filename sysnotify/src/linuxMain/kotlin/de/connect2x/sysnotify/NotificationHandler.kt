@@ -307,17 +307,15 @@ internal class LinuxNotificationHandler(
     }
 
     override fun close() {
-        runBlocking {
-            isRunning = false
-            println("Disposing notification handler")
-            clearAll()
-            println("Joining coroutines")
-            dequeueJob.join()
-            eventLoopJob.join()
-            println("Cancelling coroutine scope")
-            coroutineScope.cancel()
-            closeCallback()
-        }
+        isRunning = false
+        println("Disposing notification handler")
+        runBlocking { clearAll() }
+        println("Joining coroutines")
+        runBlocking { dequeueJob.join() }
+        runBlocking { eventLoopJob.join() }
+        println("Cancelling coroutine scope")
+        coroutineScope.cancel()
+        closeCallback()
     }
 }
 
