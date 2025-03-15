@@ -119,7 +119,7 @@ internal class LinuxNotificationHandler(
     // Flushes notifications from the internal queue to the system periodically
     private val dequeueJob: Job = coroutineScope.launch {
         while (isRunning) {
-            if(pendingNotifications.isEmpty()) yield()
+            while (pendingNotifications.isEmpty()) yield()
             notificationSemaphore.acquire()
             val (tag, isSameContent, notification) = pendingNotifications.removeFirst()
             val handle = create(tag, notification)
@@ -129,7 +129,6 @@ internal class LinuxNotificationHandler(
             val delay = if (isSameContent) timeout else minimumDelay
             delay(delay)
             notificationSemaphore.release()
-            yield()
         }
     }
 
