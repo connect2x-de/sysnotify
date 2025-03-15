@@ -40,11 +40,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.yield
 import libnotify.GError
 import libnotify.GdkColorspace
@@ -112,7 +111,8 @@ internal class LinuxNotificationHandler(
     private val pendingNotifications: SharedLinkedList<Triple<String, Boolean, Notification>> = SharedLinkedList()
     private val notifications: SharedHashMap<String, LinuxNotificationHandle> = SharedHashMap()
 
-    private var isRunning: Boolean by atomic(true)
+    private var shouldDispachNotifications: Boolean by atomic(true)
+    private var shouldHandleEvents: Boolean by atomic(true)
     private var lastNotification: Notification? by atomic(null)
     internal var activationHandler: ActivationHandler? by atomic(null)
 
@@ -120,7 +120,7 @@ internal class LinuxNotificationHandler(
     private val dequeueJob: Job = coroutineScope.launch(start = CoroutineStart.ATOMIC) {
         println("Initializing queue coroutine and libnotify")
         check(LibNotify.notify_init(name) != 0) { "Could not initialize libnotify" }
-        while (isRunning) {
+        while (shouldDispachNotifications) {
             while (pendingNotifications.isEmpty()) yield()
             val (tag, isSameContent, notification) = pendingNotifications.removeFirst()
             val handle = create(tag, notification)
@@ -143,7 +143,7 @@ internal class LinuxNotificationHandler(
         val loopContext = requireNotNull(LibGLib.g_main_loop_get_context(eventLoop)) {
             "Could not obtain GMainContext for event loop"
         }
-        while (isRunning) {
+        while (shouldHandleEvents) {
             if (LibGLib.g_main_context_iteration(loopContext, 0) == 1) continue
             yield()
         }
@@ -307,12 +307,17 @@ internal class LinuxNotificationHandler(
     }
 
     override fun close() {
-        isRunning = false
         println("Disposing notification handler")
         runBlocking { clearAll() }
         println("Joining coroutines")
-        runBlocking { dequeueJob.join() }
-        runBlocking { eventLoopJob.join() }
+        runBlocking {
+            shouldDispachNotifications = false
+            dequeueJob.join()
+        }
+        runBlocking {
+            shouldHandleEvents = false
+            eventLoopJob.join()
+        }
         println("Cancelling coroutine scope")
         coroutineScope.cancel()
         closeCallback()
