@@ -124,14 +124,16 @@ internal class LinuxNotificationHandler(
     private val dequeueJob: Job = coroutineScope.launch(start = CoroutineStart.ATOMIC) {
         println("Initializing queue coroutine")
         while (shouldDispachNotifications) {
-            if (pendingNotifications.isEmpty()) yield()
-            val (tag, isSameContent, notification) = pendingNotifications.removeFirst()
-            val handle = create(tag, notification)
-            handle.check<LinuxNotificationHandle>()
-            notifications[tag] = handle
-            // Minimum required DBus timeouts to prevent dropping notifications
-            val delay = if (isSameContent) timeout else minimumDelay
-            delay(delay)
+            while(shouldDispachNotifications && pendingNotifications.isNotEmpty()) {
+                val (tag, isSameContent, notification) = pendingNotifications.removeFirst()
+                val handle = create(tag, notification)
+                handle.check<LinuxNotificationHandle>()
+                notifications[tag] = handle
+                // Minimum required DBus timeouts to prevent dropping notifications
+                val delay = if (isSameContent) timeout else minimumDelay
+                delay(delay)
+            }
+            yield()
         }
     }
 
