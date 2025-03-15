@@ -111,7 +111,6 @@ internal class LinuxNotificationHandler(
     private val activationStates: SharedHashMap<String, StableRef<NotificationActivationState>> = SharedHashMap()
     private val pendingNotifications: SharedLinkedList<Triple<String, Boolean, Notification>> = SharedLinkedList()
     private val notifications: SharedHashMap<String, LinuxNotificationHandle> = SharedHashMap()
-    private val notificationSemaphore: Semaphore = Semaphore(1)
 
     private var isRunning: Boolean by atomic(true)
     private var lastNotification: Notification? by atomic(null)
@@ -123,12 +122,10 @@ internal class LinuxNotificationHandler(
         check(LibNotify.notify_init(name) != 0) { "Could not initialize libnotify" }
         while (isRunning) {
             while (pendingNotifications.isEmpty()) yield()
-            notificationSemaphore.acquire()
             val (tag, isSameContent, notification) = pendingNotifications.removeFirst()
             val handle = create(tag, notification)
             handle.check<LinuxNotificationHandle>()
             notifications[tag] = handle
-            notificationSemaphore.release()
             // Minimum required DBus timeouts to prevent dropping notifications
             val delay = if (isSameContent) timeout else minimumDelay
             delay(delay)
@@ -246,73 +243,67 @@ internal class LinuxNotificationHandler(
 
     override suspend fun update(handle: NotificationHandle, notification: Notification): NotificationHandle {
         handle.check<LinuxNotificationHandle>()
-        notificationSemaphore.withPermit {
-            val tag = handle.tag
-            // If the notification is already active, just update it immediately
-            if (tag in notifications) {
-                val notificationAddress =
-                    requireNotNull(handle.address) { "Handle does not contain a valid address" }
-                LibNotify.notify_notification_update(
-                    notification = notificationAddress,
-                    summary = notification.title,
-                    body = notification.description,
-                    icon = DEFAULT_ICON
-                )
-                setIcon(notificationAddress, notification)
-                return if (show(notificationAddress)) handle
-                else NotificationHandle.INVALID
-            }
-            // Otherwise update the pending notification associated with the given tag
-            val outdatedEntry =
-                pendingNotifications.find { it.first == tag } ?: return NotificationHandle.INVALID
-            val outdatedIndex = pendingNotifications.indexOf(outdatedEntry)
-            if (outdatedIndex == -1) return NotificationHandle.INVALID
-            val isSameContent = lastNotification == notification
-            pendingNotifications[outdatedIndex] = Triple(tag, isSameContent, notification)
-            lastNotification = notification
+        val tag = handle.tag
+        // If the notification is already active, just update it immediately
+        if (tag in notifications) {
+            val notificationAddress =
+                requireNotNull(handle.address) { "Handle does not contain a valid address" }
+            LibNotify.notify_notification_update(
+                notification = notificationAddress,
+                summary = notification.title,
+                body = notification.description,
+                icon = DEFAULT_ICON
+            )
+            setIcon(notificationAddress, notification)
+            return if (show(notificationAddress)) handle
+            else NotificationHandle.INVALID
         }
+        // Otherwise update the pending notification associated with the given tag
+        val outdatedEntry =
+            pendingNotifications.find { it.first == tag } ?: return NotificationHandle.INVALID
+        val outdatedIndex = pendingNotifications.indexOf(outdatedEntry)
+        if (outdatedIndex == -1) return NotificationHandle.INVALID
+        val isSameContent = lastNotification == notification
+        pendingNotifications[outdatedIndex] = Triple(tag, isSameContent, notification)
+        lastNotification = notification
         return handle
     }
 
     override suspend fun pop(handle: NotificationHandle) {
         handle.check<LinuxNotificationHandle>()
-        notificationSemaphore.withPermit {
-            val tag = handle.tag
-            // If the notification is already active, close it
-            if (tag in notifications) {
-                val address = handle.address
-                memScoped {
-                    val errorAddress = allocPointerTo<GError>()
-                    if (LibNotify.notify_notification_close(address, errorAddress.ptr) == 0) {
-                        errorAddress.value?.freeAndThrow()
-                        return
-                    }
+        val tag = handle.tag
+        // If the notification is already active, close it
+        if (tag in notifications) {
+            val address = handle.address
+            memScoped {
+                val errorAddress = allocPointerTo<GError>()
+                if (LibNotify.notify_notification_close(address, errorAddress.ptr) == 0) {
+                    errorAddress.value?.freeAndThrow()
+                    return
                 }
-                LibGLib.g_object_unref(address?.reinterpret())
-                notifications -= tag
-                return
             }
-            // Otherwise dequeue the pending notification early
-            val outdatedEntry = pendingNotifications.find { it.first == tag } ?: return
-            pendingNotifications -= outdatedEntry
+            LibGLib.g_object_unref(address?.reinterpret())
+            notifications -= tag
+            return
         }
+        // Otherwise dequeue the pending notification early
+        val outdatedEntry = pendingNotifications.find { it.first == tag } ?: return
+        pendingNotifications -= outdatedEntry
     }
 
     override suspend fun clearAll() {
-        notificationSemaphore.withPermit { // Wait until current batch is done being processed
-            println("Clearing all notifications")
-            for ((_, notification) in notifications) {
-                memScoped {
-                    val errorAddress = allocPointerTo<GError>()
-                    if (LibNotify.notify_notification_close(notification.address, errorAddress.ptr) == 0) {
-                        errorAddress.value?.freeAndThrow()
-                    }
+        println("Clearing all notifications")
+        for ((_, notification) in notifications) {
+            memScoped {
+                val errorAddress = allocPointerTo<GError>()
+                if (LibNotify.notify_notification_close(notification.address, errorAddress.ptr) == 0) {
+                    errorAddress.value?.freeAndThrow()
                 }
             }
-            notifications.clear()
-            pendingNotifications.clear()
-            println("Cleared all notifications!")
         }
+        notifications.clear()
+        pendingNotifications.clear()
+        println("Cleared all notifications!")
     }
 
     override fun close() {
