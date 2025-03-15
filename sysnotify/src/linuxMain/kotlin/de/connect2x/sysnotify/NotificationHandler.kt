@@ -142,11 +142,12 @@ internal class LinuxNotificationHandler(
             "Could not obtain GMainContext for event loop"
         }
         while (isRunning) {
-            // Empty scope so yield() doesn't cause a reformat
-            while (LibGLib.g_main_context_iteration(loopContext, 0) == 1) {}
+            if (LibGLib.g_main_context_iteration(loopContext, 0) == 1) continue
             yield()
         }
         println("Deinitializing GTK event coroutine")
+        // Make sure event loop is stopped, since apparently KDE doesn't do that on its own
+        LibGLib.g_main_loop_quit(eventLoop)
         LibGLib.g_main_loop_unref(eventLoop)
     }
 

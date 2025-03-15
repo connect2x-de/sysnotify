@@ -53,6 +53,8 @@ private typealias _g_main_context_iteration = (
     mayBlock: gboolean
 ) -> gboolean
 
+private typealias _g_main_loop_quit = (loop: CPointer<GMainLoop>?) -> Unit
+
 @Suppress("FunctionName")
 internal object LibGLib {
     private val library: SharedLibrary? = SharedLibrary.open("libglib-2.0.so")
@@ -100,6 +102,10 @@ internal object LibGLib {
     fun g_main_loop_get_context(loop: CPointer<GMainLoop>?): CPointer<GMainContext>? {
         return library?.findFunction<_g_main_loop_get_context>("g_main_loop_get_context")
             ?.invoke(loop)
+    }
+
+    fun g_main_loop_quit(loop: CPointer<GMainLoop>?) {
+        library?.findFunction<_g_main_loop_quit>("g_main_loop_quit")?.invoke(loop)
     }
 
     fun g_main_context_iteration(
