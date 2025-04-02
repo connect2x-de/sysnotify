@@ -25,7 +25,7 @@ import kotlin.io.path.div
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
-    alias(libs.plugins.androidLibrary)
+    alias(libs.plugins.android.library)
     `maven-publish`
 }
 
@@ -199,9 +199,9 @@ dependencies {
 
 android {
     namespace = "${rootProject.group}.${rootProject.name}"
-    compileSdk = libs.versions.android.compileSdk.get().toInt()
+    compileSdk = libs.versions.androidCompileSDK.get().toInt()
     defaultConfig {
-        minSdk = libs.versions.android.minSdk.get().toInt()
+        minSdk = libs.versions.androidMinimalSDK.get().toInt()
     }
     buildTypes {
         release { isMinifyEnabled = false }

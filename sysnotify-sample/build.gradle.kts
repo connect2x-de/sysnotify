@@ -18,7 +18,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
-    alias(libs.plugins.androidApplication)
+    alias(libs.plugins.android.application)
     alias(libs.plugins.compose)
     alias(libs.plugins.compose.compiler)
 }
@@ -39,7 +39,7 @@ kotlin {
         }
     }
 
-    js(IR) {
+    js {
         browser {
             runTask {
                 mainOutputFileName = "Sample.js"

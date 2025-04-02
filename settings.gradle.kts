@@ -19,19 +19,25 @@ pluginManagement {
     repositories {
         google()
         mavenCentral()
+        mavenLocal()
         gradlePluginPortal()
+        maven("https://gitlab.com/api/v4/projects/68438621/packages/maven") // c2x Conventions
     }
 }
 
+@Suppress("UnstableApiUsage")
 dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        mavenLocal()
+        maven("https://gitlab.com/api/v4/projects/68438621/packages/maven") // c2x Conventions
+        maven("https://gitlab.com/api/v4/projects/65231927/packages/maven") // kmp-jni
     }
 }
 
 plugins {
-    id("org.gradle.toolchains.foojay-resolver-convention") version "0.8.0"
+    id("org.gradle.toolchains.foojay-resolver-convention") version "0.9.0"
 }
 
 include(":sysnotify")
