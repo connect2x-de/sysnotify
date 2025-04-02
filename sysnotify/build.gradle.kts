@@ -15,7 +15,6 @@
 
 import org.gradle.internal.extensions.stdlib.capitalized
 import org.gradle.internal.os.OperatingSystem
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.DefaultCInteropSettings
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.konan.target.Family
@@ -61,26 +60,11 @@ fun DefaultCInteropSettings.includePlatformBinaries(target: KotlinNativeTarget) 
 }
 
 kotlin {
-    withSourcesJar(true)
-    val kotlinJvmVersion = libs.versions.jvmTarget.get()
-    val kotlinJvmTarget = JvmTarget.fromTarget(kotlinJvmVersion)
-    jvmToolchain(JavaLanguageVersion.of(kotlinJvmVersion).asInt())
-    jvm {
-        compilations.all {
-            compileTaskProvider {
-                compilerOptions {
-                    jvmTarget = kotlinJvmTarget
-                }
-            }
-        }
-    }
     androidTarget {
         publishLibraryVariants("release")
-        compilerOptions {
-            jvmTarget = kotlinJvmTarget
-        }
     }
-    js(IR) {
+    jvm()
+    js {
         browser {
             testTask {
                 enabled = false
@@ -139,8 +123,9 @@ kotlin {
         }
     }
     applyDefaultHierarchyTemplate()
+    withSourcesJar(true)
     sourceSets {
-        commonMain {
+        val commonMain by getting {
             dependencies {
                 api(libs.kotlinx.coroutines)
                 implementation(libs.stately.common)
@@ -148,9 +133,9 @@ kotlin {
                 implementation(libs.kotlinx.atomicfu)
             }
         }
-        commonTest {
+        val commonTest by getting {
             dependencies {
-                implementation(kotlin("test"))
+                implementation(libs.kotlin.test)
             }
         }
         androidMain {
@@ -163,9 +148,9 @@ kotlin {
             // Include JVM natives for desktop targets
             resources.srcDir("build/generatedResources")
         }
-
+        val nativeMain by getting
         val desktopMain by creating {
-            dependsOn(nativeMain.get())
+            dependsOn(nativeMain)
             dependencies {
                 implementation(libs.kmpJni)
             }
@@ -175,7 +160,7 @@ kotlin {
         mingwMain { dependsOn(desktopMain) }
 
         val sharedTest by creating {
-            dependsOn(commonTest.get())
+            dependsOn(commonTest)
         }
         appleTest { dependsOn(sharedTest) }
         linuxTest { dependsOn(sharedTest) }
@@ -184,7 +169,7 @@ kotlin {
         jsTest { dependsOn(sharedTest) }
 
         val activatableMain by creating {
-            dependsOn(commonMain.get())
+            dependsOn(commonMain)
         }
         linuxMain { dependsOn(activatableMain) }
         mingwMain { dependsOn(activatableMain) }
@@ -204,75 +189,38 @@ android {
         minSdk = libs.versions.androidMinimalSDK.get().toInt()
     }
     buildTypes {
-        release { isMinifyEnabled = false }
-        debug { isMinifyEnabled = false }
-    }
-}
-
-val copyNativesForJvm: Copy by tasks.register<Copy>("copyNativesForJvm") {
-    dependsOn(
-        tasks.getByName("linkReleaseSharedMacosArm64"),
-        tasks.getByName("linkReleaseSharedMacosX64"),
-        tasks.getByName("linkReleaseSharedLinuxArm64"),
-        tasks.getByName("linkReleaseSharedLinuxX64"),
-        tasks.getByName("linkReleaseSharedMingwX64")
-    )
-    from("build/bin/linuxX64/releaseShared/libsysnotify.so") { into("linux-x64/") }
-    from("build/bin/linuxArm64/releaseShared/libsysnotify.so") { into("linux-arm64/") }
-    from("build/bin/macosX64/releaseShared/libsysnotify.dylib") { into("macos-x64/") }
-    from("build/bin/macosArm64/releaseShared/libsysnotify.dylib") { into("macos-arm64/") }
-    from("build/bin/mingwX64/releaseShared/sysnotify.dll") { into("windows-x64/") }
-    from("build/sysnotify-platform/windowsX64/lib/sysnotify-com.dll") { into("windows-x64/") }
-    destinationDir = (Path("build") / "generatedResources" / "natives").toFile()
-}
-
-tasks.getByName("jvmProcessResources") {
-    dependsOn(copyNativesForJvm)
-}
-
-publishing {
-    repositories {
-        repositories {
-            System.getenv("CI_API_V4_URL")?.let { apiUrl ->
-                maven {
-                    url = uri("$apiUrl/projects/${System.getenv("CI_PROJECT_ID")}/packages/maven")
-                    name = "GitLab"
-                    credentials(HttpHeaderCredentials::class) {
-                        name = "Job-Token"
-                        value = System.getenv("CI_JOB_TOKEN")
-                    }
-                    authentication {
-                        create("header", HttpHeaderAuthentication::class)
-                    }
-                }
-            }
+        debug {
+            isDefault = true
+        }
+        release {
+            isMinifyEnabled = false
         }
     }
-    publications {
-        configureEach {
-            if (this is MavenPublication) {
-                pom {
-                    name.set(project.name)
-                    description.set("Cross-platform system notifications for Kotlin Multiplatform")
-                    url.set(System.getenv("CI_PROJECT_URL"))
-                    licenses {
-                        license {
-                            name.set("Apache License 2.0")
-                            url.set("https://www.apache.org/licenses/LICENSE-2.0")
-                        }
-                    }
-                    developers {
-                        developer {
-                            id.set("michael.thiele")
-                            id.set("benkuly")
-                            id.set("KitsuneAlex")
-                        }
-                    }
-                    scm {
-                        url.set(this@pom.url)
-                    }
-                }
-            }
-        }
+}
+
+tasks {
+    val linkReleaseSharedMacosArm64 by getting
+    val linkReleaseSharedMacosX64 by getting
+    val linkReleaseSharedLinuxArm64 by getting
+    val linkReleaseSharedLinuxX64 by getting
+    val linkReleaseSharedMingwX64 by getting
+    val copyNativesForJvm: Copy by register<Copy>("copyNativesForJvm") {
+        dependsOn(
+            linkReleaseSharedMacosArm64,
+            linkReleaseSharedMacosX64,
+            linkReleaseSharedLinuxArm64,
+            linkReleaseSharedLinuxX64,
+            linkReleaseSharedMingwX64
+        )
+        from("build/bin/linuxX64/releaseShared/libsysnotify.so") { into("linux-x64/") }
+        from("build/bin/linuxArm64/releaseShared/libsysnotify.so") { into("linux-arm64/") }
+        from("build/bin/macosX64/releaseShared/libsysnotify.dylib") { into("macos-x64/") }
+        from("build/bin/macosArm64/releaseShared/libsysnotify.dylib") { into("macos-arm64/") }
+        from("build/bin/mingwX64/releaseShared/sysnotify.dll") { into("windows-x64/") }
+        from("build/sysnotify-platform/windowsX64/lib/sysnotify-com.dll") { into("windows-x64/") }
+        destinationDir = (Path("build") / "generatedResources" / "natives").toFile()
+    }
+    val jvmProcessResources by getting {
+        dependsOn(copyNativesForJvm)
     }
 }

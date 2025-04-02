@@ -14,7 +14,6 @@
  */
 
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -23,22 +22,9 @@ plugins {
     alias(libs.plugins.compose.compiler)
 }
 
-val baseVersion: String = libs.versions.sysnotify.get()
-
 kotlin {
-    val kotlinJvmVersion = libs.versions.jvmTarget.get()
-    val kotlinJvmTarget = JvmTarget.fromTarget(kotlinJvmVersion)
-    jvmToolchain(JavaLanguageVersion.of(kotlinJvmVersion).asInt())
-    jvm {
-        compilations.all {
-            compileTaskProvider {
-                compilerOptions {
-                    jvmTarget = kotlinJvmTarget
-                }
-            }
-        }
-    }
-
+    androidTarget()
+    jvm()
     js {
         browser {
             runTask {
@@ -50,13 +36,6 @@ kotlin {
         }
         binaries.executable()
     }
-
-    androidTarget {
-        compilerOptions {
-            jvmTarget.set(kotlinJvmTarget)
-        }
-    }
-
     listOf(macosX64(), macosArm64()).forEach {
         it.apply {
             binaries {
@@ -66,7 +45,6 @@ kotlin {
             }
         }
     }
-
     listOf(iosX64(), iosArm64(), iosSimulatorArm64()).forEach {
         it.apply {
             binaries {
@@ -77,7 +55,6 @@ kotlin {
             }
         }
     }
-
     sourceSets {
         androidMain {
             dependencies {
@@ -123,9 +100,8 @@ android {
     defaultConfig {
         applicationId = "${rootProject.group}.${rootProject.name}.sample"
         minSdk = 28
-        targetSdk = 34
         versionCode = 1
-        versionName = baseVersion
+        versionName = libs.versions.sysnotify.get()
     }
     packaging {
         resources {
@@ -154,7 +130,7 @@ compose {
                 targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
                 appResourcesRootDir.set(layout.buildDirectory)
                 packageName = "Sysnotify Sample"
-                packageVersion = baseVersion
+                packageVersion = libs.versions.sysnotify.get()
                 windows {
                     menu = true
                     upgradeUuid = "3e1d7fa0-4c3f-4c3d-805f-d28bd21d6019"

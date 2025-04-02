@@ -156,9 +156,7 @@ test:linux:
   rules:
     - *if-merge-request-or-main
   script:
-    - ./gradlew
-      :sysnotify:{jvm,linuxX64}Test
-      --stacktrace
+    - ./gradlew :sysnotify:{jvm,linuxX64}Test --stacktrace
 
 test:mac:
   stage: test
@@ -172,9 +170,7 @@ test:mac:
   rules:
     - *if-merge-request-or-main
   script:
-    - ./gradlew
-      :sysnotify:{jvm,macosX64}Test
-      --stacktrace
+    - ./gradlew :sysnotify:{jvm,macosX64}Test --stacktrace
 
 test:windows:
   stage: test
@@ -188,10 +184,7 @@ test:windows:
   rules:
     - *if-merge-request-or-main
   script:
-    - ./gradlew
-      :sysnotify:jvmTest
-      :sysnotify:mingwX64Test
-      --stacktrace
+    - ./gradlew :sysnotify:jvmTest :sysnotify:mingwX64Test --stacktrace
 
 security:dependencies:
   stage: security

@@ -3,8 +3,8 @@ jvmTarget = "17"
 c2xConventions = "39087842"
 
 androidGradle = "8.7.3" # https://developer.android.com/build/releases/gradle-plugin
+androidCompileSDK = "35"
 androidMinimalSDK = "28"
-androidCompileSDK = "34"
 androidxTest = "1.6.1" # https://developer.android.com/jetpack/androidx/releases/test?hl=de
 androidxCore = "1.15.0" # https://developer.android.com/jetpack/androidx/releases/core
 androidxActivityKtx = "1.10.1" # https://mvnrepository.com/artifact/androidx.activity/activity-ktx
@@ -24,6 +24,7 @@ kmpJni = "1.0.1" # https://gitlab.com/connect2x/kmp-jni/-/packages
 sysnotifyBinaries = "DEV-d88c0061" # https://gitlab.com/connect2x/sysnotify-platform-binaries/-/packages/
 
 [libraries]
+kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlinx-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
 kotlinx-atomicfu = { module = "org.jetbrains.kotlinx:atomicfu", version.ref = "kotlinx-atomicfu" }
 
