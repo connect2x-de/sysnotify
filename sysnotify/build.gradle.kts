@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+import de.connect2x.conventions.authenticatedPackageRegistry
+import de.connect2x.conventions.c2xOrganization
 import org.gradle.internal.extensions.stdlib.capitalized
 import org.gradle.internal.os.OperatingSystem
 import org.jetbrains.kotlin.gradle.plugin.mpp.DefaultCInteropSettings
@@ -222,5 +224,28 @@ tasks {
     }
     val jvmProcessResources by getting {
         dependsOn(copyNativesForJvm)
+    }
+}
+
+publishing {
+    repositories {
+        authenticatedPackageRegistry()
+    }
+    publications.withType<MavenPublication>().configureEach {
+        pom {
+            name = project.name
+            description = "Cross-platform system notifications for Kotlin Multiplatform"
+            url = "https://gitlab.com/connect2x/sysnotify"
+            c2xOrganization()
+            licenses {
+                license {
+                    name = "Apache 2.0"
+                    url = "https://www.apache.org/licenses/LICENSE-2.0.txt"
+                }
+            }
+            scm {
+                url = this@pom.url
+            }
+        }
     }
 }

@@ -17,6 +17,7 @@ variables:
   GRADLE_USER_HOME: $CI_PROJECT_DIR/.gradle
   KONAN_DATA_DIR: $CI_PROJECT_DIR/.konan
   BUILD_LINUX_IMAGE_NAME: registry.gitlab.com/trixnity/trixnity/trixnity-build-linux:latest
+  SYSNOTIFY_DEBUG: 1
 
 .cache-linux: &cache-linux
   - key: global-sysnotify-cache-linux

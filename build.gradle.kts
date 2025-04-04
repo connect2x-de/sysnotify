@@ -25,7 +25,6 @@ plugins {
     alias(libs.plugins.compose) apply false
     alias(libs.plugins.compose.compiler) apply false
     alias(libs.plugins.c2xConventions)
-    `maven-publish`
 }
 
 allprojects {
@@ -38,32 +37,5 @@ allprojects {
             lockAllConfigurations()
         }
         val dependenciesForAll by tasks.registering(DependencyReportTask::class)
-    }
-}
-
-subprojects {
-    apply(plugin = "maven-publish")
-
-    publishing {
-        repositories {
-            authenticatedPackageRegistry()
-        }
-        publications.withType<MavenPublication>().configureEach {
-            pom {
-                name = project.name
-                description = "Cross-platform system notifications for Kotlin Multiplatform"
-                url = "https://gitlab.com/connect2x/sysnotify"
-                c2xOrganization()
-                licenses {
-                    license {
-                        name = "Apache 2.0"
-                        url = "https://www.apache.org/licenses/LICENSE-2.0.txt"
-                    }
-                }
-                scm {
-                    url = this@pom.url
-                }
-            }
-        }
     }
 }

@@ -17,13 +17,7 @@ package de.connect2x.sysnotify
 
 import co.touchlab.stately.collections.SharedHashMap
 import kotlinx.atomicfu.atomic
-import kotlinx.cinterop.ByteVar
-import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.alloc
-import kotlinx.cinterop.allocArray
-import kotlinx.cinterop.memScoped
-import kotlinx.cinterop.ptr
 import kotlinx.cinterop.toKStringFromUtf8
 import kotlinx.coroutines.runBlocking
 import platform.UserNotifications.UNAuthorizationOptionAlert
@@ -37,10 +31,9 @@ import platform.UserNotifications.UNNotificationCategoryOptionNone
 import platform.UserNotifications.UNNotificationRequest
 import platform.UserNotifications.UNNotificationSound
 import platform.UserNotifications.UNUserNotificationCenter
-import platform.posix.PATH_MAX
-import platform.posix.uint32_tVar
 import kotlin.experimental.ExperimentalNativeApi
 import kotlin.uuid.ExperimentalUuidApi
+import platform.posix.getenv
 
 @OptIn(ExperimentalNativeApi::class)
 internal class AppleNotificationHandler(
@@ -49,6 +42,9 @@ internal class AppleNotificationHandler(
     override val priority: NotificationPriority,
     private val closeCallback: () -> Unit = {}
 ) : NotificationHandler {
+    @OptIn(ExperimentalForeignApi::class)
+    internal val isDebugEnabled: Boolean = getenv("SYSNOTIFY_DEBUG")?.toKStringFromUtf8() == "1"
+
     override val platform: NotificationPlatform = NotificationPlatform.APPLE
     override var hasPermissions: Boolean by atomic(false)
 
@@ -64,7 +60,9 @@ internal class AppleNotificationHandler(
     )
 
     private val notificationCategories: SharedHashMap<String, UNNotificationCategory> = SharedHashMap()
-    private val notificationCenter: UNUserNotificationCenter = UNUserNotificationCenter.currentNotificationCenter()
+
+    private val notificationCenter: UNUserNotificationCenter? = if(isDebugEnabled) null
+    else UNUserNotificationCenter.currentNotificationCenter()
 
     private fun ensureCategoryExists(key: String) {
         if (key in notificationCategories) return
@@ -76,7 +74,7 @@ internal class AppleNotificationHandler(
         )
         notificationCategories[key] = category
         // We have to update ALL the categories every time we add a new one
-        notificationCenter.setNotificationCategories(notificationCategories.values.toSet())
+        notificationCenter?.setNotificationCategories(notificationCategories.values.toSet())
     }
 
     override fun getHandle(tag: String): NotificationHandle {
@@ -117,7 +115,7 @@ internal class AppleNotificationHandler(
             }
         }
 
-        notificationCenter.addNotificationRequest(
+        notificationCenter?.addNotificationRequest(
             UNNotificationRequest.requestWithIdentifier(
                 handle.tag, content, null
             )
@@ -139,7 +137,7 @@ internal class AppleNotificationHandler(
         val identifier = handle.tag
         var found = false
         // First try to remove it from the pending notifications
-        notificationCenter.getPendingNotificationRequestsWithCompletionHandler {
+        notificationCenter?.getPendingNotificationRequestsWithCompletionHandler {
             for (request in it as List<UNNotificationRequest>) {
                 if (request.identifier != identifier) continue
                 notificationCenter.removePendingNotificationRequestsWithIdentifiers(listOf(identifier))
@@ -149,7 +147,7 @@ internal class AppleNotificationHandler(
         }
         if (found) return
         // Otherwise it was already delivered
-        notificationCenter.getDeliveredNotificationsWithCompletionHandler {
+        notificationCenter?.getDeliveredNotificationsWithCompletionHandler {
             for (notification in it as List<UNNotification>) {
                 if (notification.request.identifier != identifier) continue
                 notificationCenter.removeDeliveredNotificationsWithIdentifiers(listOf(identifier))
@@ -160,8 +158,8 @@ internal class AppleNotificationHandler(
 
     override suspend fun clearAll() {
         if (!hasPermissions) return
-        notificationCenter.removeAllPendingNotificationRequests()
-        notificationCenter.removeAllDeliveredNotifications()
+        notificationCenter?.removeAllPendingNotificationRequests()
+        notificationCenter?.removeAllDeliveredNotifications()
     }
 
     override fun close() {
