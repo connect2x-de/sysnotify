@@ -219,7 +219,6 @@ tasks {
         from("build/bin/macosX64/releaseShared/libsysnotify.dylib") { into("macos-x64/") }
         from("build/bin/macosArm64/releaseShared/libsysnotify.dylib") { into("macos-arm64/") }
         from("build/bin/mingwX64/releaseShared/sysnotify.dll") { into("windows-x64/") }
-        from("build/sysnotify-platform/windowsX64/lib/sysnotify-com.dll") { into("windows-x64/") }
         destinationDir = (Path("build") / "generatedResources" / "natives").toFile()
     }
     val jvmProcessResources by getting {
