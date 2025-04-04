@@ -153,7 +153,7 @@ internal inline fun jbyteArray.toByteArray(): ByteArray {
 internal inline fun jclass.registerNativeFunction(
     name: String,
     address: COpaquePointer,
-    signature: JvmSignatureBuilder.() -> Unit
+    signature: JvmSignatureBuilder.() -> Unit = {}
 ) = memScoped {
     val method = alloc<JNINativeMethod>()
     method.name = name.cstr.ptr

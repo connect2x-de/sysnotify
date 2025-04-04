@@ -113,6 +113,9 @@ internal fun registerNatives() {
             JvmBuiltinType.LONG named "handler"
             JvmBuiltinType.LONG named "notification"
         }
+        registerNativeFunction("clearAll", staticCFunction(::clearAll)) {
+            JvmBuiltinType.LONG named "handler"
+        }
     }
 }
 
@@ -276,5 +279,19 @@ private fun pop(
             .asStableRef<NotificationHandler>()
             .get().pop(handle.get())
         handle.dispose() // Make sure to dispose old handle
+    }
+}
+
+
+private fun clearAll(
+    env: JNIEnvVar,
+    clazz: jclass,
+    handler: jlong
+) {
+    runBlocking {
+        requireNotNull(handler.toCPointer<CPointed>())
+            .asStableRef<NotificationHandler>()
+            .get()
+            .clearAll()
     }
 }

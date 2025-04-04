@@ -18,8 +18,10 @@ package de.connect2x.sysnotify.sample
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.Button
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
@@ -143,8 +145,17 @@ fun App(
                             )
                         }
                     },
-                    modifier = Modifier.weight(1F)
+                    modifier = Modifier.weight(0.5F)
                 ) { Text("Test") }
+                Spacer(Modifier.width(8.dp))
+                Button(
+                    onClick = {
+                        coroutineScope.launch {
+                            notificationHandler.clearAll()
+                        }
+                    },
+                    modifier = Modifier.weight(0.5F)
+                ) { Text("Clear") }
             }
         }
     }

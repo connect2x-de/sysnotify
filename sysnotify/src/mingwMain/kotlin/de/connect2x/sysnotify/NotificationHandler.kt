@@ -13,9 +13,6 @@
  * limitations under the License.
  */
 
-@file:OptIn(ExperimentalForeignApi::class, ExperimentalUuidApi::class)
-@file:Suppress("NOTHING_TO_INLINE")
-
 package de.connect2x.sysnotify
 
 import de.connect2x.sysnotify.com.SYSNOTIFY_FALSE
@@ -28,6 +25,7 @@ import de.connect2x.sysnotify.com.sysnotify_handler_destroy
 import de.connect2x.sysnotify.com.sysnotify_handler_pop
 import de.connect2x.sysnotify.com.sysnotify_handler_push
 import de.connect2x.sysnotify.com.sysnotify_handler_update
+import de.connect2x.sysnotify.com.sysnotify_handler_clear
 import kotlinx.atomicfu.atomic
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.MemScope
@@ -42,6 +40,8 @@ import kotlinx.cinterop.toCValues
 import kotlinx.cinterop.value
 import kotlin.uuid.ExperimentalUuidApi
 
+@OptIn(ExperimentalForeignApi::class)
+@Suppress("NOTHING_TO_INLINE")
 internal class WindowsNotificationHandler(
     override val name: String,
     override val id: String,
@@ -102,7 +102,6 @@ internal class WindowsNotificationHandler(
         }
     }
 
-    // TODO: re-implement activation callbacks
     private fun MemScope.allocNotification(notification: Notification): sn_notification_content {
         return alloc<sn_notification_content> {
             title = notification.title?.cstr?.ptr
@@ -124,7 +123,7 @@ internal class WindowsNotificationHandler(
     }
 
     override suspend fun clearAll() {
-
+        sysnotify_handler_clear(address)
     }
 }
 
