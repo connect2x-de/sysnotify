@@ -122,7 +122,6 @@ internal class LinuxNotificationHandler(
 
     // Flushes notifications from the internal queue to the system periodically
     private val dequeueJob: Job = coroutineScope.launch(start = CoroutineStart.ATOMIC) {
-        println("Initializing queue coroutine")
         while (shouldDispachNotifications) {
             while(shouldDispachNotifications && pendingNotifications.isNotEmpty()) {
                 val (tag, isSameContent, notification) = pendingNotifications.removeFirst()
