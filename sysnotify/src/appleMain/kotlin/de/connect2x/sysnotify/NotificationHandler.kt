@@ -19,7 +19,10 @@ import co.touchlab.stately.collections.SharedHashMap
 import kotlinx.atomicfu.atomic
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.toKStringFromUtf8
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.yield
 import platform.UserNotifications.UNAuthorizationOptionAlert
 import platform.UserNotifications.UNAuthorizationOptionBadge
 import platform.UserNotifications.UNAuthorizationOptionSound
@@ -84,13 +87,20 @@ internal class AppleNotificationHandler(
 
     override suspend fun requestPermissions(callback: PermissionCallback) {
         if (hasPermissions) return
+        var isWaitingForAction by atomic(true)
         UNUserNotificationCenter.currentNotificationCenter().requestAuthorizationWithOptions(
             UNAuthorizationOptionSound or UNAuthorizationOptionBadge or UNAuthorizationOptionAlert
         ) { granted, error ->
-            if (granted) hasPermissions = true
-            runBlocking { callback(this@AppleNotificationHandler, granted) }
+            hasPermissions = granted
+            isWaitingForAction = false
             error?.localizedDescription?.let {
-                throw IllegalStateException("Could not request permission: $it")
+                println("Could not request permission: $it")
+            }
+        }
+        coroutineScope {
+            launch {
+                while(isWaitingForAction) yield()
+                callback(this@AppleNotificationHandler, hasPermissions)
             }
         }
     }

@@ -23,7 +23,7 @@ import platform.posix.atexit
 @OptIn(ExperimentalForeignApi::class)
 fun main() {
     atexit(staticCFunction(::onAppExit))
-    Window("SysNotify Sample") {
+    Window("Sysnotify Sample") {
         App()
     }
 }

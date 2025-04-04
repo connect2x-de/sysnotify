@@ -25,6 +25,7 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,7 +43,7 @@ import kotlinx.coroutines.launch
 internal val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.Default)
 
 internal val notificationHandler: NotificationHandler = NotificationHandler(
-    name = "SysNotify Sample",
+    name = "Sysnotify Sample",
     id = "de.connect2x.sysnotify"
 )
 
@@ -56,6 +57,11 @@ fun App(
     icon: NotificationIcon? = null,
     launchUserData: String? = null
 ) {
+    // TODO: Add wait-state to show "waiting for perms" modal
+    LaunchedEffect(Unit) {
+        notificationHandler.requestPermissions()
+    }
+
     var title by remember { mutableStateOf("Hello") }
     var description by remember { mutableStateOf("World!") }
     var callbackData by remember { mutableStateOf("This is some user data to attach to the notification") }
