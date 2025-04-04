@@ -140,7 +140,6 @@ internal class LinuxNotificationHandler(
 
     // An out-of-band event pump so actions and signals work for our notifications
     private val eventLoopJob: Job = coroutineScope.launch(start = CoroutineStart.ATOMIC) {
-        println("Initializing GTK event coroutine")
         val eventLoop = requireNotNull(LibGLib.g_main_loop_new(null, 0)) {
             "Could not create GMainLoop instance"
         }
@@ -151,7 +150,6 @@ internal class LinuxNotificationHandler(
             if (LibGLib.g_main_context_iteration(loopContext, 0) == 1) continue
             yield()
         }
-        println("Deinitializing GTK event coroutine")
         LibGLib.g_main_loop_unref(eventLoop)
     }
 
@@ -296,7 +294,6 @@ internal class LinuxNotificationHandler(
     }
 
     override suspend fun clearAll() {
-        println("Clearing all notifications")
         for ((_, notification) in notifications) {
             memScoped {
                 val errorAddress = allocPointerTo<GError>()
@@ -307,13 +304,10 @@ internal class LinuxNotificationHandler(
         }
         notifications.clear()
         pendingNotifications.clear()
-        println("Cleared all notifications!")
     }
 
     override fun close() {
-        println("Disposing notification handler")
         runBlocking { clearAll() }
-        println("Joining coroutines")
         runBlocking {
             shouldDispachNotifications = false
             dequeueJob.join()
@@ -322,9 +316,7 @@ internal class LinuxNotificationHandler(
             shouldHandleEvents = false
             eventLoopJob.join()
         }
-        println("Cancelling coroutine scope")
         coroutineScope.cancel()
-        println("Uninitializing libnotify")
         LibNotify.notify_uninit()
         closeCallback()
     }
