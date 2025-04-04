@@ -113,6 +113,7 @@ build:windows:
     - *if-merge-request-or-main
   script:
     - ./gradlew
+      clean
       :sysnotify:linkMingwX64
       --stacktrace
 
@@ -126,6 +127,7 @@ build:mac:
     - *if-merge-request-or-main
   script:
     - ./gradlew
+      clean
       :sysnotify:link{MacosX64,MacosArm64,IosArm64,IosX64,IosSimulatorArm64}
       --stacktrace
 
@@ -140,6 +142,7 @@ build:linux:
     - *if-merge-request-or-main
   script:
     - ./gradlew
+      clean
       :sysnotify:compile{ReleaseKotlinAndroid,KotlinJvm}
       :sysnotify:linkLinux{X64,Arm64}
       --stacktrace
