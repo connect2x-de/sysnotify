@@ -15,6 +15,20 @@
 
 package de.connect2x.sysnotify
 
+/**
+ * Converts a [NotificationPriority] to a relevance score for Apple notifications.
+ *
+ * This extension property maps notification priorities to numerical values that can be used
+ * with Apple's notification system to indicate the importance of a notification:
+ * - [NotificationPriority.LOW]: 0.25 (lower importance)
+ * - [NotificationPriority.DEFAULT]: 0.5 (medium importance)
+ * - [NotificationPriority.HIGH]: 1.0 (high importance)
+ *
+ * The relevance score affects how notifications are displayed and sorted in the notification center.
+ * Higher scores may result in more prominent display of notifications.
+ *
+ * @return A [Double] value between 0.25 and 1.0 representing the notification's relevance
+ */
 inline val NotificationPriority.relevanceScore: Double
     get() = when (this) {
         NotificationPriority.LOW -> 0.25
