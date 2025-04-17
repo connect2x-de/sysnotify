@@ -34,9 +34,8 @@ import platform.UserNotifications.UNNotificationCategoryOptionNone
 import platform.UserNotifications.UNNotificationRequest
 import platform.UserNotifications.UNNotificationSound
 import platform.UserNotifications.UNUserNotificationCenter
-import kotlin.experimental.ExperimentalNativeApi
-import kotlin.uuid.ExperimentalUuidApi
 import platform.posix.getenv
+import kotlin.experimental.ExperimentalNativeApi
 
 @OptIn(ExperimentalNativeApi::class)
 internal class AppleNotificationHandler(
@@ -64,7 +63,7 @@ internal class AppleNotificationHandler(
 
     private val notificationCategories: SharedHashMap<String, UNNotificationCategory> = SharedHashMap()
 
-    private val notificationCenter: UNUserNotificationCenter? = if(isDebugEnabled) null
+    private val notificationCenter: UNUserNotificationCenter? = if (isDebugEnabled) null
     else UNUserNotificationCenter.currentNotificationCenter()
 
     private fun ensureCategoryExists(key: String) {
@@ -99,13 +98,12 @@ internal class AppleNotificationHandler(
         }
         coroutineScope {
             launch {
-                while(isWaitingForAction) yield()
+                while (isWaitingForAction) yield()
                 callback(this@AppleNotificationHandler, hasPermissions)
             }
         }
     }
 
-    @OptIn(ExperimentalUuidApi::class)
     override suspend fun push(notification: Notification, tag: String): NotificationHandle {
         if (!hasPermissions) return NotificationHandle.INVALID
         val handle = AppleNotificationHandle(tag)
@@ -139,7 +137,6 @@ internal class AppleNotificationHandler(
     }
 
     @Suppress("UNCHECKED_CAST")
-    @OptIn(ExperimentalUuidApi::class)
     override suspend fun pop(handle: NotificationHandle) {
         if (!hasPermissions) return
         handle.check<AppleNotificationHandle>()
