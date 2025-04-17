@@ -22,6 +22,6 @@ internal actual fun createNotificationHandler(
     activationHandler: ActivationHandler,
     closeCallback: () -> Unit,
 ): NotificationHandler {
-    // TODO: implement activation callbacks
     return AppleNotificationHandler(name, id, priority, closeCallback)
+        .withActivationHandler(activationHandler)
 }
