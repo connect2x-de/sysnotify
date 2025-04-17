@@ -26,7 +26,6 @@ import libnotify.GBytes
 import libnotify.GError
 import libnotify.GMainContext
 import libnotify.GMainLoop
-import libnotify.GObject
 import libnotify.gboolean
 import libnotify.gsize
 import platform.posix.atexit
@@ -38,7 +37,6 @@ private typealias _g_bytes_new_static = (
 
 private typealias _g_error_free = (error: CPointer<GError>?) -> Unit
 private typealias _g_bytes_unref = (data: CPointer<GBytes>?) -> Unit
-private typealias _g_object_unref = (obj: CPointer<GObject>?) -> Unit
 
 private typealias _g_main_loop_new = (
     context: CPointer<GMainContext>?,
@@ -55,6 +53,9 @@ private typealias _g_main_context_iteration = (
 
 private typealias _g_main_loop_quit = (loop: CPointer<GMainLoop>?) -> Unit
 
+/**
+ * See [the GTK documentation](https://docs.gtk.org/glib/)
+ */
 @Suppress("FunctionName")
 internal object LibGLib {
     private val library: SharedLibrary? = SharedLibrary.open("libglib-2.0.so")
@@ -66,26 +67,33 @@ internal object LibGLib {
         })
     }
 
+    /**
+     * See [the GTK documentation](https://docs.gtk.org/glib/ctor.Bytes.new_static.html)
+     */
     fun g_bytes_new_static(address: COpaquePointer?, size: gsize): CPointer<GBytes>? {
         return library?.findFunction<_g_bytes_new_static>("g_bytes_new_static")
             ?.invoke(address, size)
     }
 
+    /**
+     * See [the GTK documentation](https://docs.gtk.org/glib/method.Error.free.html)
+     */
     fun g_error_free(error: CPointer<GError>?) {
         library?.findFunction<_g_error_free>("g_error_free")
             ?.invoke(error)
     }
 
+    /**
+     * See [the GTK documentation](https://docs.gtk.org/glib/method.Bytes.unref.html)
+     */
     fun g_bytes_unref(data: CPointer<GBytes>?) {
         library?.findFunction<_g_bytes_unref>("g_bytes_unref")
             ?.invoke(data)
     }
 
-    fun g_object_unref(obj: CPointer<GObject>?) {
-        library?.findFunction<_g_object_unref>("g_object_unref")
-            ?.invoke(obj)
-    }
-
+    /**
+     * See [the GTK documentation](https://docs.gtk.org/glib/ctor.MainLoop.new.html)
+     */
     fun g_main_loop_new(
         context: CPointer<GMainContext>?,
         isRunning: gboolean
@@ -94,20 +102,32 @@ internal object LibGLib {
             ?.invoke(context, isRunning)
     }
 
+    /**
+     * See [the GTK documentation](https://docs.gtk.org/glib/method.MainLoop.unref.html)
+     */
     fun g_main_loop_unref(loop: CPointer<GMainLoop>?) {
         library?.findFunction<_g_main_loop_unref>("g_main_loop_unref")
             ?.invoke(loop)
     }
 
+    /**
+     * See [the GTK documentation](https://docs.gtk.org/glib/method.MainLoop.get_context.html)
+     */
     fun g_main_loop_get_context(loop: CPointer<GMainLoop>?): CPointer<GMainContext>? {
         return library?.findFunction<_g_main_loop_get_context>("g_main_loop_get_context")
             ?.invoke(loop)
     }
 
+    /**
+     * See [the GTK documentation](https://docs.gtk.org/glib/method.MainLoop.quit.html)
+     */
     fun g_main_loop_quit(loop: CPointer<GMainLoop>?) {
         library?.findFunction<_g_main_loop_quit>("g_main_loop_quit")?.invoke(loop)
     }
 
+    /**
+     * See [the GTK documentation](https://docs.gtk.org/glib/method.MainContext.iteration.html)
+     */
     fun g_main_context_iteration(
         context: CPointer<GMainContext>?,
         mayBlock: gboolean

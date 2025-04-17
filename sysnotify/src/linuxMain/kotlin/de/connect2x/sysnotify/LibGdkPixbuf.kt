@@ -40,6 +40,9 @@ private typealias _gdk_pixbuf_new_from_bytes = (
 
 private typealias _gdk_pixbuf_unref = (buffer: CPointer<GdkPixbuf>?) -> Unit
 
+/**
+ * See [the GTK documentation](https://docs.gtk.org/gdk-pixbuf/index.html)
+ */
 @Suppress("FunctionName")
 internal object LibGdkPixbuf {
     private val library: SharedLibrary? = SharedLibrary.open("libgdk_pixbuf-2.0.so")
@@ -51,6 +54,9 @@ internal object LibGdkPixbuf {
         })
     }
 
+    /**
+     * See [the GTK documentation](https://docs.gtk.org/gdk-pixbuf/ctor.Pixbuf.new_from_bytes.html)
+     */
     fun gdk_pixbuf_new_from_bytes(
         data: CPointer<GBytes>?,
         colorSpace: GdkColorspace,
@@ -64,6 +70,9 @@ internal object LibGdkPixbuf {
             ?.invoke(data, colorSpace, hasAlpha, bitsPerSample, width, height, rowStride)
     }
 
+    /**
+     * See [the GTK documentation](https://docs.gtk.org/gdk-pixbuf/method.Pixbuf.unref.html)
+     */
     fun gdk_pixbuf_unref(buffer: CPointer<GdkPixbuf>?) {
         library?.findFunction<_gdk_pixbuf_unref>("gdk_pixbuf_unref")
             ?.invoke(buffer)

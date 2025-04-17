@@ -97,6 +97,9 @@ private typealias _notify_notification_add_action = (
     freeFunc: GFreeFunc?
 ) -> Unit
 
+/**
+ * See [the documentation](https://www.manpagez.com/html/libnotify/libnotify-0.7.7/api-index-full.php)
+ */
 @Suppress("FunctionName")
 internal object LibNotify {
     private val library: SharedLibrary? = SharedLibrary.open("libnotify.so")
@@ -108,16 +111,25 @@ internal object LibNotify {
         })
     }
 
+    /**
+     * See [the documentation](https://www.manpagez.com/html/libnotify/libnotify-0.7.7/libnotify-notify.php#notify-init)
+     */
     fun notify_init(name: String): Int {
         return library?.findFunction<_notify_init>("notify_init")
             ?.invoke(name.cstr) ?: -1
     }
 
+    /**
+     * See [the documentation](https://www.manpagez.com/html/libnotify/libnotify-0.7.7/libnotify-notify.php#notify-uninit)
+     */
     fun notify_uninit() {
         library?.findFunction<_notify_uninit>("notify_uninit")
             ?.invoke()
     }
 
+    /**
+     * See [the documentation](https://www.manpagez.com/html/libnotify/libnotify-0.7.7/NotifyNotification.php#notify-notification-set-icon-from-pixbuf)
+     */
     fun notify_notification_set_icon_from_pixbuf(
         notification: CPointer<NotifyNotification>?,
         buffer: CPointer<GdkPixbuf>?
@@ -126,6 +138,9 @@ internal object LibNotify {
             ?.invoke(notification, buffer)
     }
 
+    /**
+     * See [the documentation](https://www.manpagez.com/html/libnotify/libnotify-0.7.7/NotifyNotification.php#notify-notification-show)
+     */
     fun notify_notification_show(
         notification: CPointer<NotifyNotification>?,
         error: CPointer<CPointerVar<GError>>?
@@ -134,6 +149,9 @@ internal object LibNotify {
             ?.invoke(notification, error) ?: 0
     }
 
+    /**
+     * See [the documentation](https://www.manpagez.com/html/libnotify/libnotify-0.7.7/NotifyNotification.php#notify-notification-new)
+     */
     fun notify_notification_new(
         summary: String?,
         body: String?,
@@ -143,6 +161,9 @@ internal object LibNotify {
             ?.invoke(summary?.cstr, body?.cstr, icon?.cstr)
     }
 
+    /**
+     * See [the documentation](https://www.manpagez.com/html/libnotify/libnotify-0.7.7/NotifyNotification.php#notify-notification-set-app-name)
+     */
     fun notify_notification_set_app_name(
         notification: CPointer<NotifyNotification>?,
         name: String?
@@ -151,6 +172,9 @@ internal object LibNotify {
             ?.invoke(notification, name?.cstr)
     }
 
+    /**
+     * See [the documentation](https://www.manpagez.com/html/libnotify/libnotify-0.7.7/NotifyNotification.php#notify-notification-set-timeout)
+     */
     fun notify_notification_set_timeout(
         notification: CPointer<NotifyNotification>?,
         timeout: gint
@@ -159,6 +183,9 @@ internal object LibNotify {
             ?.invoke(notification, timeout)
     }
 
+    /**
+     * See [the documentation](https://www.manpagez.com/html/libnotify/libnotify-0.7.7/NotifyNotification.php#notify-notification-set-urgency)
+     */
     fun notify_notification_set_urgency(
         notification: CPointer<NotifyNotification>?,
         urgency: NotifyUrgency
@@ -167,6 +194,9 @@ internal object LibNotify {
             ?.invoke(notification, urgency)
     }
 
+    /**
+     * See [the documentation](https://www.manpagez.com/html/libnotify/libnotify-0.7.7/NotifyNotification.php#notify-notification-set-hint-string)
+     */
     fun notify_notification_set_hint_string(
         notification: CPointer<NotifyNotification>?,
         key: String?,
@@ -176,6 +206,9 @@ internal object LibNotify {
             ?.invoke(notification, key?.cstr, value?.cstr)
     }
 
+    /**
+     * See [the documentation](https://www.manpagez.com/html/libnotify/libnotify-0.7.7/NotifyNotification.php#notify-notification-update)
+     */
     fun notify_notification_update(
         notification: CPointer<NotifyNotification>?,
         summary: String?,
@@ -186,6 +219,9 @@ internal object LibNotify {
             ?.invoke(notification, summary?.cstr, body?.cstr, icon?.cstr) ?: 0
     }
 
+    /**
+     * See [the documentation](https://www.manpagez.com/html/libnotify/libnotify-0.7.7/NotifyNotification.php#notify-notification-close)
+     */
     fun notify_notification_close(
         notification: CPointer<NotifyNotification>?,
         error: CPointer<CPointerVar<GError>>?
@@ -194,6 +230,9 @@ internal object LibNotify {
             ?.invoke(notification, error) ?: 0
     }
 
+    /**
+     * See [the documentation](https://www.manpagez.com/html/libnotify/libnotify-0.7.7/NotifyNotification.php#notify-notification-add-action)
+     */
     fun notify_notification_add_action(
         notification: CPointer<NotifyNotification>?,
         action: String?,

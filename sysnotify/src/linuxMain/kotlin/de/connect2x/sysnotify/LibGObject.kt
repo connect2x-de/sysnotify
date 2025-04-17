@@ -41,6 +41,11 @@ private typealias _g_signal_connect_data = (
     connectFlags: GConnectFlags
 ) -> gulong
 
+private typealias _g_object_unref = (obj: CPointer<GObject>?) -> Unit
+
+/**
+ * See [the GTK documentation](https://docs.gtk.org/gobject/index.html)
+ */
 object LibGObject {
     private val library: SharedLibrary? = SharedLibrary.open("libgobject-2.0.so")
 
@@ -51,6 +56,9 @@ object LibGObject {
         })
     }
 
+    /**
+     * See [the GTK documentation](https://docs.gtk.org/gobject/func.signal_connect_data.html)
+     */
     fun g_signal_connect_data(
         instance: CPointer<GObject>?,
         detailedSignal: String,
@@ -61,5 +69,13 @@ object LibGObject {
     ): gulong {
         return library?.findFunction<_g_signal_connect_data>("g_signal_connect_data")
             ?.invoke(instance, detailedSignal.cstr, handler, data, destroyData, connectFlags) ?: 0UL
+    }
+
+    /**
+     * See [the GTK documentation](https://docs.gtk.org/gobject/method.Object.unref.html)
+     */
+    fun g_object_unref(obj: CPointer<GObject>?) {
+        library?.findFunction<_g_object_unref>("g_object_unref")
+            ?.invoke(obj)
     }
 }
