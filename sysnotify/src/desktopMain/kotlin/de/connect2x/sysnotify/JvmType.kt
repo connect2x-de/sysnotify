@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 connect2x GmbH
+ * Copyright 2025 connect2x GmbH
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -58,39 +58,5 @@ internal data class JvmArrayType(private val type: JvmType, private val depth: I
         for (i in 0 until depth) builder.append('[')
         builder.append(type.toSignatureString())
         return builder.toString()
-    }
-}
-
-/**
- * A small DSL builder class for constructing JNI signature strings
- * in a safe(r) manner than by hand.
- * See [JvmType], [JvmBuiltinType], [JvmRefType] and [JvmArrayType].
- */
-internal class JvmSignature {
-    internal val parameters: ArrayList<JvmType> = ArrayList()
-    internal var returnType: JvmType = JvmBuiltinType.VOID
-
-    companion object {
-        data class JvmSignatureResult(val signatureString: String, val signature: JvmSignature)
-
-        inline fun of(scope: JvmSignature.() -> Unit): JvmSignatureResult {
-            val signature = JvmSignature().apply(scope)
-            val builder = StringBuilder()
-            builder.append('(')
-            for (param in signature.parameters) {
-                builder.append(param.toSignatureString())
-            }
-            builder.append(')')
-            builder.append(signature.returnType.toSignatureString())
-            return JvmSignatureResult(builder.toString(), signature)
-        }
-    }
-
-    fun parameter(type: JvmType) {
-        parameters += type
-    }
-
-    fun returns(type: JvmType) {
-        returnType = type
     }
 }

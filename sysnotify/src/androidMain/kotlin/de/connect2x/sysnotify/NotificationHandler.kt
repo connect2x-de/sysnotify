@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 connect2x GmbH
+ * Copyright 2025 connect2x GmbH
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -28,59 +28,93 @@ import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.graphics.drawable.IconCompat
+import co.touchlab.stately.collections.SharedLinkedList
+import kotlinx.coroutines.runBlocking
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import android.app.NotificationChannel as AndroidNotificationChannel
 
-internal class AndroidNotificationHandler(
+/**
+ * Function type for retrieving the Android Context.
+ * Used to provide a Context to the notification handler when needed.
+ */
+typealias ContextGetter = () -> Context
+
+/**
+ * Function type for retrieving the current Activity.
+ * Used to provide an Activity reference to the notification handler when needed.
+ * May return null if no Activity is currently available.
+ */
+typealias ActivityGetter = () -> Activity?
+
+/**
+ * Function type for creating an Intent that will be triggered when a notification is activated.
+ * @param context The Android Context to use for creating the Intent
+ * @param notification The Notification that was activated
+ * @return An Intent that will be used as the PendingIntent for the notification
+ */
+typealias ActivationFactory = (context: Context, notification: Notification) -> Intent
+
+internal class AndroidNotificationHandler( // @formatter:off
     override val name: String,
     override val id: String,
-    override val priority: NotificationPriority,
-    internal val contextGetter: () -> Context,
-    internal var activityGetter: () -> Activity?,
-    private val activationIntent: (Context, Notification) -> Intent,
-    internal var permissionCallback: (Activity, Boolean) -> Unit,
-) : NotificationHandler {
+    override val priority: NotificationPriority
+) : NotificationHandler { // @formatter:on
     companion object {
         const val PERMISSION_REQUEST_CODE: Int = 0xBEEF
     }
 
-    internal val channel: AndroidNotificationChannel = AndroidNotificationChannel(
-        id, name, priority.nativeImportance
-    ).apply { manager.createNotificationChannel(this) }
-    internal val manager: NotificationManagerCompat
-        get() = NotificationManagerCompat.from(contextGetter())
+    private var channel: AtomicReference<AndroidNotificationChannel?> = AtomicReference(null)
+
+    internal var contextGetter: AtomicReference<ContextGetter?> = AtomicReference(null)
+    internal var activityGetter: AtomicReference<ActivityGetter?> = AtomicReference(null)
+    internal var activationIntent: AtomicReference<ActivationFactory?> = AtomicReference(null)
 
     override val platform: NotificationPlatform = NotificationPlatform.ANDROID
     override val capabilities: NotificationCapabilities = NotificationCapabilities(NotificationCapabilities.ALL)
-    override val hasPermissions: Boolean
-        get() = hasNotificationPermissions(contextGetter())
+    internal val permissionRequests: SharedLinkedList<PermissionCallback> = SharedLinkedList()
 
-    override fun close() {
-        manager.deleteNotificationChannel(id)
+    internal val manager: NotificationManagerCompat
+        get() = NotificationManagerCompat.from(context)
+
+    override val hasPermissions: Boolean
+        get() = hasNotificationPermissions(context)
+
+    internal fun getOrCreateChannel(): AndroidNotificationChannel {
+        val current = channel.get()
+        if (current != null) return current
+        val new = AndroidNotificationChannel(
+            id, name, priority.nativeImportance
+        ).apply { manager.createNotificationChannel(this) }
+        channel.set(new)
+        return new
     }
 
-    override suspend fun requestPermissions() {
-        if (hasPermissions) return
-        val activity = requireNotNull(activityGetter()) { "No current activity set" }
+    override fun getHandle(tag: String): NotificationHandle {
+        require(tag.isNotEmpty()) { "Handle tag may not be empty" }
+        return AndroidNotificationHandle(tag)
+    }
+
+    override suspend fun requestPermissions(callback: PermissionCallback) {
         // If we are API level T or above, request permission to push notifications
+        permissionRequests += callback
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             ActivityCompat.requestPermissions(
-                activity,
+                requireNotNull(activity) { "No current activity with set context, use withActivity() to set it" },
                 arrayOf(Manifest.permission.POST_NOTIFICATIONS),
                 PERMISSION_REQUEST_CODE
             )
         }
     }
 
-    @OptIn(ExperimentalUuidApi::class)
     internal fun createImpl(
         notification: Notification,
         handle: AndroidNotificationHandle = AndroidNotificationHandle(),
         callback: NotificationCompat.Builder.() -> Unit = {},
     ): AndroidNotificationHandle {
         return handle.apply {
-            val context = contextGetter()
+            val context = this@AndroidNotificationHandler.context
             value = NotificationCompat.Builder(context, id).apply {
                 setContentTitle(notification.title ?: name)
                 setContentText(notification.description)
@@ -91,7 +125,10 @@ internal class AndroidNotificationHandler(
 
                 // Setup sound
                 if (notification.playSound) notification.soundPath?.let { setSound(Uri.parse(it)) }
-                else setSound(null)
+                else {
+                    setSilent(true)
+                    setSound(null)
+                }
 
                 // Setup icon, fallback to default icon if none was specified
                 val icon = notification.icon
@@ -107,7 +144,8 @@ internal class AndroidNotificationHandler(
                     PendingIntent.getActivity(
                         context,
                         0,
-                        activationIntent(context, notification),
+                        activationIntent.get()?.let { it(context, notification) }
+                            ?: context.getDefaultActivationFactory()(context, notification),
                         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                     )
                 )
@@ -117,14 +155,11 @@ internal class AndroidNotificationHandler(
         }
     }
 
-    override fun create(notification: Notification): NotificationHandle = createImpl(notification)
-
-    @OptIn(ExperimentalUuidApi::class)
     @SuppressLint("MissingPermission") // It is the callers responsibility to make sure perms are defined
-    override suspend fun push(notification: Notification): NotificationHandle {
-        if (!hasPermissions) return AndroidNotificationHandle()
-        return createImpl(notification).apply {
-            manager.notify(hashCode(), requireNotNull(value) { "Invalid notification handle" })
+    override suspend fun push(notification: Notification, tag: String): NotificationHandle {
+        if (!hasPermissions) return NotificationHandle.INVALID
+        return createImpl(notification, AndroidNotificationHandle(tag)).apply {
+            manager.notify(this.tag, 0, requireNotNull(value) { "Invalid notification handle" })
         }
     }
 
@@ -133,63 +168,173 @@ internal class AndroidNotificationHandler(
         handle: NotificationHandle,
         notification: Notification
     ): NotificationHandle {
-        if (!hasPermissions) return handle
-        require(handle is AndroidNotificationHandle) { "Handle is not an android notification handle" }
+        if (!hasPermissions) return NotificationHandle.INVALID
+        handle.check<AndroidNotificationHandle>()
         return createImpl(notification, handle).apply {
-            manager.notify(hashCode(), requireNotNull(value) { "Invalid notification handle" })
+            manager.notify(tag, 0, requireNotNull(value) { "Invalid notification handle" })
         }
     }
 
     override suspend fun pop(handle: NotificationHandle) {
         if (!hasPermissions) return
-        require(handle is AndroidNotificationHandle) { "Handle is not an android notification handle" }
-        manager.cancel(handle.hashCode())
+        handle.check<AndroidNotificationHandle>()
+        manager.cancel(handle.tag, 0)
+    }
+
+    override suspend fun clearAll() {
+        if (!hasPermissions) return
+        manager.cancelAll()
+    }
+
+    override fun close() {
+        permissionRequests.clear()
+        manager.deleteNotificationChannel(id)
+        runBlocking { clearAll() }
     }
 }
 
 /**
- * Same as [NotificationHandler.create] but with an additional
- * builder callback to customize the platform-specific notification instance.
+ * Gets the Android Context associated with this NotificationHandler.
+ *
+ * @return The Android Context
+ * @throws ClassCastException if the handler is not an AndroidNotificationHandler
+ * @throws IllegalStateException if no context has been set
  */
-@OptIn(ExperimentalUuidApi::class)
+val NotificationHandler.context: Context
+    get() {
+        check<AndroidNotificationHandler>()
+        return activityGetter.get()?.invoke()
+            ?: requireNotNull(contextGetter.get()?.invoke()) {
+                "No context associated with NotificationHandler, use withContext() to set it"
+            }
+    }
+
+/**
+ * Gets the current Activity associated with this NotificationHandler.
+ *
+ * @return The current Activity, or null if no Activity is available
+ * @throws ClassCastException if the handler is not an AndroidNotificationHandler
+ * @throws IllegalStateException if no activity getter has been set
+ */
+val NotificationHandler.activity: Activity?
+    get() {
+        check<AndroidNotificationHandler>()
+        return activityGetter.get()?.invoke()
+    }
+
+/**
+ * Associates an Android Context with this NotificationHandler.
+ *
+ * This method must be called before using the NotificationHandler.
+ *
+ * @param getter A function that provides the Android Context
+ * @return This NotificationHandler for method chaining
+ * @throws ClassCastException if the handler is not an AndroidNotificationHandler
+ */
+fun NotificationHandler.withContext(getter: () -> Context): NotificationHandler {
+    check<AndroidNotificationHandler>()
+    contextGetter.set(getter)
+    getOrCreateChannel() // Make sure channel is created once context is available
+    return this
+}
+
+/**
+ * Associates an Activity with this NotificationHandler.
+ *
+ * This method should be called if you need to request notification permissions,
+ * as permission requests require an Activity.
+ *
+ * @param getter A function that provides the current Activity
+ * @return This NotificationHandler for method chaining
+ * @throws ClassCastException if the handler is not an AndroidNotificationHandler
+ */
+fun NotificationHandler.withActivity(getter: () -> Activity): NotificationHandler {
+    check<AndroidNotificationHandler>()
+    activityGetter.set(getter)
+    getOrCreateChannel() // Make sure channel is created once activity is available
+    return this
+}
+
+/**
+ * Associates an ActivationFactory with this NotificationHandler.
+ *
+ * The ActivationFactory is used to create Intents that determine what happens
+ * when a user clicks on a notification. This allows customizing the activation
+ * behavior of notifications.
+ *
+ * @param factory A function that creates an Intent for notification activation
+ * @return This NotificationHandler for method chaining
+ * @throws ClassCastException if the handler is not an AndroidNotificationHandler
+ */
+fun NotificationHandler.withActivationFactory(factory: ActivationFactory): NotificationHandler {
+    check<AndroidNotificationHandler>()
+    activationIntent.set(factory)
+    return this
+}
+
+/**
+ * Creates a notification without displaying it.
+ *
+ * This method is useful when you want to create a notification but display it later
+ * or when you need to customize the notification beyond what the standard parameters allow.
+ *
+ * @param notification The notification to create
+ * @param tag A unique identifier for the notification (defaults to a random UUID)
+ * @param callback Additional configuration to apply to the notification builder
+ * @return A handle for the created notification
+ * @throws ClassCastException if the handler is not an AndroidNotificationHandler
+ */
 fun NotificationHandler.create(
     notification: Notification,
-    tag: Uuid = Uuid.random(),
+    tag: String = Uuid.random().toHexString(),
     callback: NotificationCompat.Builder.() -> Unit,
 ): NotificationHandle {
-    require(this is AndroidNotificationHandler)
+    check<AndroidNotificationHandler>()
     return createImpl(
         notification = notification,
-        callback = callback,
-        handle = AndroidNotificationHandle(tag)
+        handle = AndroidNotificationHandle(tag),
+        callback = callback
     )
 }
 
 /**
- * Same as [NotificationHandler.push] but with an additional
- * builder callback to customize the platform-specific notification instance.
+ * Creates and displays a notification with additional customization options.
+ *
+ * This extension function allows for more customization of the notification
+ * through the callback parameter.
+ *
+ * @param notification The notification to display
+ * @param tag A unique identifier for the notification (defaults to a random UUID)
+ * @param callback Additional configuration to apply to the notification builder
+ * @return A handle for the displayed notification, or INVALID if permissions are not granted
+ * @throws ClassCastException if the handler is not an AndroidNotificationHandler
  */
 @OptIn(ExperimentalUuidApi::class)
 @SuppressLint("MissingPermission") // It is the callers responsibility to make sure perms are defined
 fun NotificationHandler.push(
     notification: Notification,
-    tag: Uuid = Uuid.random(),
+    tag: String = Uuid.random().toHexString(),
     callback: NotificationCompat.Builder.() -> Unit,
 ): NotificationHandle {
-    require(this is AndroidNotificationHandler)
-    if (!hasPermissions) return AndroidNotificationHandle()
+    if (!hasPermissions) return NotificationHandle.INVALID
+    check<AndroidNotificationHandler>()
     return createImpl(
         notification = notification,
         callback = callback,
         handle = AndroidNotificationHandle(tag)
     ).apply {
-        manager.notify(hashCode(), requireNotNull(value) { "Invalid notification handle" })
+        manager.notify(this.tag, 0, requireNotNull(value) { "Invalid notification handle" })
     }
 }
 
 /**
- * Same as [NotificationHandler.update] but with an additional
- * builder callback to customize the platform-specific notification instance.
+ * Updates an existing notification with new content and additional customization options.
+ *
+ * @param handle The handle of the notification to update
+ * @param notification The new notification content
+ * @param callback Additional configuration to apply to the notification builder
+ * @return The updated notification handle, or INVALID if permissions are not granted
+ * @throws ClassCastException if the handler is not an AndroidNotificationHandler or if the handle is not an AndroidNotificationHandle
  */
 @OptIn(ExperimentalUuidApi::class)
 @SuppressLint("MissingPermission") // It is the callers responsibility to make sure perms are defined
@@ -198,105 +343,92 @@ fun NotificationHandler.update(
     notification: Notification,
     callback: NotificationCompat.Builder.() -> Unit,
 ): NotificationHandle {
-    require(this is AndroidNotificationHandler && handle is AndroidNotificationHandle)
-    if (!hasPermissions) return AndroidNotificationHandle()
+    if (!hasPermissions) return NotificationHandle.INVALID
+    check<AndroidNotificationHandler>()
+    handle.check<AndroidNotificationHandle>()
     return createImpl(
         notification = notification,
         callback = callback,
         handle = handle,
     ).apply {
-        manager.notify(hashCode(), requireNotNull(value) { "Invalid notification handle" })
+        manager.notify(tag, 0, requireNotNull(value) { "Invalid notification handle" })
     }
 }
 
 /**
- * Call this in the [Activity.onRequestPermissionsResult] of your main activity
- * to automatically handle notification permission requests initiated by [NotificationHandler.requestPermissions].
- * This will invoke the `permissionCallback` specified when creating the notification handler instance.
+ * Handles the result of a permission request.
  *
- * @param requestCode The unique code of the permission request. `0xBEEF` for SysNotify requests.
- * @param grantResults An array of all grant results for each requested permission.
+ * This method should be called from the Activity's onRequestPermissionsResult method
+ * to process the result of a notification permission request.
+ *
+ * @param requestCode The request code from onRequestPermissionsResult
+ * @param grantResults The grant results from onRequestPermissionsResult
+ * @throws ClassCastException if the handler is not an AndroidNotificationHandler
  */
 fun NotificationHandler.handlePermissionRequest(requestCode: Int, grantResults: IntArray) {
     if (requestCode != AndroidNotificationHandler.PERMISSION_REQUEST_CODE || grantResults.isEmpty()) return
-    require(this is AndroidNotificationHandler)
+    check<AndroidNotificationHandler>()
     if (grantResults.first() == PackageManager.PERMISSION_DENIED) {
-        permissionCallback(requireNotNull(activityGetter()) { "No current activity set" }, false)
+        for (request in permissionRequests) {
+            runBlocking { request(this@handlePermissionRequest, false) }
+        }
+        permissionRequests.clear()
         return
     }
-    permissionCallback(requireNotNull(activityGetter()) { "No current activity set" }, true)
+    for (request in permissionRequests) {
+        runBlocking { request(this@handlePermissionRequest, true) }
+    }
+    permissionRequests.clear()
 }
 
 /**
- * Overrides the getter function which provides the current activity instance.
- * If the [NotificationHandler] instance was created by a service instead of an activity,
- * this function must be called before using either [NotificationHandler.requestPermissions] or [getLaunchNotification].
+ * Gets the notification that launched the current activity, if any.
  *
- * @param activity The current activity instance.
- * @return This notification handler instance.
- */
-fun NotificationHandler.withActivity(activity: Activity): NotificationHandler {
-    require(this is AndroidNotificationHandler)
-    activityGetter = { activity }
-    return this
-}
-
-/**
- * Retrieves the [Notification] instance the current activity was started from,
- * including the specified user data.
+ * This method can be used to determine if the activity was launched from a notification
+ * and to retrieve the notification data.
  *
- * @return The [Notification] instance the current activity was started from.
+ * @return The notification that launched the activity, or null if the activity was not launched from a notification
+ * @throws ClassCastException if the handler is not an AndroidNotificationHandler
  */
 @Suppress("DEPRECATION")
 fun NotificationHandler.getLaunchNotification(): ParcelableNotification? {
-    require(this is AndroidNotificationHandler)
-    return activityGetter()?.intent?.let {
-        return@let if (!it.hasExtra(SysNotifyIntent.EXTRA_LAUNCH_NOTIFICATION)) null
-        else it.getParcelableExtra<ParcelableNotification>(SysNotifyIntent.EXTRA_LAUNCH_NOTIFICATION)
+    check<AndroidNotificationHandler>()
+    return activity?.intent?.let { intent ->
+        return@let if (!intent.hasExtra(SysNotifyIntent.EXTRA_LAUNCH_NOTIFICATION)) null
+        else intent.getParcelableExtra(SysNotifyIntent.EXTRA_LAUNCH_NOTIFICATION)
     }
 }
 
 /**
- * The native [AndroidNotificationChannel] instance associated with this notification handler.
+ * Gets the Android notification channel associated with this NotificationHandler.
+ *
+ * @return The Android notification channel
+ * @throws ClassCastException if the handler is not an AndroidNotificationHandler
  */
-val NotificationHandler.nativeChannel: AndroidNotificationChannel
+val NotificationHandler.channel: AndroidNotificationChannel
     get() {
-        require(this is AndroidNotificationHandler) { "Handler is not an Android notification handler" }
-        return channel
+        check<AndroidNotificationHandler>()
+        return getOrCreateChannel()
     }
 
 /**
- * Creates a new Android notification handler instance with the given name and ID.
- * The internal ID of the handler should ideally match the app's package group.
+ * Creates a default activation factory for the given Context.
  *
- * @param name The display name of the notification handler. May appear in notifications.
- * @param id The internal ID of the notification handler.
- * @param contextGetter A getter closure which provides the context associated with your app. This may be an
- *  application context, a service or an activity.
- * @param activityGetter A getter closure which provides the current activity of your app.
- *  This is required for requesting permissions and retrieving the launch notification.
- * @param activationIntent A factory closure which creates a new [Intent] or any subtype of it.
- *  For each pushed notification, this closure will be invoked to create an associated launch intent,
- *  which will be activated when the user taps on one of the notifications pushed by SysNotify.
- * @param permissionCallback An optional callback closure which is called when the permission grant results are processed.
- *  The boolean parameter will be true if the permission was granted, false otherwise.
- * @return A new notification handler with the given properties.
+ * The activation factory creates an Intent that will be triggered when a notification is activated.
+ * The default implementation creates an Intent that will launch the current Activity.
+ *
+ * @return An ActivationFactory that creates Intents for notification activation
+ * @throws IllegalStateException if the Context is not an Activity
  */
-fun NotificationHandler.Companion.create(
+fun Context.getDefaultActivationFactory(): ActivationFactory = { context, notification ->
+    check(this is Activity) { "An activity is required for a notification intent" }
+    SysNotifyIntent(context, this::class.java, notification)
+}
+
+actual fun NotificationHandler( // @formatter:off
     name: String,
-    id: String = name,
-    contextGetter: () -> Context,
-    activityGetter: () -> Activity? = { contextGetter() as? Activity },
-    activationIntent: (Context, Notification) -> Intent,
-    permissionCallback: (Activity, Boolean) -> Unit = { _, _ -> },
-    priority: NotificationPriority = NotificationPriority.DEFAULT,
-): NotificationHandler =
-    AndroidNotificationHandler(
-        name,
-        id,
-        priority,
-        contextGetter,
-        activityGetter,
-        activationIntent,
-        permissionCallback,
-    )
+    id: String,
+    priority: NotificationPriority
+): NotificationHandler { // @formatter:on
+    return AndroidNotificationHandler(name, id, priority)
+}

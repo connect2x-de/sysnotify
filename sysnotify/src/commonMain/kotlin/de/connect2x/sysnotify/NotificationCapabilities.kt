@@ -18,27 +18,51 @@ package de.connect2x.sysnotify
 import kotlin.jvm.JvmInline
 
 /**
- * @author Alexander Hinze
- * @since 07/01/2025
+ * Represents the capabilities of a notification system on a specific platform.
+ * 
+ * This class uses a bit mask to efficiently store which notification features
+ * are supported by the underlying platform implementation. Each bit in the mask
+ * corresponds to a specific capability such as title support, icon support, etc.
  *
- * A value class describing the capabilities of a given [NotificationHandler] instance.
- * Each flag indicates whether a feature is supported.
- * The [isSupported] flag indicates if notifications are supported on the current platform at all.
+ * @property mask The bit mask representing the supported capabilities.
  */
 @JvmInline
 value class NotificationCapabilities(val mask: UInt) {
+    /**
+     * Contains constants for all supported notification capabilities.
+     * Each constant represents a specific bit in the capabilities mask.
+     */
     companion object {
         // @formatter:off
+        /** Indicates whether the notification system supports displaying a title. */
         const val IS_TITLE_SUPPORTED: UInt          = 0b0000_0001U
+
+        /** Indicates whether the notification system supports displaying a description/content. */
         const val IS_DESCRIPTION_SUPPORTED: UInt    = 0b0000_0010U
+
+        /** Indicates whether the notification system supports displaying an icon. */
         const val IS_ICON_SUPPORTED: UInt           = 0b0000_0100U
+
+        /** Indicates whether the notification system supports action callbacks. */
         const val IS_ACTION_SUPPORTED: UInt         = 0b0000_1000U
+
+        /** Indicates whether the notification system supports dismissing/popping notifications. */
         const val IS_POP_SUPPORTED: UInt            = 0b0001_0000U
+
+        /** Indicates whether the notification system supports playing sounds. */
         const val IS_SOUND_SUPPORTED: UInt          = 0b0010_0000U
+
+        /** Indicates whether the notification system supports custom sound files. */
         const val IS_CUSTOM_SOUND_SUPPORTED: UInt   = 0b0100_0000U
+
+        /** Indicates whether the notification system supports grouping notifications. */
         const val IS_GROUPING_SUPPORTED: UInt       = 0b1000_0000U
         // @formatter:on
 
+        /**
+         * A mask with all capabilities enabled.
+         * This represents a notification system that supports all available features.
+         */
         val ALL: UInt = IS_TITLE_SUPPORTED or
                 IS_DESCRIPTION_SUPPORTED or
                 IS_ICON_SUPPORTED or
@@ -49,6 +73,18 @@ value class NotificationCapabilities(val mask: UInt) {
                 IS_GROUPING_SUPPORTED
     }
 
+    /**
+     * Constructs a NotificationCapabilities instance from individual boolean flags.
+     *
+     * @param isTitleSupported Whether title display is supported
+     * @param isDescriptionSupported Whether description/content display is supported
+     * @param isIconSupported Whether icon display is supported
+     * @param isActionSupported Whether action callbacks are supported
+     * @param isPopSupported Whether dismissing/popping notifications is supported
+     * @param isSoundSupported Whether playing sounds is supported
+     * @param isCustomSoundSupported Whether custom sound files are supported
+     * @param isGroupingSupported Whether grouping notifications is supported
+     */
     constructor(
         isTitleSupported: Boolean,
         isDescriptionSupported: Boolean,
@@ -69,27 +105,51 @@ value class NotificationCapabilities(val mask: UInt) {
                 or if (isGroupingSupported) IS_GROUPING_SUPPORTED else 0U
     )
 
+    /**
+     * Indicates whether the notification system supports displaying a title.
+     */
     inline val isTitleSupported: Boolean
         get() = (mask and IS_TITLE_SUPPORTED) == IS_TITLE_SUPPORTED
 
+    /**
+     * Indicates whether the notification system supports displaying a description/content.
+     */
     inline val isDescriptionSupported: Boolean
         get() = (mask and IS_DESCRIPTION_SUPPORTED) == IS_DESCRIPTION_SUPPORTED
 
+    /**
+     * Indicates whether the notification system supports displaying an icon.
+     */
     inline val isIconSupported: Boolean
         get() = (mask and IS_ICON_SUPPORTED) == IS_ICON_SUPPORTED
 
+    /**
+     * Indicates whether the notification system supports action callbacks.
+     */
     inline val isActionSupported: Boolean
         get() = (mask and IS_ACTION_SUPPORTED) == IS_ACTION_SUPPORTED
 
+    /**
+     * Indicates whether the notification system supports dismissing/popping notifications.
+     */
     inline val isPopSupported: Boolean
         get() = (mask and IS_POP_SUPPORTED) == IS_POP_SUPPORTED
 
+    /**
+     * Indicates whether the notification system supports playing sounds.
+     */
     inline val isSoundSupported: Boolean
         get() = (mask and IS_SOUND_SUPPORTED) == IS_SOUND_SUPPORTED
 
+    /**
+     * Indicates whether the notification system supports custom sound files.
+     */
     inline val isCustomSoundSupported: Boolean
         get() = (mask and IS_CUSTOM_SOUND_SUPPORTED) == IS_CUSTOM_SOUND_SUPPORTED
 
+    /**
+     * Indicates whether the notification system supports grouping notifications.
+     */
     inline val isGroupingSupported: Boolean
         get() = (mask and IS_GROUPING_SUPPORTED) == IS_GROUPING_SUPPORTED
 

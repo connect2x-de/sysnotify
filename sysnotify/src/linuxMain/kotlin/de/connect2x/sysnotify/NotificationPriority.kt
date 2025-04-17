@@ -20,6 +20,15 @@ package de.connect2x.sysnotify
 import kotlinx.cinterop.ExperimentalForeignApi
 import libnotify.NotifyUrgency
 
+/**
+ * Maps the common [NotificationPriority] enum values to the Linux-specific [NotifyUrgency] enum values.
+ * 
+ * This extension property is used internally by the Linux implementation to convert the
+ * platform-independent notification priority to the corresponding libnotify urgency level:
+ * - [NotificationPriority.LOW] maps to [NotifyUrgency.NOTIFY_URGENCY_LOW]
+ * - [NotificationPriority.DEFAULT] maps to [NotifyUrgency.NOTIFY_URGENCY_NORMAL]
+ * - [NotificationPriority.HIGH] maps to [NotifyUrgency.NOTIFY_URGENCY_CRITICAL]
+ */
 inline val NotificationPriority.urgency: NotifyUrgency
     get() = when (this) {
         NotificationPriority.LOW -> NotifyUrgency.NOTIFY_URGENCY_LOW

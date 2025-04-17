@@ -15,10 +15,6 @@
 
 package de.connect2x.sysnotify
 
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
-
-@OptIn(ExperimentalUuidApi::class)
 internal data class AppleNotificationHandle(
-    val uuid: Uuid = Uuid.random()
+    override val tag: String
 ) : NotificationHandle

@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 connect2x GmbH
+ * Copyright 2025 connect2x GmbH
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,7 +13,31 @@
  * limitations under the License.
  */
 
+@file:JvmMultifileClass
+@file:JvmName("NotificationHandler$")
+
 package de.connect2x.sysnotify
+
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
+import kotlin.jvm.JvmMultifileClass
+import kotlin.jvm.JvmName
+import kotlin.uuid.Uuid
+
+/**
+ * A callback function that is invoked after permission to show notifications has been requested.
+ *
+ * @param handler The notification handler that requested the permission
+ * @param granted Boolean indicating whether permission was granted (true) or denied (false)
+ */
+typealias PermissionCallback = suspend (handler: NotificationHandler, granted: Boolean) -> Unit
+
+/**
+ * A callback function that is invoked when a user interacts with (clicks/activates) a notification.
+ *
+ * @param notification The notification object that was activated by the user
+ */
+typealias ActivationHandler = (notification: Notification) -> Unit
 
 /**
  * This interface provides platform-agnostic functions to interact with the OSs notifications.
@@ -39,7 +63,8 @@ interface NotificationHandler : AutoCloseable {
     /**
      * The internal ID of the notification handler.
      * This usually follows the underlying platform's naming conventions;
-     * Package group on JVM and Android, AUMID on Windows etc.
+     * A standard convention of <tld>.<company>.<product> must be used
+     * to guarantee correct platform-specific conversion under the hood.
      */
     val id: String
 
@@ -72,20 +97,18 @@ interface NotificationHandler : AutoCloseable {
     val priority: NotificationPriority
 
     /**
-     * Creates a new notification which has a valid associated system notification,
-     * but is not pushed to be displayed. This can be useful on certain systems like
-     * Android to create Notification instances without explicitly pushing them.
+     * Retrieves a notification handle for a notification with the given tag.
      *
-     * @param notification The notification contents to create the new notification from.
-     * @return A new notification with the given content.
+     * @param tag A unique string identifying a particular notification.
+     * @return The notification handle associated with the tag, or an invalid handle if no notification with the given tag exists.
      */
-    fun create(notification: Notification): NotificationHandle
+    fun getHandle(tag: String): NotificationHandle = NotificationHandle.INVALID
 
     /**
      * Requests the permissions to show notifications from the underlying platform
-     * when possible. Otherwise this function returns without any side effects.
+     * when possible. Otherwise, this function returns without any side effects.
      */
-    suspend fun requestPermissions() {}
+    suspend fun requestPermissions(callback: PermissionCallback = { _, _ -> }) {}
 
     /**
      * Clears all notifications that were created by this notification handler instance.
@@ -97,10 +120,14 @@ interface NotificationHandler : AutoCloseable {
      * be displayed by the underlying platform.
      *
      * @param notification The notification contents to create the new notification from.
+     * @param tag A unique string identifying this particular notification. Must be application-unique.
      * @return A new notification with the given content which has been shown by the system
      *  when successful, null otherwise.
      */
-    suspend fun push(notification: Notification): NotificationHandle?
+    suspend fun push(
+        notification: Notification,
+        tag: String = Uuid.random().toHexString()
+    ): NotificationHandle
 
     /**
      * Hides and removes the given notification if it is valid and if it exists.
@@ -108,6 +135,15 @@ interface NotificationHandler : AutoCloseable {
      * @param handle A handle to the notification to hide and remove.
      */
     suspend fun pop(handle: NotificationHandle)
+
+    /**
+     * Hides and removes a notification identified by its tag.
+     * This is a convenience method that retrieves the notification handle using the tag
+     * and then calls the primary pop method.
+     *
+     * @param tag A unique string identifying the notification to hide and remove.
+     */
+    suspend fun pop(tag: String) = pop(getHandle(tag))
 
     /**
      * Updates the given existing notification with the given content if it is valid.
@@ -118,10 +154,25 @@ interface NotificationHandler : AutoCloseable {
     suspend fun update(
         handle: NotificationHandle,
         notification: Notification,
-    ): NotificationHandle? {
+    ): NotificationHandle {
         pop(handle)
         return push(notification)
     }
+
+    /**
+     * Updates an existing notification identified by its tag with the given content.
+     * This is a convenience method that retrieves the notification handle using the tag
+     * and then calls the primary update method.
+     *
+     * @param tag A unique string identifying the notification to update.
+     * @param notification The new notification contents to update with.
+     * @return The notification handle associated with the updated notification when successful,
+     *  or an invalid handle if the update failed.
+     */
+    suspend fun update(
+        tag: String,
+        notification: Notification
+    ): NotificationHandle = update(getHandle(tag), notification)
 
     /**
      * Frees all underlying resources allocated by this notification handler if any
@@ -129,10 +180,40 @@ interface NotificationHandler : AutoCloseable {
      * **Always call this when you're done using the notification handler!**
      */
     override fun close() {}
-
-    companion object // Used for create implementations
 }
 
+/**
+ * Type-checking utility function that verifies if the receiver [NotificationHandler] is of type [H].
+ *
+ * This function uses Kotlin contracts to inform the compiler that if this function returns normally
+ * (without throwing an exception), then the receiver can be safely cast to type [H] in the calling context.
+ *
+ * @param H The specific [NotificationHandler] type to check against
+ * @throws ClassCastException implicitly if the receiver is not of type [H]
+ */
+@PublishedApi
+@OptIn(ExperimentalContracts::class)
+internal inline fun <reified H : NotificationHandler> NotificationHandler.check() {
+    contract { returns() implies (this@check is H) }
+}
+
+expect fun NotificationHandler(
+    name: String,
+    id: String = name,
+    priority: NotificationPriority = NotificationPriority.DEFAULT
+): NotificationHandler
+
+/**
+ * A no-operation implementation of the [NotificationHandler] interface.
+ *
+ * This implementation does not perform any actual notification operations and is useful in scenarios where:
+ * - Notifications are not supported or available on the current platform
+ * - A placeholder implementation is needed during testing or development
+ * - A fallback is required when the primary notification handler cannot be initialized
+ *
+ * All methods return invalid or null values, and no actual notifications will be displayed.
+ * This handler always reports [NotificationPlatform.UNKNOWN] as its platform and has no permissions or capabilities.
+ */
 object NoopNotificationHandler : NotificationHandler {
     override val name: String = "NOOP"
     override val id: String = "no.op.noop"
@@ -141,13 +222,17 @@ object NoopNotificationHandler : NotificationHandler {
     override val capabilities: NotificationCapabilities = NotificationCapabilities(0U)
     override val priority: NotificationPriority = NotificationPriority.DEFAULT
 
-    override fun create(notification: Notification): NotificationHandle = InvalidNotificationHandle
-    override suspend fun push(notification: Notification): NotificationHandle = InvalidNotificationHandle
+    override fun getHandle(tag: String): NotificationHandle = NotificationHandle.INVALID
+
+    override suspend fun push(
+        notification: Notification,
+        tag: String
+    ): NotificationHandle = NotificationHandle.INVALID
 
     override suspend fun update(
         handle: NotificationHandle,
         notification: Notification
-    ): NotificationHandle = InvalidNotificationHandle
+    ): NotificationHandle = NotificationHandle.INVALID
 
     override suspend fun pop(handle: NotificationHandle) {}
 }

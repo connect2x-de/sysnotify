@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 connect2x GmbH
+ * Copyright 2025 connect2x GmbH
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,8 +18,10 @@ package de.connect2x.sysnotify
 internal actual fun createNotificationHandler(
     name: String,
     id: String,
-    activationCallback: (Notification) -> Unit,
     priority: NotificationPriority,
+    activationHandler: ActivationHandler,
+    closeCallback: () -> Unit,
 ): NotificationHandler {
-    return WindowsNotificationHandler(name, id, priority, activationCallback)
+    return WindowsNotificationHandler(name, id, priority, closeCallback)
+        .withActivationHandler(activationHandler)
 }

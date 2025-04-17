@@ -15,8 +15,38 @@
 
 package de.connect2x.sysnotify
 
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 import org.w3c.notifications.Notification as JsNotification
 
+@OptIn(ExperimentalUuidApi::class)
 internal class WebNotificationHandle(
-    val instance: JsNotification
-) : NotificationHandle
+    override val tag: String = Uuid.random().toHexString(),
+    val instance: JsNotification? = null
+) : NotificationHandle {
+    override fun equals(other: Any?): Boolean {
+        return if (other !is WebNotificationHandle) false
+        else tag == other.tag
+    }
+
+    override fun hashCode(): Int = tag.hashCode()
+    override fun toString(): String = tag
+}
+
+/**
+ * Extension property to access the web [JsNotification] object from a [NotificationHandle].
+ *
+ * This property performs several checks to ensure the handle is valid and contains a proper
+ * web notification reference before returning it.
+ *
+ * @throws IllegalArgumentException If the handle is not an [WebNotificationHandle],
+ *                                  if the handle is not valid, or if the handle does not
+ *                                  contain a valid Android Notification reference.
+ * @return The web [Notification] object.
+ */
+val NotificationHandle.notification: JsNotification
+    get() {
+        require(this is WebNotificationHandle) { "Handle is not a web notification handle" }
+        require(isValid) { "Handle must be valid" }
+        return requireNotNull(instance) { "Handle does not contain a valid web Notification reference" }
+    }

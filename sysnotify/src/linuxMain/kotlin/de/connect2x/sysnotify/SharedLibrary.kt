@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 connect2x GmbH
+ * Copyright 2025 connect2x GmbH
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -74,7 +74,7 @@ internal class SharedLibrary(
     }
 
     inline fun <reified T : Function<*>> findFunction(name: String): CPointer<CFunction<T>> {
-        return requireNotNull(findFunctionOrNull(name)) { "Could not find function ${this.name}:$name" }.reinterpret()
+        return requireNotNull(findFunctionOrNull<T>(name)) { "Could not find function ${this.name}:$name" }
     }
 }
 

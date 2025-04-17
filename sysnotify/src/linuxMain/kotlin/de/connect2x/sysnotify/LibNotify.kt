@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 connect2x GmbH
+ * Copyright 2025 connect2x GmbH
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,6 +18,7 @@
 package de.connect2x.sysnotify
 
 import kotlinx.cinterop.ByteVar
+import kotlinx.cinterop.COpaquePointer
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.CPointerVar
 import kotlinx.cinterop.CValues
@@ -26,7 +27,9 @@ import kotlinx.cinterop.cstr
 import kotlinx.cinterop.invoke
 import kotlinx.cinterop.staticCFunction
 import libnotify.GError
+import libnotify.GFreeFunc
 import libnotify.GdkPixbuf
+import libnotify.NotifyActionCallback
 import libnotify.NotifyNotification
 import libnotify.NotifyUrgency
 import libnotify.gboolean
@@ -69,8 +72,8 @@ private typealias _notify_notification_set_urgency = (
 
 private typealias _notify_notification_set_hint_string = (
     notification: CPointer<NotifyNotification>?,
-    name: CValues<ByteVar>?,
-    path: CValues<ByteVar>?
+    key: CValues<ByteVar>?,
+    value: CValues<ByteVar>?
 ) -> Unit
 
 private typealias _notify_notification_update = (
@@ -85,103 +88,160 @@ private typealias _notify_notification_close = (
     error: CPointer<CPointerVar<GError>>?
 ) -> gboolean
 
+private typealias _notify_notification_add_action = (
+    notification: CPointer<NotifyNotification>?,
+    action: CValues<ByteVar>?,
+    label: CValues<ByteVar>?,
+    callback: NotifyActionCallback?,
+    userData: COpaquePointer?,
+    freeFunc: GFreeFunc?
+) -> Unit
+
+/**
+ * See [the documentation](https://www.manpagez.com/html/libnotify/libnotify-0.7.7/api-index-full.php)
+ */
 @Suppress("FunctionName")
 internal object LibNotify {
-    private val library: SharedLibrary? = SharedLibrary.open("libnotify.so")?.also {
-        println("Loaded libnotify successfully")
-    }
+    private val library: SharedLibrary? = SharedLibrary.open("libnotify.so")
 
     init {
         atexit(staticCFunction<Unit> {
-            // Must use explicit object ref to avoid non-capturing limitations
+            // Need a fully qualified reference to avoid capturing implicitly
             LibNotify.library?.close()
-            println("Unloaded libnotify successfully")
         })
     }
 
+    /**
+     * See [the documentation](https://www.manpagez.com/html/libnotify/libnotify-0.7.7/libnotify-notify.php#notify-init)
+     */
     fun notify_init(name: String): Int {
-        return library?.findFunctionOrNull<_notify_init>("notify_init")
+        return library?.findFunction<_notify_init>("notify_init")
             ?.invoke(name.cstr) ?: -1
     }
 
+    /**
+     * See [the documentation](https://www.manpagez.com/html/libnotify/libnotify-0.7.7/libnotify-notify.php#notify-uninit)
+     */
     fun notify_uninit() {
-        library?.findFunctionOrNull<_notify_uninit>("notify_uninit")
+        library?.findFunction<_notify_uninit>("notify_uninit")
             ?.invoke()
     }
 
+    /**
+     * See [the documentation](https://www.manpagez.com/html/libnotify/libnotify-0.7.7/NotifyNotification.php#notify-notification-set-icon-from-pixbuf)
+     */
     fun notify_notification_set_icon_from_pixbuf(
         notification: CPointer<NotifyNotification>?,
         buffer: CPointer<GdkPixbuf>?
     ) {
-        library?.findFunctionOrNull<_notify_notification_set_icon_from_pixbuf>("notify_notification_set_icon_from_pixbuf")
+        library?.findFunction<_notify_notification_set_icon_from_pixbuf>("notify_notification_set_icon_from_pixbuf")
             ?.invoke(notification, buffer)
     }
 
+    /**
+     * See [the documentation](https://www.manpagez.com/html/libnotify/libnotify-0.7.7/NotifyNotification.php#notify-notification-show)
+     */
     fun notify_notification_show(
         notification: CPointer<NotifyNotification>?,
         error: CPointer<CPointerVar<GError>>?
     ): gboolean {
-        return library?.findFunctionOrNull<_notify_notification_show>("notify_notification_show")
+        return library?.findFunction<_notify_notification_show>("notify_notification_show")
             ?.invoke(notification, error) ?: 0
     }
 
+    /**
+     * See [the documentation](https://www.manpagez.com/html/libnotify/libnotify-0.7.7/NotifyNotification.php#notify-notification-new)
+     */
     fun notify_notification_new(
         summary: String?,
         body: String?,
         icon: String?
     ): CPointer<NotifyNotification>? {
-        return library?.findFunctionOrNull<_notify_notification_new>("notify_notification_new")
+        return library?.findFunction<_notify_notification_new>("notify_notification_new")
             ?.invoke(summary?.cstr, body?.cstr, icon?.cstr)
     }
 
+    /**
+     * See [the documentation](https://www.manpagez.com/html/libnotify/libnotify-0.7.7/NotifyNotification.php#notify-notification-set-app-name)
+     */
     fun notify_notification_set_app_name(
         notification: CPointer<NotifyNotification>?,
         name: String?
     ) {
-        library?.findFunctionOrNull<_notify_notification_set_app_name>("notify_notification_set_app_name")
+        library?.findFunction<_notify_notification_set_app_name>("notify_notification_set_app_name")
             ?.invoke(notification, name?.cstr)
     }
 
+    /**
+     * See [the documentation](https://www.manpagez.com/html/libnotify/libnotify-0.7.7/NotifyNotification.php#notify-notification-set-timeout)
+     */
     fun notify_notification_set_timeout(
         notification: CPointer<NotifyNotification>?,
         timeout: gint
     ) {
-        library?.findFunctionOrNull<_notify_notification_set_timeout>("notify_notification_set_timeout")
+        library?.findFunction<_notify_notification_set_timeout>("notify_notification_set_timeout")
             ?.invoke(notification, timeout)
     }
 
+    /**
+     * See [the documentation](https://www.manpagez.com/html/libnotify/libnotify-0.7.7/NotifyNotification.php#notify-notification-set-urgency)
+     */
     fun notify_notification_set_urgency(
         notification: CPointer<NotifyNotification>?,
         urgency: NotifyUrgency
     ) {
-        library?.findFunctionOrNull<_notify_notification_set_urgency>("notify_notification_set_urgency")
+        library?.findFunction<_notify_notification_set_urgency>("notify_notification_set_urgency")
             ?.invoke(notification, urgency)
     }
 
+    /**
+     * See [the documentation](https://www.manpagez.com/html/libnotify/libnotify-0.7.7/NotifyNotification.php#notify-notification-set-hint-string)
+     */
     fun notify_notification_set_hint_string(
         notification: CPointer<NotifyNotification>?,
-        name: String?,
-        path: String?
+        key: String?,
+        value: String?
     ) {
-        library?.findFunctionOrNull<_notify_notification_set_hint_string>("notify_notification_set_hint_string")
-            ?.invoke(notification, name?.cstr, path?.cstr)
+        library?.findFunction<_notify_notification_set_hint_string>("notify_notification_set_hint_string")
+            ?.invoke(notification, key?.cstr, value?.cstr)
     }
 
+    /**
+     * See [the documentation](https://www.manpagez.com/html/libnotify/libnotify-0.7.7/NotifyNotification.php#notify-notification-update)
+     */
     fun notify_notification_update(
         notification: CPointer<NotifyNotification>?,
         summary: String?,
         body: String?,
         icon: String?
     ): gboolean {
-        return library?.findFunctionOrNull<_notify_notification_update>("notify_notification_update")
+        return library?.findFunction<_notify_notification_update>("notify_notification_update")
             ?.invoke(notification, summary?.cstr, body?.cstr, icon?.cstr) ?: 0
     }
 
+    /**
+     * See [the documentation](https://www.manpagez.com/html/libnotify/libnotify-0.7.7/NotifyNotification.php#notify-notification-close)
+     */
     fun notify_notification_close(
         notification: CPointer<NotifyNotification>?,
         error: CPointer<CPointerVar<GError>>?
     ): gboolean {
-        return library?.findFunctionOrNull<_notify_notification_close>("notify_notification_close")
+        return library?.findFunction<_notify_notification_close>("notify_notification_close")
             ?.invoke(notification, error) ?: 0
+    }
+
+    /**
+     * See [the documentation](https://www.manpagez.com/html/libnotify/libnotify-0.7.7/NotifyNotification.php#notify-notification-add-action)
+     */
+    fun notify_notification_add_action(
+        notification: CPointer<NotifyNotification>?,
+        action: String?,
+        label: String?,
+        callback: NotifyActionCallback?,
+        userData: COpaquePointer?,
+        freeFunc: GFreeFunc?
+    ) {
+        library?.findFunction<_notify_notification_add_action>("notify_notification_add_action")
+            ?.invoke(notification, action?.cstr, label?.cstr, callback, userData, freeFunc)
     }
 }

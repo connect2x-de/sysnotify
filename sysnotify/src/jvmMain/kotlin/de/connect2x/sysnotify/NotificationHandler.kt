@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 connect2x GmbH
+ * Copyright 2025 connect2x GmbH
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,39 +13,66 @@
  * limitations under the License.
  */
 
+@file:JvmName("NotificationHandler\$Impl")
+
 package de.connect2x.sysnotify
+
+import kotlinx.atomicfu.atomic
+import kotlinx.coroutines.runBlocking
 
 private class JvmNotificationHandler(
     override val name: String,
     override val id: String,
-    override val priority: NotificationPriority,
-    private val activationCallback: (Notification) -> Unit,
+    override val priority: NotificationPriority
 ) : NotificationHandler {
-    private val address: Long = NativeNotificationHandler.create(name, id, {
-        activationCallback(it) // Delegate the call to the closure
-    })
-    override val platform: NotificationPlatform =
-        NotificationPlatform.entries[NativeNotificationHandler.getPlatform(address)]
-    override val hasPermissions: Boolean = false // TODO: Implement hasPermissions flag
+    var activationHandler: ActivationHandler? by atomic(null)
 
-    override val capabilities: NotificationCapabilities = NotificationCapabilities(
-        NativeNotificationHandler.getCapabilities(address).toUInt()
-    )
+    private val address: Long by lazy {
+        NativeNotificationHandler.create(
+            name,
+            id,
+            priority.ordinal,
+            NativeActivationCallback.create {
+                // Wire activation through to instance activation handler
+                activationHandler?.invoke(it)
+            }
+        )
+    }
+
+    override val platform: NotificationPlatform by lazy {
+        NotificationPlatform.entries[NativeNotificationHandler.getPlatform(address)]
+    }
+
+    override val hasPermissions: Boolean by lazy {
+        NativeNotificationHandler.hasPermissions(address)
+    }
+
+    override val capabilities: NotificationCapabilities by lazy {
+        NotificationCapabilities(NativeNotificationHandler.getCapabilities(address).toUInt())
+    }
 
     override fun close() {
         NativeNotificationHandler.destroy(address)
     }
 
-    override suspend fun requestPermissions() {
-        NativeNotificationHandler.requestPermissions(address)
+    override fun getHandle(tag: String): NotificationHandle {
+        require(tag.isNotEmpty()) { "Handle tag may not be empty" }
+        return JvmNotificationHandle(tag)
     }
 
-    override fun create(notification: Notification): NotificationHandle =
-        InvalidNotificationHandle // TODO: implement this
+    override suspend fun requestPermissions(callback: PermissionCallback) {
+        NativeNotificationHandler.requestPermissions(address) {
+            runBlocking {
+                callback(this@JvmNotificationHandler, it)
+            }
+        }
+    }
 
-    override suspend fun push(notification: Notification): NotificationHandle? {
+    override suspend fun push(notification: Notification, tag: String): NotificationHandle {
+        if (!hasPermissions) return NotificationHandle.INVALID
         val handle = NativeNotificationHandler.push(
             handler = address,
+            tag = tag,
             title = notification.title ?: "Unknown",
             description = notification.description,
             icon = notification.icon?.data,
@@ -53,17 +80,19 @@ private class JvmNotificationHandler(
             iconHeight = notification.icon?.height ?: 0,
             playSound = notification.playSound,
             soundPath = notification.soundPath,
-            group = notification.group
+            group = notification.group,
+            callbackData = notification.callbackData
         )
-        return if (handle != 0L) JvmNotificationHandle(handle)
-        else null
+        return if (handle != 0L) JvmNotificationHandle(tag, address)
+        else NotificationHandle.INVALID
     }
 
     override suspend fun update(
         handle: NotificationHandle,
         notification: Notification
-    ): NotificationHandle? {
-        require(handle is JvmNotificationHandle)
+    ): NotificationHandle {
+        if (!hasPermissions) return NotificationHandle.INVALID
+        handle.check<JvmNotificationHandle>()
         val newHandle = NativeNotificationHandler.update(
             handler = address,
             notification = handle.address,
@@ -72,21 +101,35 @@ private class JvmNotificationHandler(
             icon = notification.icon?.data,
             iconWidth = notification.icon?.width ?: 0,
             iconHeight = notification.icon?.height ?: 0,
-            group = notification.group
+            group = notification.group,
+            callbackData = notification.callbackData
         )
-        return if (newHandle != 0L) JvmNotificationHandle(newHandle)
-        else null
+        return if (newHandle != 0L) JvmNotificationHandle(address = newHandle)
+        else NotificationHandle.INVALID
     }
 
     override suspend fun pop(handle: NotificationHandle) {
-        require(handle is JvmNotificationHandle)
+        if (!hasPermissions) return
+        handle.check<JvmNotificationHandle>()
         NativeNotificationHandler.pop(address, handle.address)
+    }
+
+    override suspend fun clearAll() {
+        if (!hasPermissions) return
+        NativeNotificationHandler.clearAll(address)
     }
 }
 
-fun NotificationHandler.Companion.create(
+actual fun NotificationHandler.withActivationHandler(handler: ActivationHandler): NotificationHandler {
+    check<JvmNotificationHandler>()
+    activationHandler = handler
+    return this
+}
+
+actual fun NotificationHandler( // @formatter:off
     name: String,
-    id: String = name,
-    activationCallback: (Notification) -> Unit = {},
-    priority: NotificationPriority = NotificationPriority.DEFAULT,
-): NotificationHandler = JvmNotificationHandler(name, id, priority, activationCallback)
+    id: String,
+    priority: NotificationPriority
+): NotificationHandler { // @formatter:on
+    return JvmNotificationHandler(name, id, priority)
+}

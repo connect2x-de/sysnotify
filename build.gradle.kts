@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 connect2x GmbH
+ * Copyright 2025 connect2x GmbH
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,30 +13,29 @@
  * limitations under the License.
  */
 
+import de.connect2x.conventions.authenticatedPackageRegistry
+import de.connect2x.conventions.c2xOrganization
+import de.connect2x.conventions.configureJava
+import de.connect2x.conventions.withVersionSuffix
+
 plugins {
-    alias(libs.plugins.androidLibrary) apply false
+    alias(libs.plugins.android.library) apply false
+    alias(libs.plugins.android.application) apply false
     alias(libs.plugins.kotlin.multiplatform) apply false
-    // For sample
-    alias(libs.plugins.androidApplication) apply false
     alias(libs.plugins.compose) apply false
     alias(libs.plugins.compose.compiler) apply false
+    alias(libs.plugins.c2xConventions)
 }
-
-val baseVersion: String = libs.versions.sysnotify.get()
 
 allprojects {
     group = "de.connect2x"
-    version = withVersionSuffix(baseVersion)
+    version = withVersionSuffix(rootProject.libs.versions.sysnotify)
+    configureJava(rootProject.libs.versions.jvmTarget)
 
-    dependencyLocking {
-        lockMode = LockMode.LENIENT
-        lockAllConfigurations()
-    }
-
-    repositories {
-        mavenLocal()
-        mavenCentral()
-        google()
-        maven("https://gitlab.com/api/v4/projects/65231927/packages/maven") // kmp-jni
+    if (System.getenv("WITH_LOCK")?.toBoolean() == true) {
+        dependencyLocking {
+            lockAllConfigurations()
+        }
+        val dependenciesForAll by tasks.registering(DependencyReportTask::class)
     }
 }

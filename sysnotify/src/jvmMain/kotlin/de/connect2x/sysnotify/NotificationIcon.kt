@@ -17,14 +17,30 @@ package de.connect2x.sysnotify
 
 import java.awt.image.BufferedImage
 
+/**
+ * Creates a [NotificationIcon] from a Java AWT [BufferedImage].
+ *
+ * This extension function for the [NotificationIcon.Companion] provides a convenient way
+ * to convert Java's BufferedImage to the platform-agnostic NotificationIcon format used
+ * across the library.
+ *
+ * The function performs the following operations:
+ * 1. Extracts the dimensions and pixel data from the BufferedImage
+ * 2. Converts the color format from Java's ARGB (Alpha, Red, Green, Blue) to
+ *    the RGBA (Red, Green, Blue, Alpha) format used by NotificationIcon
+ * 3. Creates and returns a new NotificationIcon with the converted data
+ *
+ * @param image The BufferedImage to convert
+ * @return A new NotificationIcon containing the image data
+ */
 fun NotificationIcon.Companion.fromBufferedImage(image: BufferedImage): NotificationIcon {
     val width = image.width
     val height = image.height
     val iconPixelCount = width * height
-    val rawPixelData = IntArray(iconPixelCount) { 0 }
+    val rawPixelData = IntArray(iconPixelCount)
     image.getRGB(0, 0, width, height, rawPixelData, 0, width)
     val iconDataSize = iconPixelCount shl 2
-    val iconData = ByteArray(iconDataSize) { 0 }
+    val iconData = ByteArray(iconDataSize)
     // We need to swizzle the color channels from ARGB to RGBA
     for (i in rawPixelData.indices) {
         val pixel = rawPixelData[i]

@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 connect2x GmbH
+ * Copyright 2025 connect2x GmbH
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,21 +15,21 @@
 
 package de.connect2x.sysnotify
 
-fun interface NativeActivationCallback {
-    fun invoke(notification: Long) {
-        // TODO: delegate invoke call to typed function
-    }
-
-    fun invoke(notification: Notification)
-}
-
 object NativeNotificationHandler {
     init {
         NativeLoader.ensureLoaded()
     }
 
     @JvmStatic
-    external fun create(name: String, id: String, activationCallback: NativeActivationCallback): Long
+    external fun create( // @formatter:off
+        name: String,
+        id: String,
+        priority: Int,
+        activationCallback: NativeActivationCallback
+    ): Long // @formatter:on
+
+    @JvmStatic
+    external fun hasPermissions(handler: Long): Boolean
 
     @JvmStatic
     external fun getPlatform(handler: Long): Int
@@ -38,11 +38,15 @@ object NativeNotificationHandler {
     external fun getCapabilities(handler: Long): Int
 
     @JvmStatic
-    external fun requestPermissions(handler: Long)
+    external fun requestPermissions( // @formatter:off
+        handler: Long,
+        callback: NativePermissionCallback
+    ) // @formatter:on
 
     @JvmStatic
     external fun push(
         handler: Long,
+        tag: String,
         title: String,
         description: String?,
         icon: ByteArray?,
@@ -50,7 +54,8 @@ object NativeNotificationHandler {
         iconHeight: Int,
         playSound: Boolean,
         soundPath: String?,
-        group: String?
+        group: String?,
+        callbackData: String?
     ): Long
 
     @JvmStatic
@@ -62,11 +67,15 @@ object NativeNotificationHandler {
         icon: ByteArray?,
         iconWidth: Int,
         iconHeight: Int,
-        group: String?
+        group: String?,
+        callbackData: String?
     ): Long
 
     @JvmStatic
     external fun pop(handler: Long, notification: Long)
+
+    @JvmStatic
+    external fun clearAll(handler: Long)
 
     @JvmStatic
     external fun destroy(handler: Long)

@@ -17,66 +17,7 @@ variables:
   GRADLE_USER_HOME: $CI_PROJECT_DIR/.gradle
   KONAN_DATA_DIR: $CI_PROJECT_DIR/.konan
   BUILD_LINUX_IMAGE_NAME: registry.gitlab.com/trixnity/trixnity/trixnity-build-linux:latest
-
-.cache-linux: &cache-linux
-  - key: global-sysnotify-cache-linux
-    policy: pull-push
-    paths:
-      - $GRADLE_USER_HOME
-      - $KONAN_DATA_DIR
-  - key: "$CI_COMMIT_REF_NAME-linux"
-    policy: push
-    paths:
-      - $GRADLE_USER_HOME
-      - $KONAN_DATA_DIR
-
-.pull-cache-linux: &pull-cache-linux
-  - key: "$CI_COMMIT_REF_NAME-linux"
-    fallback_keys: [ "global-sysnotify-cache-linux" ]
-    policy: pull
-    paths:
-      - $GRADLE_USER_HOME
-      - $KONAN_DATA_DIR
-
-.cache-mac: &cache-mac
-  - key: global-sysnotify-cache-mac
-    policy: pull-push
-    paths:
-      - $GRADLE_USER_HOME
-      - $KONAN_DATA_DIR
-  - key: "$CI_COMMIT_REF_NAME-mac"
-    policy: push
-    paths:
-      - $GRADLE_USER_HOME
-      - $KONAN_DATA_DIR
-
-.pull-cache-mac: &pull-cache-mac
-  - key: "$CI_COMMIT_REF_NAME-mac"
-    fallback_keys: [ "global-sysnotify-cache-mac" ]
-    policy: pull
-    paths:
-      - $GRADLE_USER_HOME
-      - $KONAN_DATA_DIR
-
-.cache-windows: &cache-windows
-  - key: global-sysnotify-cache-windows
-    policy: pull-push
-    paths:
-      - $GRADLE_USER_HOME
-      - $KONAN_DATA_DIR
-  - key: "$CI_COMMIT_REF_NAME-windows"
-    policy: push
-    paths:
-      - $GRADLE_USER_HOME
-      - $KONAN_DATA_DIR
-
-.pull-cache-windows: &pull-cache-windows
-  - key: "$CI_COMMIT_REF_NAME-windows"
-    fallback_keys: [ "global-sysnotify-cache-windows" ]
-    policy: pull
-    paths:
-      - $GRADLE_USER_HOME
-      - $KONAN_DATA_DIR
+  SYSNOTIFY_DEBUG: 1
 
 .artifact-reports: &artifact-reports
   name: reports
@@ -106,12 +47,11 @@ build:windows:
   interruptible: true
   timeout: 2h
   tags: [ "saas-windows-medium-amd64" ]
-  cache:
-    - *cache-windows
   rules:
     - *if-merge-request-or-main
   script:
     - ./gradlew
+      clean
       :sysnotify:linkMingwX64
       --stacktrace
 
@@ -119,12 +59,11 @@ build:mac:
   stage: build
   interruptible: true
   tags: [ "connect2x-mac" ]
-  cache:
-    - *cache-mac
   rules:
     - *if-merge-request-or-main
   script:
     - ./gradlew
+      clean
       :sysnotify:link{MacosX64,MacosArm64,IosArm64,IosX64,IosSimulatorArm64}
       --stacktrace
 
@@ -133,12 +72,11 @@ build:linux:
   interruptible: true
   tags: [ "connect2x-linux" ]
   image: $BUILD_LINUX_IMAGE_NAME
-  cache:
-    - *cache-linux
   rules:
     - *if-merge-request-or-main
   script:
     - ./gradlew
+      clean
       :sysnotify:compile{ReleaseKotlinAndroid,KotlinJvm}
       :sysnotify:linkLinux{X64,Arm64}
       --stacktrace
@@ -150,15 +88,11 @@ test:linux:
   needs: [ "build:linux" ]
   tags: [ "connect2x-linux" ]
   image: $BUILD_LINUX_IMAGE_NAME
-  cache:
-    - *pull-cache-linux
   artifacts: *artifact-reports
   rules:
     - *if-merge-request-or-main
   script:
-    - ./gradlew
-      :sysnotify:{jvm,linuxX64}Test
-      --stacktrace
+    - ./gradlew :sysnotify:{jvm,linuxX64}Test --stacktrace
 
 test:mac:
   stage: test
@@ -166,15 +100,11 @@ test:mac:
   timeout: 1h
   needs: [ "build:mac" ]
   tags: [ "connect2x-mac" ]
-  cache:
-    - *pull-cache-mac
   artifacts: *artifact-reports
   rules:
     - *if-merge-request-or-main
   script:
-    - ./gradlew
-      :sysnotify:{jvm,macosX64}Test
-      --stacktrace
+    - ./gradlew :sysnotify:{jvm,macosX64}Test --stacktrace
 
 test:windows:
   stage: test
@@ -182,16 +112,11 @@ test:windows:
   timeout: 2h
   needs: [ "build:windows" ]
   tags: [ "saas-windows-medium-amd64" ]
-  cache:
-    - *pull-cache-windows
   artifacts: *artifact-reports
   rules:
     - *if-merge-request-or-main
   script:
-    - ./gradlew
-      :sysnotify:jvmTest
-      :sysnotify:mingwX64Test
-      --stacktrace
+    - ./gradlew :sysnotify:jvmTest :sysnotify:mingwX64Test --stacktrace
 
 security:dependencies:
   stage: security
@@ -226,8 +151,6 @@ security:dependencies:
 publish:mac:
   stage: publish
   tags: [ "connect2x-mac" ]
-  cache:
-    - *pull-cache-mac
   rules:
     - *if-main
     - *if-release
@@ -240,8 +163,6 @@ publish:linux:
   stage: publish
   tags: [ "connect2x-linux" ]
   image: $BUILD_LINUX_IMAGE_NAME
-  cache:
-    - *pull-cache-linux
   rules:
     - *if-main
     - *if-release
@@ -254,8 +175,6 @@ publish:windows:
   stage: publish
   timeout: 2h
   tags: [ "saas-windows-medium-amd64" ]
-  cache:
-    - *pull-cache-windows
   rules:
     - *if-main
     - *if-release

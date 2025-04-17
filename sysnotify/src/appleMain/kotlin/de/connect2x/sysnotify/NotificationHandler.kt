@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 connect2x GmbH
+ * Copyright 2025 connect2x GmbH
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -17,6 +17,12 @@ package de.connect2x.sysnotify
 
 import co.touchlab.stately.collections.SharedHashMap
 import kotlinx.atomicfu.atomic
+import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.toKStringFromUtf8
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.yield
 import platform.UserNotifications.UNAuthorizationOptionAlert
 import platform.UserNotifications.UNAuthorizationOptionBadge
 import platform.UserNotifications.UNAuthorizationOptionSound
@@ -28,16 +34,19 @@ import platform.UserNotifications.UNNotificationCategoryOptionNone
 import platform.UserNotifications.UNNotificationRequest
 import platform.UserNotifications.UNNotificationSound
 import platform.UserNotifications.UNUserNotificationCenter
+import platform.posix.getenv
 import kotlin.experimental.ExperimentalNativeApi
-import kotlin.uuid.ExperimentalUuidApi
 
 @OptIn(ExperimentalNativeApi::class)
 internal class AppleNotificationHandler(
     override val name: String,
     override val id: String,
     override val priority: NotificationPriority,
-    private val activationCallback: (Notification) -> Unit,
+    private val closeCallback: () -> Unit = {}
 ) : NotificationHandler {
+    @OptIn(ExperimentalForeignApi::class)
+    internal val isDebugEnabled: Boolean = getenv("SYSNOTIFY_DEBUG")?.toKStringFromUtf8() == "1"
+
     override val platform: NotificationPlatform = NotificationPlatform.APPLE
     override var hasPermissions: Boolean by atomic(false)
 
@@ -54,7 +63,8 @@ internal class AppleNotificationHandler(
 
     private val notificationCategories: SharedHashMap<String, UNNotificationCategory> = SharedHashMap()
 
-    private val notificationCenter: UNUserNotificationCenter = UNUserNotificationCenter.currentNotificationCenter()
+    private val notificationCenter: UNUserNotificationCenter? = if (isDebugEnabled) null
+    else UNUserNotificationCenter.currentNotificationCenter()
 
     private fun ensureCategoryExists(key: String) {
         if (key in notificationCategories) return
@@ -66,34 +76,40 @@ internal class AppleNotificationHandler(
         )
         notificationCategories[key] = category
         // We have to update ALL the categories every time we add a new one
-        notificationCenter.setNotificationCategories(notificationCategories.values.toSet())
+        notificationCenter?.setNotificationCategories(notificationCategories.values.toSet())
     }
 
-    override suspend fun requestPermissions() {
+    override fun getHandle(tag: String): NotificationHandle {
+        require(tag.isNotEmpty()) { "Handle tag may not be empty" }
+        return AppleNotificationHandle(tag)
+    }
+
+    override suspend fun requestPermissions(callback: PermissionCallback) {
         if (hasPermissions) return
+        var isWaitingForAction by atomic(true)
         UNUserNotificationCenter.currentNotificationCenter().requestAuthorizationWithOptions(
             UNAuthorizationOptionSound or UNAuthorizationOptionBadge or UNAuthorizationOptionAlert
         ) { granted, error ->
-            if (granted) hasPermissions = true
+            hasPermissions = granted
+            isWaitingForAction = false
             error?.localizedDescription?.let {
-                throw IllegalStateException("Could not request permission: $it")
+                println("Could not request permission: $it")
+            }
+        }
+        coroutineScope {
+            launch {
+                while (isWaitingForAction) yield()
+                callback(this@AppleNotificationHandler, hasPermissions)
             }
         }
     }
 
-    @OptIn(ExperimentalUuidApi::class)
-    override fun create(notification: Notification): NotificationHandle {
-        return if (hasPermissions) AppleNotificationHandle()
-        else InvalidNotificationHandle
-    }
-
-    @OptIn(ExperimentalUuidApi::class)
-    override suspend fun push(notification: Notification): NotificationHandle {
-        val handle = AppleNotificationHandle()
-        if (!hasPermissions) return handle
+    override suspend fun push(notification: Notification, tag: String): NotificationHandle {
+        if (!hasPermissions) return NotificationHandle.INVALID
+        val handle = AppleNotificationHandle(tag)
 
         val content = UNMutableNotificationContent().apply {
-            setTitle(notification.title ?: handle.uuid.toString())
+            setTitle(notification.title ?: handle.tag)
             setRelevanceScore(notification.priority.relevanceScore)
             notification.description?.let(::setBody)
             if (notification.playSound) {
@@ -107,9 +123,9 @@ internal class AppleNotificationHandler(
             }
         }
 
-        notificationCenter.addNotificationRequest(
+        notificationCenter?.addNotificationRequest(
             UNNotificationRequest.requestWithIdentifier(
-                handle.uuid.toString(), content, null
+                handle.tag, content, null
             )
         ) { error ->
             error?.localizedDescription?.let {
@@ -121,15 +137,14 @@ internal class AppleNotificationHandler(
     }
 
     @Suppress("UNCHECKED_CAST")
-    @OptIn(ExperimentalUuidApi::class)
     override suspend fun pop(handle: NotificationHandle) {
-        require(handle is AppleNotificationHandle) { "Handle is not an Apple notification handle" }
         if (!hasPermissions) return
+        handle.check<AppleNotificationHandle>()
 
-        val identifier = handle.uuid.toString()
+        val identifier = handle.tag
         var found = false
         // First try to remove it from the pending notifications
-        notificationCenter.getPendingNotificationRequestsWithCompletionHandler {
+        notificationCenter?.getPendingNotificationRequestsWithCompletionHandler {
             for (request in it as List<UNNotificationRequest>) {
                 if (request.identifier != identifier) continue
                 notificationCenter.removePendingNotificationRequestsWithIdentifiers(listOf(identifier))
@@ -139,7 +154,7 @@ internal class AppleNotificationHandler(
         }
         if (found) return
         // Otherwise it was already delivered
-        notificationCenter.getDeliveredNotificationsWithCompletionHandler {
+        notificationCenter?.getDeliveredNotificationsWithCompletionHandler {
             for (notification in it as List<UNNotification>) {
                 if (notification.request.identifier != identifier) continue
                 notificationCenter.removeDeliveredNotificationsWithIdentifiers(listOf(identifier))
@@ -147,11 +162,31 @@ internal class AppleNotificationHandler(
             }
         }
     }
+
+    override suspend fun clearAll() {
+        if (!hasPermissions) return
+        notificationCenter?.removeAllPendingNotificationRequests()
+        notificationCenter?.removeAllDeliveredNotifications()
+    }
+
+    override fun close() {
+        if (!hasPermissions) return
+        closeCallback()
+        runBlocking { clearAll() }
+        notificationCategories.clear()
+    }
 }
 
-fun NotificationHandler.Companion.create(
+actual fun NotificationHandler.withActivationHandler(handler: ActivationHandler): NotificationHandler {
+    // TODO: implement activation handlers for iOS/macOS
+    return this
+}
+
+@OptIn(ExperimentalForeignApi::class)
+actual fun NotificationHandler( // @formatter:off
     name: String,
-    id: String = name,
-    activationCallback: (Notification) -> Unit = {},
-    priority: NotificationPriority = NotificationPriority.DEFAULT,
-): NotificationHandler = AppleNotificationHandler(name, id, priority, activationCallback)
+    id: String,
+    priority: NotificationPriority
+): NotificationHandler { // @formatter:on
+    return AppleNotificationHandler(name, id, priority)
+}

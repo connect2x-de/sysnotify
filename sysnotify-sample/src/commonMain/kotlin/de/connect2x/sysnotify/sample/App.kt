@@ -18,13 +18,16 @@ package de.connect2x.sysnotify.sample
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.Button
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,18 +39,35 @@ import de.connect2x.sysnotify.NotificationHandler
 import de.connect2x.sysnotify.NotificationIcon
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
-internal val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.Default)
+private val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.Default)
+
+// Internal because in Android we need to access it from onRequestPermissionsResult still, TODO: fix this
+internal lateinit var notificationHandler: NotificationHandler
+
+fun onAppInit(initCallback: NotificationHandler.() -> Unit = {}) {
+    notificationHandler = NotificationHandler(
+        name = "Sysnotify Sample",
+        id = "de.connect2x.sysnotify"
+    )
+    notificationHandler.initCallback()
+}
+
+fun onAppExit() {
+    coroutineScope.cancel()
+    notificationHandler.close()
+}
 
 @Composable
 fun App(
-    notificationHandler: NotificationHandler,
-    icon: NotificationIcon? = null,
-    launchUserData: String? = null
+    icon: NotificationHandler.() -> NotificationIcon? = { null },
+    launchUserData: NotificationHandler.() -> String? = { null },
 ) {
-    coroutineScope.launch {
-        notificationHandler.requestPermissions() // Request permissions in-place because we are lazy here
+    // TODO: Add wait-state to show "waiting for perms" modal
+    LaunchedEffect(Unit) {
+        notificationHandler.requestPermissions()
     }
 
     var title by remember { mutableStateOf("Hello") }
@@ -105,7 +125,7 @@ fun App(
                 )
             }
             // Launch Notification
-            launchUserData?.let {
+            notificationHandler.launchUserData()?.let {
                 Text(
                     text = "Launch Notification",
                     modifier = Modifier.padding(vertical = 5.dp),
@@ -125,14 +145,23 @@ fun App(
                                 Notification(
                                     title = title,
                                     description = description,
-                                    icon = icon,
+                                    icon = notificationHandler.icon(),
                                     callbackData = callbackData
                                 )
                             )
                         }
                     },
-                    modifier = Modifier.weight(1F)
+                    modifier = Modifier.weight(0.5F)
                 ) { Text("Test") }
+                Spacer(Modifier.width(8.dp))
+                Button(
+                    onClick = {
+                        coroutineScope.launch {
+                            notificationHandler.clearAll()
+                        }
+                    },
+                    modifier = Modifier.weight(0.5F)
+                ) { Text("Clear") }
             }
         }
     }

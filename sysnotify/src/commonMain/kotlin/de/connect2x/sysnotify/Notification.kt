@@ -16,9 +16,6 @@
 package de.connect2x.sysnotify
 
 /**
- * @author Alexander Hinze
- * @since 07/01/2025
- *
  * Describes a notification including its title, description and icon among other things.
  *
  * @param title The title of the notification, should be short.

@@ -15,30 +15,8 @@
 
 package de.connect2x.sysnotify
 
-import de.connect2x.sysnotify.com.SYSNOTIFY_TRUE
-import de.connect2x.sysnotify.com.sn_boolVar
-import de.connect2x.sysnotify.com.sysnotify_handler_is_valid_tag
-import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.alloc
-import kotlinx.cinterop.memScoped
-import kotlinx.cinterop.ptr
-import kotlinx.cinterop.value
-import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
-@OptIn(ExperimentalUuidApi::class, ExperimentalForeignApi::class)
 internal data class WindowsNotificationHandle(
-    val handler: WindowsNotificationHandler,
-    val tag: Uuid,
-) : NotificationHandle {
-    inline val isValid: Boolean
-        get() = memScoped {
-            val result = alloc<sn_boolVar>()
-            sysnotify_handler_is_valid_tag(
-                handler.address,
-                allocNotificationTag(tag).ptr,
-                result.ptr
-            ).check()
-            return result.value == SYSNOTIFY_TRUE
-        }
-}
+    override val tag: String = Uuid.random().toHexString()
+) : NotificationHandle

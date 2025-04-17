@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 connect2x GmbH
+ * Copyright 2025 connect2x GmbH
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -40,20 +40,23 @@ private typealias _gdk_pixbuf_new_from_bytes = (
 
 private typealias _gdk_pixbuf_unref = (buffer: CPointer<GdkPixbuf>?) -> Unit
 
+/**
+ * See [the GTK documentation](https://docs.gtk.org/gdk-pixbuf/index.html)
+ */
 @Suppress("FunctionName")
 internal object LibGdkPixbuf {
-    private val library: SharedLibrary? = SharedLibrary.open("libgdk_pixbuf-2.0.so")?.also {
-        println("Loaded libgdk_pixbuf-2.0 successfully")
-    }
+    private val library: SharedLibrary? = SharedLibrary.open("libgdk_pixbuf-2.0.so")
 
     init {
         atexit(staticCFunction<Unit> {
-            // Must use explicit object ref to avoid non-capturing limitations
+            // Need a fully qualified reference to avoid capturing implicitly
             LibGdkPixbuf.library?.close()
-            println("Unloaded libgdk_pixbuf-2.0 successfully")
         })
     }
 
+    /**
+     * See [the GTK documentation](https://docs.gtk.org/gdk-pixbuf/ctor.Pixbuf.new_from_bytes.html)
+     */
     fun gdk_pixbuf_new_from_bytes(
         data: CPointer<GBytes>?,
         colorSpace: GdkColorspace,
@@ -63,12 +66,15 @@ internal object LibGdkPixbuf {
         height: gint,
         rowStride: gint
     ): CPointer<GdkPixbuf>? {
-        return library?.findFunctionOrNull<_gdk_pixbuf_new_from_bytes>("gdk_pixbuf_new_from_bytes")
+        return library?.findFunction<_gdk_pixbuf_new_from_bytes>("gdk_pixbuf_new_from_bytes")
             ?.invoke(data, colorSpace, hasAlpha, bitsPerSample, width, height, rowStride)
     }
 
+    /**
+     * See [the GTK documentation](https://docs.gtk.org/gdk-pixbuf/method.Pixbuf.unref.html)
+     */
     fun gdk_pixbuf_unref(buffer: CPointer<GdkPixbuf>?) {
-        library?.findFunctionOrNull<_gdk_pixbuf_unref>("gdk_pixbuf_unref")
+        library?.findFunction<_gdk_pixbuf_unref>("gdk_pixbuf_unref")
             ?.invoke(buffer)
     }
 }

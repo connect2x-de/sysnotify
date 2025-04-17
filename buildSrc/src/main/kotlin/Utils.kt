@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 connect2x GmbH
+ * Copyright 2025 connect2x GmbH
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -22,7 +22,6 @@ import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.internal.enterprise.test.FileProperty
 import org.gradle.internal.extensions.stdlib.capitalized
-import org.gradle.kotlin.dsl.create
 import org.gradle.kotlin.dsl.get
 import org.gradle.kotlin.dsl.getValue
 import org.gradle.kotlin.dsl.register
@@ -31,32 +30,11 @@ import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
-import java.time.Instant
 import kotlin.io.path.createDirectories
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.div
 import kotlin.io.path.exists
 import kotlin.io.path.notExists
-
-val isCI = System.getenv("CI") != null
-val isRelease = System.getenv("CI_COMMIT_TAG")?.matches("^v\\d+.\\d+.\\d+.*".toRegex()) ?: false
-fun withVersionSuffix(version: String) = when {
-    isRelease -> {
-        val commitTagVersion = System.getenv("CI_COMMIT_TAG").removePrefix("v")
-        check(version == commitTagVersion.substringBefore("-")) {
-            "version from code ($version) does not match commit tag version ($commitTagVersion)"
-        }
-        commitTagVersion
-    }
-
-    isCI -> {
-        val commitEpoch = Instant.parse(System.getenv("CI_COMMIT_TIMESTAMP")).epochSecond
-        val commitCustomEpoch = commitEpoch - 1704067200 // 01.01.2024
-        "$version-DEV-$commitCustomEpoch"
-    }
-
-    else -> "$version-LOCAL"
-}
 
 fun String.percentEncode(): String {
     val specialChars = ":/?#[]@!$&'()*+,;="

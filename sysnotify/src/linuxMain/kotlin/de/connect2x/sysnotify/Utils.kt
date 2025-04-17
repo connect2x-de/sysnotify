@@ -24,6 +24,6 @@ import libnotify.GError
 @OptIn(ExperimentalForeignApi::class)
 internal fun <P : CPointer<GError>> P.freeAndThrow() {
     val message = this.pointed.message?.toKStringFromUtf8()
-    LibGlib.g_error_free(this)
+    LibGLib.g_error_free(this)
     throw IllegalStateException(message)
 }

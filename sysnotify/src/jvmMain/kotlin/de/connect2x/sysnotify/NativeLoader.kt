@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 connect2x GmbH
+ * Copyright 2025 connect2x GmbH
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -50,6 +50,7 @@ internal object NativeLoader {
         }
     }
     private val libPrefix: String = if (os == PLATFORM_WINDOWS) "" else "lib"
+
     private val libExtension: String = when (os) {
         PLATFORM_WINDOWS -> "dll"
         PLATFORM_MACOS -> "dylib"
@@ -71,7 +72,7 @@ internal object NativeLoader {
                 StandardCopyOption.REPLACE_EXISTING
             )
         }
-        if (System.getenv("SYSNOTIFY_DEBUG")?.equals("true") == true) {
+        if (System.getenv("SYSNOTIFY_DEBUG")?.toIntOrNull() == 1) {
             println("Loading native library from ${targetPath.pathString}")
         }
         System.load(targetPath.pathString)
