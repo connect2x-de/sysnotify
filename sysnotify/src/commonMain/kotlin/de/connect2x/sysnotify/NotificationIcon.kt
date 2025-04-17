@@ -16,10 +16,39 @@
 package de.connect2x.sysnotify
 
 /**
- * A raw bitmap type for storing icon data and its width/height.
- * Data is expected to be in RGBA8888 format. Use per-platform helpers for creating instances.
+ * Represents an icon used in notifications across different platforms.
+ * 
+ * This class stores raw pixel data in RGBA format (Red, Green, Blue, Alpha) along with
+ * the dimensions of the image. It provides a platform-agnostic way to represent
+ * notification icons, with platform-specific extensions for conversion to and from
+ * native image formats (like Bitmap on Android or BufferedImage on JVM).
+ *
+ * The pixel data is stored as a continuous byte array in row-major order,
+ * with each pixel represented by 4 consecutive bytes (R, G, B, A).
  */
-data class NotificationIcon(val data: ByteArray, val width: Int, val height: Int) {
+data class NotificationIcon(
+    /**
+     * Raw pixel data in RGBA format (Red, Green, Blue, Alpha).
+     * The data is stored as a continuous byte array in row-major order,
+     * with each pixel represented by 4 consecutive bytes.
+     */
+    val data: ByteArray,
+
+    /**
+     * Width of the icon in pixels.
+     */
+    val width: Int,
+
+    /**
+     * Height of the icon in pixels.
+     */
+    val height: Int
+) {
+    /**
+     * Companion object for factory methods.
+     * Platform-specific implementations extend this companion object with methods
+     * to create NotificationIcon instances from platform-specific image formats.
+     */
     companion object;
 
     // Begin ugly generated code

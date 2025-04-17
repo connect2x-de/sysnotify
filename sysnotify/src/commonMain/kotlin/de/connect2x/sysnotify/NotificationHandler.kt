@@ -22,14 +22,22 @@ import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 import kotlin.jvm.JvmMultifileClass
 import kotlin.jvm.JvmName
-import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
-// TODO: document this
+/**
+ * A callback function that is invoked after permission to show notifications has been requested.
+ *
+ * @param handler The notification handler that requested the permission
+ * @param granted Boolean indicating whether permission was granted (true) or denied (false)
+ */
 typealias PermissionCallback = suspend (handler: NotificationHandler, granted: Boolean) -> Unit
 
-// TODO: document this
-typealias ActivationHandler = (Notification) -> Unit
+/**
+ * A callback function that is invoked when a user interacts with (clicks/activates) a notification.
+ *
+ * @param notification The notification object that was activated by the user
+ */
+typealias ActivationHandler = (notification: Notification) -> Unit
 
 /**
  * This interface provides platform-agnostic functions to interact with the OSs notifications.
@@ -88,7 +96,12 @@ interface NotificationHandler : AutoCloseable {
      */
     val priority: NotificationPriority
 
-    // TODO: document this
+    /**
+     * Retrieves a notification handle for a notification with the given tag.
+     *
+     * @param tag A unique string identifying a particular notification.
+     * @return The notification handle associated with the tag, or an invalid handle if no notification with the given tag exists.
+     */
     fun getHandle(tag: String): NotificationHandle = NotificationHandle.INVALID
 
     /**
@@ -111,7 +124,6 @@ interface NotificationHandler : AutoCloseable {
      * @return A new notification with the given content which has been shown by the system
      *  when successful, null otherwise.
      */
-    @OptIn(ExperimentalUuidApi::class)
     suspend fun push(
         notification: Notification,
         tag: String = Uuid.random().toHexString()
@@ -124,7 +136,13 @@ interface NotificationHandler : AutoCloseable {
      */
     suspend fun pop(handle: NotificationHandle)
 
-    // TODO: document this
+    /**
+     * Hides and removes a notification identified by its tag.
+     * This is a convenience method that retrieves the notification handle using the tag
+     * and then calls the primary pop method.
+     *
+     * @param tag A unique string identifying the notification to hide and remove.
+     */
     suspend fun pop(tag: String) = pop(getHandle(tag))
 
     /**
@@ -141,7 +159,16 @@ interface NotificationHandler : AutoCloseable {
         return push(notification)
     }
 
-    // TODO: document this
+    /**
+     * Updates an existing notification identified by its tag with the given content.
+     * This is a convenience method that retrieves the notification handle using the tag
+     * and then calls the primary update method.
+     *
+     * @param tag A unique string identifying the notification to update.
+     * @param notification The new notification contents to update with.
+     * @return The notification handle associated with the updated notification when successful,
+     *  or an invalid handle if the update failed.
+     */
     suspend fun update(
         tag: String,
         notification: Notification
@@ -155,20 +182,38 @@ interface NotificationHandler : AutoCloseable {
     override fun close() {}
 }
 
+/**
+ * Type-checking utility function that verifies if the receiver [NotificationHandler] is of type [H].
+ *
+ * This function uses Kotlin contracts to inform the compiler that if this function returns normally
+ * (without throwing an exception), then the receiver can be safely cast to type [H] in the calling context.
+ *
+ * @param H The specific [NotificationHandler] type to check against
+ * @throws ClassCastException implicitly if the receiver is not of type [H]
+ */
 @PublishedApi
 @OptIn(ExperimentalContracts::class)
 internal inline fun <reified H : NotificationHandler> NotificationHandler.check() {
     contract { returns() implies (this@check is H) }
 }
 
-// TODO: document this
 expect fun NotificationHandler(
     name: String,
     id: String = name,
     priority: NotificationPriority = NotificationPriority.DEFAULT
 ): NotificationHandler
 
-// TODO: document this
+/**
+ * A no-operation implementation of the [NotificationHandler] interface.
+ *
+ * This implementation does not perform any actual notification operations and is useful in scenarios where:
+ * - Notifications are not supported or available on the current platform
+ * - A placeholder implementation is needed during testing or development
+ * - A fallback is required when the primary notification handler cannot be initialized
+ *
+ * All methods return invalid or null values, and no actual notifications will be displayed.
+ * This handler always reports [NotificationPlatform.UNKNOWN] as its platform and has no permissions or capabilities.
+ */
 object NoopNotificationHandler : NotificationHandler {
     override val name: String = "NOOP"
     override val id: String = "no.op.noop"

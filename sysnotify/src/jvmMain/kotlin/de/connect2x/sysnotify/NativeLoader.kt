@@ -50,6 +50,7 @@ internal object NativeLoader {
         }
     }
     private val libPrefix: String = if (os == PLATFORM_WINDOWS) "" else "lib"
+
     private val libExtension: String = when (os) {
         PLATFORM_WINDOWS -> "dll"
         PLATFORM_MACOS -> "dylib"
