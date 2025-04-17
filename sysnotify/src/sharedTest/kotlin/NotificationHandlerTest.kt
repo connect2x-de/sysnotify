@@ -19,6 +19,6 @@ import kotlin.test.Test
 class NotificationHandlerTest {
     @Test
     fun `Create and dispose a notification handler`() {
-        NotificationHandler("Test").close()
+        NotificationHandler("com.example.test").close()
     }
 }
