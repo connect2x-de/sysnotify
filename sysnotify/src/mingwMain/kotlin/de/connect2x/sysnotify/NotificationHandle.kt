@@ -15,10 +15,8 @@
 
 package de.connect2x.sysnotify
 
-import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
-@OptIn(ExperimentalUuidApi::class)
 internal data class WindowsNotificationHandle(
     override val tag: String = Uuid.random().toHexString()
 ) : NotificationHandle
