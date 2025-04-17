@@ -16,7 +16,6 @@
 import de.connect2x.conventions.authenticatedPackageRegistry
 import de.connect2x.conventions.c2xOrganization
 import org.gradle.internal.extensions.stdlib.capitalized
-import org.gradle.internal.os.OperatingSystem
 import org.jetbrains.kotlin.gradle.plugin.mpp.DefaultCInteropSettings
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.konan.target.Family
@@ -29,10 +28,6 @@ plugins {
     alias(libs.plugins.android.library)
     `maven-publish`
 }
-
-fun OperatingSystem.getFriendlyName(): String = familyName.replace("os x", "macos")
-fun OperatingSystem.getPlatformPair(arch: String): String = "${getFriendlyName()}-$arch"
-val hostOs: OperatingSystem = OperatingSystem.current()
 
 val KonanTarget.familyName: String
     get() = when (family) {
@@ -62,6 +57,9 @@ fun DefaultCInteropSettings.includePlatformBinaries(target: KotlinNativeTarget) 
 }
 
 kotlin {
+    compilerOptions {
+        freeCompilerArgs.add("-opt-in=kotlin.uuid.ExperimentalUuidApi")
+    }
     androidTarget {
         publishLibraryVariants("release")
     }
@@ -205,8 +203,30 @@ tasks {
     val linkReleaseSharedMacosX64 by getting
     val linkReleaseSharedLinuxArm64 by getting
     val linkReleaseSharedLinuxX64 by getting
-    val linkReleaseSharedMingwX64 by getting
-    val copyNativesForJvm: Copy by register<Copy>("copyNativesForJvm") {
+
+    // Native - TODO: implement bundling for Kotlin/Native using kMBed once it's on Maven Central
+    val `extractSysnotify-platform-binariesWindowsX64` by getting
+    val copyDebugTestMingwX64SharedLibraries by registering(Copy::class) {
+        dependsOn(`extractSysnotify-platform-binariesWindowsX64`)
+        from("build/sysnotify-platform/windowsX64/lib/sysnotify-com.dll")
+        into("build/bin/mingwX64/debugTest")
+    }
+    val linkDebugTestMingwX64 by getting { dependsOn(copyDebugTestMingwX64SharedLibraries) }
+    val copyDebugSharedMingwX64SharedLibraries by registering(Copy::class) {
+        dependsOn(`extractSysnotify-platform-binariesWindowsX64`)
+        from("build/sysnotify-platform/windowsX64/lib/sysnotify-com.dll")
+        into("build/bin/mingwX64/debugShared")
+    }
+    val linkDebugSharedMingwX64 by getting { dependsOn(copyDebugSharedMingwX64SharedLibraries) }
+    val copyReleaseSharedMingwX64SharedLibraries by registering(Copy::class) {
+        dependsOn(`extractSysnotify-platform-binariesWindowsX64`)
+        from("build/sysnotify-platform/windowsX64/lib/sysnotify-com.dll")
+        into("build/bin/mingwX64/releaseShared")
+    }
+    val linkReleaseSharedMingwX64 by getting { dependsOn(copyReleaseSharedMingwX64SharedLibraries) }
+
+    // JVM
+    val copyNativesForJvm by registering(Copy::class) {
         dependsOn(
             linkReleaseSharedMacosArm64,
             linkReleaseSharedMacosX64,
@@ -219,6 +239,7 @@ tasks {
         from("build/bin/macosX64/releaseShared/libsysnotify.dylib") { into("macos-x64/") }
         from("build/bin/macosArm64/releaseShared/libsysnotify.dylib") { into("macos-arm64/") }
         from("build/bin/mingwX64/releaseShared/sysnotify.dll") { into("windows-x64/") }
+        from("build/sysnotify-platform/windowsX64/lib/sysnotify-com.dll") { into("windows-x64/") }
         destinationDir = (Path("build") / "generatedResources" / "natives").toFile()
     }
     val jvmProcessResources by getting {

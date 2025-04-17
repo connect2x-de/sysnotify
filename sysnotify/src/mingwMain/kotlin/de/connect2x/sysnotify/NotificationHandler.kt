@@ -20,25 +20,24 @@ import de.connect2x.sysnotify.com.SYSNOTIFY_TRUE
 import de.connect2x.sysnotify.com.sn_notification_content
 import de.connect2x.sysnotify.com.sn_notification_handler
 import de.connect2x.sysnotify.com.sn_notification_handlerVar
+import de.connect2x.sysnotify.com.sysnotify_handler_clear
 import de.connect2x.sysnotify.com.sysnotify_handler_create
 import de.connect2x.sysnotify.com.sysnotify_handler_destroy
 import de.connect2x.sysnotify.com.sysnotify_handler_pop
 import de.connect2x.sysnotify.com.sysnotify_handler_push
 import de.connect2x.sysnotify.com.sysnotify_handler_update
-import de.connect2x.sysnotify.com.sysnotify_handler_clear
 import kotlinx.atomicfu.atomic
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.MemScope
+import kotlinx.cinterop.StableRef
 import kotlinx.cinterop.alloc
 import kotlinx.cinterop.asStableRef
-import kotlinx.cinterop.StableRef
 import kotlinx.cinterop.cstr
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.staticCFunction
 import kotlinx.cinterop.toCValues
 import kotlinx.cinterop.value
-import kotlin.uuid.ExperimentalUuidApi
 
 @OptIn(ExperimentalForeignApi::class)
 @Suppress("NOTHING_TO_INLINE")
