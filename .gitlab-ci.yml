@@ -19,66 +19,6 @@ variables:
   BUILD_LINUX_IMAGE_NAME: registry.gitlab.com/trixnity/trixnity/trixnity-build-linux:latest
   SYSNOTIFY_DEBUG: 1
 
-.cache-linux: &cache-linux
-  - key: global-sysnotify-cache-linux
-    policy: pull-push
-    paths:
-      - $GRADLE_USER_HOME
-      - $KONAN_DATA_DIR
-  - key: "$CI_COMMIT_REF_NAME-linux"
-    policy: push
-    paths:
-      - $GRADLE_USER_HOME
-      - $KONAN_DATA_DIR
-
-.pull-cache-linux: &pull-cache-linux
-  - key: "$CI_COMMIT_REF_NAME-linux"
-    fallback_keys: [ "global-sysnotify-cache-linux" ]
-    policy: pull
-    paths:
-      - $GRADLE_USER_HOME
-      - $KONAN_DATA_DIR
-
-.cache-mac: &cache-mac
-  - key: global-sysnotify-cache-mac
-    policy: pull-push
-    paths:
-      - $GRADLE_USER_HOME
-      - $KONAN_DATA_DIR
-  - key: "$CI_COMMIT_REF_NAME-mac"
-    policy: push
-    paths:
-      - $GRADLE_USER_HOME
-      - $KONAN_DATA_DIR
-
-.pull-cache-mac: &pull-cache-mac
-  - key: "$CI_COMMIT_REF_NAME-mac"
-    fallback_keys: [ "global-sysnotify-cache-mac" ]
-    policy: pull
-    paths:
-      - $GRADLE_USER_HOME
-      - $KONAN_DATA_DIR
-
-.cache-windows: &cache-windows
-  - key: global-sysnotify-cache-windows
-    policy: pull-push
-    paths:
-      - $GRADLE_USER_HOME
-      - $KONAN_DATA_DIR
-  - key: "$CI_COMMIT_REF_NAME-windows"
-    policy: push
-    paths:
-      - $GRADLE_USER_HOME
-      - $KONAN_DATA_DIR
-
-.pull-cache-windows: &pull-cache-windows
-  - key: "$CI_COMMIT_REF_NAME-windows"
-    fallback_keys: [ "global-sysnotify-cache-windows" ]
-    policy: pull
-    paths:
-      - $GRADLE_USER_HOME
-      - $KONAN_DATA_DIR
-
 .artifact-reports: &artifact-reports
   name: reports
   when: always
@@ -107,8 +47,6 @@ build:windows:
   interruptible: true
   timeout: 2h
   tags: [ "saas-windows-medium-amd64" ]
-  cache:
-    - *cache-windows
   rules:
     - *if-merge-request-or-main
   script:
@@ -121,8 +59,6 @@ build:mac:
   stage: build
   interruptible: true
   tags: [ "connect2x-mac" ]
-  cache:
-    - *cache-mac
   rules:
     - *if-merge-request-or-main
   script:
@@ -136,8 +72,6 @@ build:linux:
   interruptible: true
   tags: [ "connect2x-linux" ]
   image: $BUILD_LINUX_IMAGE_NAME
-  cache:
-    - *cache-linux
   rules:
     - *if-merge-request-or-main
   script:
@@ -154,8 +88,6 @@ test:linux:
   needs: [ "build:linux" ]
   tags: [ "connect2x-linux" ]
   image: $BUILD_LINUX_IMAGE_NAME
-  cache:
-    - *pull-cache-linux
   artifacts: *artifact-reports
   rules:
     - *if-merge-request-or-main
@@ -168,8 +100,6 @@ test:mac:
   timeout: 1h
   needs: [ "build:mac" ]
   tags: [ "connect2x-mac" ]
-  cache:
-    - *pull-cache-mac
   artifacts: *artifact-reports
   rules:
     - *if-merge-request-or-main
@@ -182,8 +112,6 @@ test:windows:
   timeout: 2h
   needs: [ "build:windows" ]
   tags: [ "saas-windows-medium-amd64" ]
-  cache:
-    - *pull-cache-windows
   artifacts: *artifact-reports
   rules:
     - *if-merge-request-or-main
@@ -223,8 +151,6 @@ security:dependencies:
 publish:mac:
   stage: publish
   tags: [ "connect2x-mac" ]
-  cache:
-    - *pull-cache-mac
   rules:
     - *if-main
     - *if-release
@@ -237,8 +163,6 @@ publish:linux:
   stage: publish
   tags: [ "connect2x-linux" ]
   image: $BUILD_LINUX_IMAGE_NAME
-  cache:
-    - *pull-cache-linux
   rules:
     - *if-main
     - *if-release
@@ -251,8 +175,6 @@ publish:windows:
   stage: publish
   timeout: 2h
   tags: [ "saas-windows-medium-amd64" ]
-  cache:
-    - *pull-cache-windows
   rules:
     - *if-main
     - *if-release
