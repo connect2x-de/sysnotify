@@ -15,10 +15,8 @@
 
 package de.connect2x.sysnotify
 
-import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
-@OptIn(ExperimentalUuidApi::class)
 internal class JvmNotificationHandle(
     override val tag: String = Uuid.random().toHexString(),
     val address: Long = 0L,
