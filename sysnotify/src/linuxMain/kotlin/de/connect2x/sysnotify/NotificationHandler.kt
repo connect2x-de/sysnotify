@@ -40,7 +40,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -123,7 +122,7 @@ internal class LinuxNotificationHandler(
     // Flushes notifications from the internal queue to the system periodically
     private val dequeueJob: Job = coroutineScope.launch(start = CoroutineStart.ATOMIC) {
         while (shouldDispachNotifications) {
-            while(shouldDispachNotifications && pendingNotifications.isNotEmpty()) {
+            while (shouldDispachNotifications && pendingNotifications.isNotEmpty()) {
                 val (tag, isSameContent, notification) = pendingNotifications.removeFirst()
                 val handle = create(tag, notification)
                 handle.check<LinuxNotificationHandle>()
@@ -131,7 +130,7 @@ internal class LinuxNotificationHandler(
                 // Minimum required DBus timeouts to prevent dropping notifications
                 val delay = if (isSameContent) timeout else minimumDelay
                 // Only delay if the state hasn't changed since then
-                if(shouldDispachNotifications) delay(delay)
+                if (shouldDispachNotifications) delay(delay)
             }
             yield()
         }
@@ -283,7 +282,7 @@ internal class LinuxNotificationHandler(
                     return
                 }
             }
-            LibGLib.g_object_unref(address?.reinterpret())
+            LibGObject.g_object_unref(address?.reinterpret())
             notifications -= tag
             return
         }
