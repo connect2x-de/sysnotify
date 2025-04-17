@@ -42,12 +42,18 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
-internal val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.Default)
+private val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.Default)
 
-internal val notificationHandler: NotificationHandler = NotificationHandler(
-    name = "Sysnotify Sample",
-    id = "de.connect2x.sysnotify"
-)
+// Internal because in Android we need to access it from onRequestPermissionsResult still, TODO: fix this
+internal lateinit var notificationHandler: NotificationHandler
+
+fun onAppInit(initCallback: NotificationHandler.() -> Unit = {}) {
+    notificationHandler = NotificationHandler(
+        name = "Sysnotify Sample",
+        id = "de.connect2x.sysnotify"
+    )
+    notificationHandler.initCallback()
+}
 
 fun onAppExit() {
     coroutineScope.cancel()
@@ -56,8 +62,8 @@ fun onAppExit() {
 
 @Composable
 fun App(
-    icon: NotificationIcon? = null,
-    launchUserData: String? = null
+    icon: NotificationHandler.() -> NotificationIcon? = { null },
+    launchUserData: NotificationHandler.() -> String? = { null },
 ) {
     // TODO: Add wait-state to show "waiting for perms" modal
     LaunchedEffect(Unit) {
@@ -119,7 +125,7 @@ fun App(
                 )
             }
             // Launch Notification
-            launchUserData?.let {
+            notificationHandler.launchUserData()?.let {
                 Text(
                     text = "Launch Notification",
                     modifier = Modifier.padding(vertical = 5.dp),
@@ -139,7 +145,7 @@ fun App(
                                 Notification(
                                     title = title,
                                     description = description,
-                                    icon = icon,
+                                    icon = notificationHandler.icon(),
                                     callbackData = callbackData
                                 )
                             )

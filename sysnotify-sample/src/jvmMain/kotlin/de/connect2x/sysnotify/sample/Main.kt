@@ -24,6 +24,7 @@ import de.connect2x.sysnotify.fromBufferedImage
 import javax.imageio.ImageIO
 
 fun main() {
+    onAppInit()
     application {
         val icon = this::class.java.getResourceAsStream("/assets/icons/app_icon.png").use { ImageIO.read(it) }
         Window(

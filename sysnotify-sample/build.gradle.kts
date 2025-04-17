@@ -90,7 +90,7 @@ kotlin {
 
 android {
     namespace = "${rootProject.group}.${rootProject.name}.sample"
-    compileSdk = 34
+    compileSdk = libs.versions.androidCompileSDK.get().toInt()
 
     sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
     sourceSets["main"].res.srcDirs("src/androidMain/res")
@@ -98,7 +98,7 @@ android {
 
     defaultConfig {
         applicationId = "${rootProject.group}.${rootProject.name}.sample"
-        minSdk = 28
+        minSdk = libs.versions.androidMinimalSDK.get().toInt()
         versionCode = 1
         versionName = libs.versions.sysnotify.get()
     }
@@ -108,8 +108,13 @@ android {
         }
     }
     buildTypes {
-        release { isMinifyEnabled = false }
-        debug { isMinifyEnabled = false }
+        release {
+            isMinifyEnabled = false
+        }
+        debug {
+            isDefault = true
+            isMinifyEnabled = false
+        }
     }
     buildFeatures {
         compose = true

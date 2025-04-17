@@ -29,8 +29,8 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.graphics.drawable.IconCompat
 import co.touchlab.stately.collections.SharedLinkedList
-import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.runBlocking
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import android.app.NotificationChannel as AndroidNotificationChannel
@@ -65,18 +65,14 @@ internal class AndroidNotificationHandler( // @formatter:off
         const val PERMISSION_REQUEST_CODE: Int = 0xBEEF
     }
 
-    internal val channel: AndroidNotificationChannel = AndroidNotificationChannel(
-        id, name, priority.nativeImportance
-    ).apply { manager.createNotificationChannel(this) }
+    private var channel: AtomicReference<AndroidNotificationChannel?> = AtomicReference(null)
 
-    internal var contextGetter: ContextGetter? by atomic(null)
-    internal var activityGetter: ActivityGetter? by atomic { context as? Activity }
-    internal var activationIntent: ActivationFactory? by atomic(null)
+    internal var contextGetter: AtomicReference<ContextGetter?> = AtomicReference(null)
+    internal var activityGetter: AtomicReference<ActivityGetter?> = AtomicReference(null)
+    internal var activationIntent: AtomicReference<ActivationFactory?> = AtomicReference(null)
 
     override val platform: NotificationPlatform = NotificationPlatform.ANDROID
-
     override val capabilities: NotificationCapabilities = NotificationCapabilities(NotificationCapabilities.ALL)
-
     internal val permissionRequests: SharedLinkedList<PermissionCallback> = SharedLinkedList()
 
     internal val manager: NotificationManagerCompat
@@ -84,6 +80,16 @@ internal class AndroidNotificationHandler( // @formatter:off
 
     override val hasPermissions: Boolean
         get() = hasNotificationPermissions(context)
+
+    internal fun getOrCreateChannel(): AndroidNotificationChannel {
+        val current = channel.get()
+        if (current != null) return current
+        val new = AndroidNotificationChannel(
+            id, name, priority.nativeImportance
+        ).apply { manager.createNotificationChannel(this) }
+        channel.set(new)
+        return new
+    }
 
     override fun getHandle(tag: String): NotificationHandle {
         require(tag.isNotEmpty()) { "Handle tag may not be empty" }
@@ -138,7 +144,7 @@ internal class AndroidNotificationHandler( // @formatter:off
                     PendingIntent.getActivity(
                         context,
                         0,
-                        activationIntent?.let { it(context, notification) }
+                        activationIntent.get()?.let { it(context, notification) }
                             ?: context.getDefaultActivationFactory()(context, notification),
                         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                     )
@@ -197,7 +203,10 @@ internal class AndroidNotificationHandler( // @formatter:off
 val NotificationHandler.context: Context
     get() {
         check<AndroidNotificationHandler>()
-        return requireNotNull(contextGetter) { "No context associated with NotificationHandler, use withContext() to set it" }()
+        return activityGetter.get()?.invoke()
+            ?: requireNotNull(contextGetter.get()?.invoke()) {
+                "No context associated with NotificationHandler, use withContext() to set it"
+            }
     }
 
 /**
@@ -210,7 +219,7 @@ val NotificationHandler.context: Context
 val NotificationHandler.activity: Activity?
     get() {
         check<AndroidNotificationHandler>()
-        return requireNotNull(activityGetter) { "No activity associated with NotificationHandler, use withActivity() to set it" }()
+        return activityGetter.get()?.invoke()
     }
 
 /**
@@ -224,7 +233,8 @@ val NotificationHandler.activity: Activity?
  */
 fun NotificationHandler.withContext(getter: () -> Context): NotificationHandler {
     check<AndroidNotificationHandler>()
-    contextGetter = getter
+    contextGetter.set(getter)
+    getOrCreateChannel() // Make sure channel is created once context is available
     return this
 }
 
@@ -240,7 +250,25 @@ fun NotificationHandler.withContext(getter: () -> Context): NotificationHandler 
  */
 fun NotificationHandler.withActivity(getter: () -> Activity): NotificationHandler {
     check<AndroidNotificationHandler>()
-    activityGetter = getter
+    activityGetter.set(getter)
+    getOrCreateChannel() // Make sure channel is created once activity is available
+    return this
+}
+
+/**
+ * Associates an ActivationFactory with this NotificationHandler.
+ *
+ * The ActivationFactory is used to create Intents that determine what happens
+ * when a user clicks on a notification. This allows customizing the activation
+ * behavior of notifications.
+ *
+ * @param factory A function that creates an Intent for notification activation
+ * @return This NotificationHandler for method chaining
+ * @throws ClassCastException if the handler is not an AndroidNotificationHandler
+ */
+fun NotificationHandler.withActivationFactory(factory: ActivationFactory): NotificationHandler {
+    check<AndroidNotificationHandler>()
+    activationIntent.set(factory)
     return this
 }
 
@@ -380,7 +408,7 @@ fun NotificationHandler.getLaunchNotification(): ParcelableNotification? {
 val NotificationHandler.channel: AndroidNotificationChannel
     get() {
         check<AndroidNotificationHandler>()
-        return channel
+        return getOrCreateChannel()
     }
 
 /**

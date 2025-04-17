@@ -25,6 +25,7 @@ import org.jetbrains.skiko.wasm.onWasmReady
 
 @OptIn(ExperimentalComposeUiApi::class, ExperimentalResourceApi::class)
 suspend fun main() {
+    onAppInit()
     window.onunload = { onAppExit() }
     val icon = Res.readBytes("files/app_icon.png")
     onWasmReady {

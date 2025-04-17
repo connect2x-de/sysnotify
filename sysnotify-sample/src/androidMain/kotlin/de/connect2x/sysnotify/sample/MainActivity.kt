@@ -18,38 +18,19 @@ package de.connect2x.sysnotify.sample
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import de.connect2x.sysnotify.NotificationHandler
-import de.connect2x.sysnotify.SysNotifyIntent
-import de.connect2x.sysnotify.create
 import de.connect2x.sysnotify.getLaunchNotification
 import de.connect2x.sysnotify.getNotificationIcon
 import de.connect2x.sysnotify.handlePermissionRequest
-import kotlinx.coroutines.runBlocking
+import de.connect2x.sysnotify.withActivity
 
 class MainActivity : ComponentActivity() {
-    private lateinit var notificationHandler: NotificationHandler
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        notificationHandler = NotificationHandler.create(
-            name = "Sysnotify Sample",
-            id = "de.connect2x.sysnotify",
-            contextGetter = { this },
-            activationIntent = { context, notification ->
-                SysNotifyIntent(
-                    context,
-                    MainActivity::class.java,
-                    notification
-                )
-            },
-            permissionCallback = { _, granted -> if (!granted) finishAffinity() }
-        )
-        runBlocking { notificationHandler.requestPermissions() }
+        onAppInit { withActivity { this@MainActivity } }
         setContent {
             App(
-                notificationHandler = notificationHandler,
-                launchUserData = notificationHandler.getLaunchNotification()?.callbackData,
-                icon = resources.getNotificationIcon(R.drawable.ic_android)
+                launchUserData = { getLaunchNotification()?.callbackData },
+                icon = { resources.getNotificationIcon(R.drawable.ic_android) }
             )
         }
     }
@@ -61,7 +42,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        onAppExit()
         super.onDestroy()
-        notificationHandler.close()
     }
 }

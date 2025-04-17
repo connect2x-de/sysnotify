@@ -22,6 +22,7 @@ import platform.posix.atexit
 
 @OptIn(ExperimentalForeignApi::class)
 fun MainViewController() {
+    onAppInit()
     atexit(staticCFunction(::onAppExit))
     ComposeUIViewController {
         App()
