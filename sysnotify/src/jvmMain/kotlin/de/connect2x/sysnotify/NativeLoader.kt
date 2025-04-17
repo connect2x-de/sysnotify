@@ -72,7 +72,7 @@ internal object NativeLoader {
                 StandardCopyOption.REPLACE_EXISTING
             )
         }
-        if (System.getenv("SYSNOTIFY_DEBUG")?.equals("true") == true) {
+        if (System.getenv("SYSNOTIFY_DEBUG")?.toIntOrNull() == 1) {
             println("Loading native library from ${targetPath.pathString}")
         }
         System.load(targetPath.pathString)
