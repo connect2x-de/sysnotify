@@ -59,7 +59,7 @@ typealias ActivationFactory = (context: Context, notification: Notification) -> 
 internal class AndroidNotificationHandler( // @formatter:off
     override val name: String,
     override val id: String,
-    override val priority: NotificationPriority
+    override val priority: NotificationPriority,
 ) : NotificationHandler { // @formatter:on
     companion object {
         const val PERMISSION_REQUEST_CODE: Int = 0xBEEF
@@ -428,7 +428,8 @@ fun Context.getDefaultActivationFactory(): ActivationFactory = { context, notifi
 actual fun NotificationHandler( // @formatter:off
     name: String,
     id: String,
-    priority: NotificationPriority
+    priority: NotificationPriority,
+    isDebugEnabled: Boolean,
 ): NotificationHandler { // @formatter:on
     return AndroidNotificationHandler(name, id, priority)
 }

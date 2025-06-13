@@ -135,5 +135,6 @@ actual fun NotificationHandler.withActivationHandler(handler: ActivationHandler)
 actual fun NotificationHandler(
     name: String,
     id: String,
-    priority: NotificationPriority
+    priority: NotificationPriority,
+    isDebugEnabled: Boolean,
 ): NotificationHandler = WindowsNotificationHandler(name, id, priority)

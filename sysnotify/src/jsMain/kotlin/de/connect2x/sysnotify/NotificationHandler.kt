@@ -119,7 +119,8 @@ private class WebNotificationHandler(
 actual fun NotificationHandler( // @formatter:off
     name: String,
     id: String,
-    priority: NotificationPriority
+    priority: NotificationPriority,
+    isDebugEnabled: Boolean,
 ): NotificationHandler { // @formatter:on
     return WebNotificationHandler(name, id, priority)
 }

@@ -21,6 +21,7 @@ internal actual fun createNotificationHandler(
     priority: NotificationPriority,
     activationHandler: ActivationHandler,
     closeCallback: () -> Unit,
+    isDebugEnabled: Boolean,
 ): NotificationHandler {
     return WindowsNotificationHandler(name, id, priority, closeCallback)
         .withActivationHandler(activationHandler)

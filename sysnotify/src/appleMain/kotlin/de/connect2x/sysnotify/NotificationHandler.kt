@@ -18,7 +18,6 @@ package de.connect2x.sysnotify
 import co.touchlab.stately.collections.SharedHashMap
 import kotlinx.atomicfu.atomic
 import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.toKStringFromUtf8
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -34,7 +33,6 @@ import platform.UserNotifications.UNNotificationCategoryOptionNone
 import platform.UserNotifications.UNNotificationRequest
 import platform.UserNotifications.UNNotificationSound
 import platform.UserNotifications.UNUserNotificationCenter
-import platform.posix.getenv
 import kotlin.experimental.ExperimentalNativeApi
 
 @OptIn(ExperimentalNativeApi::class)
@@ -42,10 +40,10 @@ internal class AppleNotificationHandler(
     override val name: String,
     override val id: String,
     override val priority: NotificationPriority,
-    private val closeCallback: () -> Unit = {}
+    private val closeCallback: () -> Unit = {},
+    isDebugEnabled: Boolean,
 ) : NotificationHandler {
     @OptIn(ExperimentalForeignApi::class)
-    internal val isDebugEnabled: Boolean = getenv("SYSNOTIFY_DEBUG")?.toKStringFromUtf8() == "1"
 
     override val platform: NotificationPlatform = NotificationPlatform.APPLE
     override var hasPermissions: Boolean by atomic(false)
@@ -63,8 +61,8 @@ internal class AppleNotificationHandler(
 
     private val notificationCategories: SharedHashMap<String, UNNotificationCategory> = SharedHashMap()
 
-    private val notificationCenter: UNUserNotificationCenter? = if (isDebugEnabled) null
-    else UNUserNotificationCenter.currentNotificationCenter()
+    private val notificationCenter: UNUserNotificationCenter? =
+        if (isDebugEnabled) null else UNUserNotificationCenter.currentNotificationCenter()
 
     private fun ensureCategoryExists(key: String) {
         if (key in notificationCategories) return
@@ -87,7 +85,7 @@ internal class AppleNotificationHandler(
     override suspend fun requestPermissions(callback: PermissionCallback) {
         if (hasPermissions) return
         var isWaitingForAction by atomic(true)
-        UNUserNotificationCenter.currentNotificationCenter().requestAuthorizationWithOptions(
+        notificationCenter?.requestAuthorizationWithOptions(
             UNAuthorizationOptionSound or UNAuthorizationOptionBadge or UNAuthorizationOptionAlert
         ) { granted, error ->
             hasPermissions = granted
@@ -95,7 +93,7 @@ internal class AppleNotificationHandler(
             error?.localizedDescription?.let {
                 println("Could not request permission: $it")
             }
-        }
+        } ?: return
         coroutineScope {
             launch {
                 while (isWaitingForAction) yield()
@@ -186,7 +184,8 @@ actual fun NotificationHandler.withActivationHandler(handler: ActivationHandler)
 actual fun NotificationHandler( // @formatter:off
     name: String,
     id: String,
-    priority: NotificationPriority
+    priority: NotificationPriority,
+    isDebugEnabled: Boolean,
 ): NotificationHandler { // @formatter:on
-    return AppleNotificationHandler(name, id, priority)
+    return AppleNotificationHandler(name, id, priority, closeCallback = {}, isDebugEnabled)
 }
