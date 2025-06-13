@@ -34,7 +34,7 @@ fun main() {
                 onAppExit()
                 exitApplication()
             }) {
-            App(NotificationIcon.fromBufferedImage(icon))
+            App(icon = { NotificationIcon.fromBufferedImage(icon) })
         }
     }
 }
