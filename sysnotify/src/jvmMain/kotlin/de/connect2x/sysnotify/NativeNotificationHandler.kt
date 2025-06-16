@@ -25,7 +25,8 @@ object NativeNotificationHandler {
         name: String,
         id: String,
         priority: Int,
-        activationCallback: NativeActivationCallback
+        activationCallback: NativeActivationCallback,
+        isDebugEnabled: Boolean,
     ): Long // @formatter:on
 
     @JvmStatic

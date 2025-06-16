@@ -23,7 +23,8 @@ import kotlinx.coroutines.runBlocking
 private class JvmNotificationHandler(
     override val name: String,
     override val id: String,
-    override val priority: NotificationPriority
+    override val priority: NotificationPriority,
+    isDebugEnabled: Boolean,
 ) : NotificationHandler {
     var activationHandler: ActivationHandler? by atomic(null)
 
@@ -35,7 +36,8 @@ private class JvmNotificationHandler(
             NativeActivationCallback.create {
                 // Wire activation through to instance activation handler
                 activationHandler?.invoke(it)
-            }
+            },
+            isDebugEnabled,
         )
     }
 
@@ -129,7 +131,8 @@ actual fun NotificationHandler.withActivationHandler(handler: ActivationHandler)
 actual fun NotificationHandler( // @formatter:off
     name: String,
     id: String,
-    priority: NotificationPriority
+    priority: NotificationPriority,
+    isDebugEnabled: Boolean,
 ): NotificationHandler { // @formatter:on
-    return JvmNotificationHandler(name, id, priority)
+    return JvmNotificationHandler(name, id, priority, isDebugEnabled)
 }

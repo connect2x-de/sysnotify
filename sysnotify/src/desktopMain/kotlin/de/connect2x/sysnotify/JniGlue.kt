@@ -44,7 +44,8 @@ internal expect fun createNotificationHandler(
     id: String,
     priority: NotificationPriority,
     activationHandler: ActivationHandler,
-    closeCallback: () -> Unit = {}
+    closeCallback: () -> Unit = {},
+    isDebugEnabled: Boolean = false,
 ): NotificationHandler
 
 private val typeNativeNotificationHandler =
@@ -62,6 +63,7 @@ internal fun registerNatives() {
             typeString named "id"
             JvmBuiltinType.INT named "priority"
             typeNativeActivationCallback named "activationCallback"
+            JvmBuiltinType.BOOLEAN named "isDebugEnabled"
             returns(JvmBuiltinType.LONG)
         }
         registerNativeFunction("hasPermissions", staticCFunction(::hasPermissions)) {
@@ -125,7 +127,8 @@ private fun create(
     name: jstring,
     id: jstring,
     priority: jint,
-    activationCallback: jobject
+    activationCallback: jobject,
+    isDebugEnabled: jboolean,
 ): jlong {
     val globalCallback = activationCallback.newGlobalRef()
     val handler = createNotificationHandler(
@@ -154,7 +157,8 @@ private fun create(
                 }
             }
         },
-        { globalCallback.deleteGlobalRef() }
+        { globalCallback.deleteGlobalRef() },
+        isDebugEnabled = isDebugEnabled.toKBoolean(),
     )
     return StableRef.create(handler).asCPointer().rawValue.toLong()
 }

@@ -197,10 +197,19 @@ internal inline fun <reified H : NotificationHandler> NotificationHandler.check(
     contract { returns() implies (this@check is H) }
 }
 
+/**
+ * Create a NotificationHandler.
+ *
+ * @param name The display name of the notification handler.
+ * @param id The internal ID of the notification handler.
+ * @param priority The priority of the notification handler. See [NotificationPriority] for more information.
+ * @param isDebugEnabled Used in macOS/iOS to disable the notifications when in development mode; a bundled app is needed for notifications to work properly here. On other systems, it is ignored. Defaults to false.
+ */
 expect fun NotificationHandler(
     name: String,
     id: String = name,
-    priority: NotificationPriority = NotificationPriority.DEFAULT
+    priority: NotificationPriority = NotificationPriority.DEFAULT,
+    isDebugEnabled: Boolean = false,
 ): NotificationHandler
 
 /**
