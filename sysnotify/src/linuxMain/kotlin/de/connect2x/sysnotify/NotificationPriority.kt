@@ -22,7 +22,7 @@ import libnotify.NotifyUrgency
 
 /**
  * Maps the common [NotificationPriority] enum values to the Linux-specific [NotifyUrgency] enum values.
- * 
+ *
  * This extension property is used internally by the Linux implementation to convert the
  * platform-independent notification priority to the corresponding libnotify urgency level:
  * - [NotificationPriority.LOW] maps to [NotifyUrgency.NOTIFY_URGENCY_LOW]

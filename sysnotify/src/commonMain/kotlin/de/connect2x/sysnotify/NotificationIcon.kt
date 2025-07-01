@@ -17,7 +17,7 @@ package de.connect2x.sysnotify
 
 /**
  * Represents an icon used in notifications across different platforms.
- * 
+ *
  * This class stores raw pixel data in RGBA format (Red, Green, Blue, Alpha) along with
  * the dimensions of the image. It provides a platform-agnostic way to represent
  * notification icons, with platform-specific extensions for conversion to and from
@@ -44,11 +44,6 @@ data class NotificationIcon(
      */
     val height: Int
 ) {
-    /**
-     * Companion object for factory methods.
-     * Platform-specific implementations extend this companion object with methods
-     * to create NotificationIcon instances from platform-specific image formats.
-     */
     companion object;
 
     // Begin ugly generated code

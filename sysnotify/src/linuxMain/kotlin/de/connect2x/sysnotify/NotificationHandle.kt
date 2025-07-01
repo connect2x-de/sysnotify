@@ -31,11 +31,11 @@ internal class LinuxNotificationHandle(
 
 /**
  * Gets the native pointer to the Linux notification object.
- * 
+ *
  * This extension property provides access to the underlying C pointer that references
  * the native libnotify notification object. It's used for interacting with the
  * libnotify API when updating or removing notifications.
- * 
+ *
  * @return The C pointer to the NotifyNotification object
  * @throws IllegalStateException if the handle is not a LinuxNotificationHandle
  * @throws IllegalArgumentException if the handle is not valid

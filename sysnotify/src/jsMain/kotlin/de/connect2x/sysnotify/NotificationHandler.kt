@@ -17,19 +17,28 @@ package de.connect2x.sysnotify
 
 import co.touchlab.stately.collections.SharedHashMap
 import kotlinx.atomicfu.atomic
+import kotlinx.browser.document
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.await
 import kotlinx.coroutines.launch
+import org.khronos.webgl.Int8Array
+import org.khronos.webgl.Uint8ClampedArray
+import org.w3c.dom.CanvasRenderingContext2D
+import org.w3c.dom.HTMLCanvasElement
+import org.w3c.dom.ImageData
+import org.w3c.dom.url.URL
 import org.w3c.notifications.GRANTED
 import org.w3c.notifications.NotificationOptions
-import kotlin.io.encoding.Base64
+import kotlin.concurrent.atomics.AtomicReference
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.uuid.ExperimentalUuidApi
 import org.w3c.notifications.Notification as JsNotification
 import org.w3c.notifications.NotificationPermission as JsNotificationPermission
 
 // https://developer.mozilla.org/en-US/docs/Web/API/Notification
+@OptIn(ExperimentalAtomicApi::class)
 private class WebNotificationHandler(
     override val name: String,
     override val id: String,
@@ -51,6 +60,8 @@ private class WebNotificationHandler(
         isGroupingSupported = false
     )
 
+    val activationHandler: AtomicReference<ActivationHandler> = AtomicReference {}
+
     override fun getHandle(tag: String): NotificationHandle {
         require(tag.isNotEmpty()) { "Handle tag may not be empty" }
         require(tag in notifications) { "Handle must be that of an existing notification" }
@@ -68,24 +79,50 @@ private class WebNotificationHandler(
         callback(this, hasPermissions)
     }
 
+    private fun encodeIcon(notification: Notification): String? {
+        return notification.icon?.let { icon ->
+            val (data, width, height) = icon
+
+            val canvas = document.createElement("canvas") as HTMLCanvasElement
+            canvas.width = width
+            canvas.height = height
+
+            val context = canvas.getContext("2d") as CanvasRenderingContext2D
+            val imageBuffer = Int8Array(data.toTypedArray()).buffer
+            context.putImageData(ImageData(Uint8ClampedArray(imageBuffer), width, height), 0.0, 0.0)
+
+            canvas.toDataURL("image/png")
+        }
+    }
+
     @OptIn(ExperimentalEncodingApi::class, ExperimentalUuidApi::class)
     override suspend fun push(notification: Notification, tag: String): NotificationHandle {
         if (!hasPermissions) return NotificationHandle.INVALID
-        val icon = notification.icon?.data?.let { Base64.encode(it) }
+        val iconUrl = encodeIcon(notification)
         return WebNotificationHandle(
             instance = JsNotification(
                 title = notification.title ?: "",
                 options = NotificationOptions(
                     body = notification.description,
-                    icon = icon?.let { "data:image/*;base64,$it" },
+                    icon = iconUrl,
                     silent = !notification.playSound,
                     sound = notification.soundPath,
                 )
             ).apply {
+                // https://developer.mozilla.org/en-US/docs/Web/API/Notification/click_event
+                addEventListener(
+                    type = "click",
+                    callback = { event ->
+                        activationHandler.load()(notification)
+                        iconUrl?.let(URL::revokeObjectURL)
+                        notifications -= tag
+                    }
+                )
                 // https://developer.mozilla.org/en-US/docs/Web/API/Notification/close_event
                 addEventListener(
                     type = "close",
                     callback = { event ->
+                        iconUrl?.let(URL::revokeObjectURL)
                         notifications -= tag
                     }
                 )
@@ -114,6 +151,17 @@ private class WebNotificationHandler(
     override fun close() {
         GlobalScope.launch { clearAll() }
     }
+}
+
+@OptIn(ExperimentalAtomicApi::class)
+actual fun NotificationHandler.withActivationHandler(handler: ActivationHandler): NotificationHandler {
+    check<WebNotificationHandler>()
+    val previousHandler = activationHandler.load()
+    activationHandler.store {
+        handler(it)
+        previousHandler(it)
+    }
+    return this
 }
 
 actual fun NotificationHandler( // @formatter:off

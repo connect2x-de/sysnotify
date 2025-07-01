@@ -2,17 +2,15 @@
 jvmTarget = "17"
 c2xConventions = "39087842"
 
-androidGradle = "8.7.3" # https://developer.android.com/build/releases/gradle-plugin
+androidGradle = "8.9.3" # https://developer.android.com/build/releases/gradle-plugin
 androidCompileSDK = "35"
 androidMinimalSDK = "28"
-androidxTest = "1.6.1" # https://developer.android.com/jetpack/androidx/releases/test?hl=de
 androidxCore = "1.16.0" # https://developer.android.com/jetpack/androidx/releases/core
 androidxActivityKtx = "1.10.1" # https://mvnrepository.com/artifact/androidx.activity/activity-ktx
 
-sysnotify = "1.8.0"
-kotlin = "2.1.10" # https://github.com/JetBrains/kotlin/releases
-kotlinx-coroutines = "1.10.1" # https://github.com/Kotlin/kotlinx.coroutines/releases
-kotlinx-atomicfu = "0.27.0" # https://github.com/Kotlin/kotlinx-atomicfu/releases
+sysnotify = "1.8.1"
+kotlin = "2.1.21" # https://github.com/JetBrains/kotlin/releases
+kotlinx-coroutines = "1.10.2" # https://github.com/Kotlin/kotlinx.coroutines/releases
 stately = "2.1.0" # https://github.com/touchlab/Stately/releases
 
 # For sample
@@ -26,11 +24,9 @@ sysnotifyBinaries = "DEV-44ed6780" # https://gitlab.com/connect2x/sysnotify-plat
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlinx-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
-kotlinx-atomicfu = { module = "org.jetbrains.kotlinx:atomicfu", version.ref = "kotlinx-atomicfu" }
 
 androidx-core = { module = "androidx.core:core", version.ref = "androidxCore" }
 androidx-activity-ktx = { module = "androidx.activity:activity-ktx", version.ref = "androidxActivityKtx" }
-androidx-test = { module = "androidx.test:core", version.ref = "androidxTest" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activityCompose" }
 androidx-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling", version.ref = "androidx-ui-tooling" }
 androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview", version.ref = "androidx-ui-tooling" }
