@@ -47,6 +47,7 @@ import kotlinx.coroutines.yield
 import libnotify.GError
 import libnotify.GdkColorspace
 import libnotify.NotifyNotification
+import libnotify.gpointer
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
