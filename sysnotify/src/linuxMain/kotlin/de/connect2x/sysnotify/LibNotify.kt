@@ -107,7 +107,7 @@ internal object LibNotify {
     init {
         atexit(staticCFunction<Unit> {
             // Need a fully qualified reference to avoid capturing implicitly
-            library?.close()
+            LibNotify.library?.close()
         })
     }
 

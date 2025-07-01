@@ -52,7 +52,7 @@ object LibGObject {
     init {
         atexit(staticCFunction<Unit> {
             // Need a fully qualified reference to avoid capturing implicitly
-            library?.close()
+            LibGObject.library?.close()
         })
     }
 
