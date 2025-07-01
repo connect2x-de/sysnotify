@@ -23,7 +23,7 @@ import kotlin.jvm.JvmName
 
 /**
  * Represents a handle to a notification that has been pushed to the system.
- * 
+ *
  * A notification handle is a reference that can be used to update or remove
  * a notification after it has been displayed. Each handle has a unique tag
  * that identifies it within the notification system.
@@ -31,7 +31,7 @@ import kotlin.jvm.JvmName
 interface NotificationHandle {
     /**
      * The unique identifier for this notification handle.
-     * 
+     *
      * This tag is used to identify the notification within the system and
      * should not be empty for valid handles.
      */
@@ -39,7 +39,7 @@ interface NotificationHandle {
 
     /**
      * Indicates whether this handle is valid and can be used for operations.
-     * 
+     *
      * A handle is considered valid if its tag is not empty. Invalid handles
      * cannot be used to update or remove notifications.
      */
@@ -48,7 +48,7 @@ interface NotificationHandle {
 
     /**
      * A singleton representing an invalid notification handle.
-     * 
+     *
      * This is returned by operations that fail to create or update a notification,
      * such as when permissions are not granted or when the notification system
      * is not available.
@@ -60,11 +60,11 @@ interface NotificationHandle {
 
 /**
  * Checks if this notification handle is valid and of the expected type.
- * 
+ *
  * This function uses Kotlin contracts to ensure type safety when working with
  * platform-specific notification handle implementations. It throws an exception
  * if the handle is not valid.
- * 
+ *
  * @param H The expected type of the notification handle
  * @throws IllegalStateException if the handle is not valid
  */

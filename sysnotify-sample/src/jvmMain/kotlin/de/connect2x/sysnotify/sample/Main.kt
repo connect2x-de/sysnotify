@@ -21,6 +21,8 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import de.connect2x.sysnotify.NotificationIcon
 import de.connect2x.sysnotify.fromBufferedImage
+import de.connect2x.sysnotify.withActivationHandler
+import java.awt.Frame
 import javax.imageio.ImageIO
 
 fun main() {
@@ -34,6 +36,11 @@ fun main() {
                 onAppExit()
                 exitApplication()
             }) {
+            // On Desktop platforms, we manually need to handle bringing up the application window
+            notificationHandler.withActivationHandler {
+                window.state = Frame.NORMAL
+                window.requestFocus()
+            }
             App(icon = { NotificationIcon.fromBufferedImage(icon) })
         }
     }

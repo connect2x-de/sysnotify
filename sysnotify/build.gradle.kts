@@ -130,7 +130,6 @@ kotlin {
                 api(libs.kotlinx.coroutines)
                 implementation(libs.stately.common)
                 implementation(libs.stately.collections)
-                implementation(libs.kotlinx.atomicfu)
             }
         }
         val commonTest by getting {
@@ -175,11 +174,8 @@ kotlin {
         mingwMain { dependsOn(activatableMain) }
         appleMain { dependsOn(activatableMain) }
         jvmMain { dependsOn(activatableMain) }
+        jsMain { dependsOn(activatableMain) }
     }
-}
-
-dependencies {
-    androidTestImplementation(libs.androidx.test)
 }
 
 android {

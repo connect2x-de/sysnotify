@@ -25,8 +25,8 @@ import android.graphics.drawable.Drawable
 import android.os.Build
 import android.os.Parcel
 import androidx.core.app.ActivityCompat
-import kotlin.math.max
 import androidx.core.graphics.createBitmap
+import kotlin.math.max
 
 /**
  * Converts a Drawable to a Bitmap.

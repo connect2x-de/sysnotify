@@ -17,16 +17,18 @@
 
 package de.connect2x.sysnotify
 
-import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.runBlocking
+import kotlin.concurrent.atomics.AtomicReference
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
+@OptIn(ExperimentalAtomicApi::class)
 private class JvmNotificationHandler(
     override val name: String,
     override val id: String,
     override val priority: NotificationPriority,
     isDebugEnabled: Boolean,
 ) : NotificationHandler {
-    var activationHandler: ActivationHandler? by atomic(null)
+    var activationHandler: AtomicReference<ActivationHandler?> = AtomicReference(null)
 
     private val address: Long by lazy {
         NativeNotificationHandler.create(
@@ -35,7 +37,7 @@ private class JvmNotificationHandler(
             priority.ordinal,
             NativeActivationCallback.create {
                 // Wire activation through to instance activation handler
-                activationHandler?.invoke(it)
+                activationHandler.load()?.invoke(it)
             },
             isDebugEnabled,
         )
@@ -122,9 +124,10 @@ private class JvmNotificationHandler(
     }
 }
 
+@OptIn(ExperimentalAtomicApi::class)
 actual fun NotificationHandler.withActivationHandler(handler: ActivationHandler): NotificationHandler {
     check<JvmNotificationHandler>()
-    activationHandler = handler
+    activationHandler.store(handler)
     return this
 }
 

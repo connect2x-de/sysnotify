@@ -118,7 +118,7 @@ internal class AndroidNotificationHandler( // @formatter:off
             value = NotificationCompat.Builder(context, id).apply {
                 setContentTitle(notification.title ?: name)
                 setContentText(notification.description)
-                setPriority(notification.priority.nativePriority)
+                priority = notification.priority.nativePriority
                 setOngoing(!notification.dismissible)
                 setAutoCancel(true) // Remove notification when user taps it
                 setGroup(notification.group)

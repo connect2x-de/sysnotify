@@ -19,7 +19,7 @@ import kotlin.jvm.JvmInline
 
 /**
  * Represents the capabilities of a notification system on a specific platform.
- * 
+ *
  * This class uses a bit mask to efficiently store which notification features
  * are supported by the underlying platform implementation. Each bit in the mask
  * corresponds to a specific capability such as title support, icon support, etc.

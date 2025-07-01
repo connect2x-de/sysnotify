@@ -50,7 +50,7 @@ internal object LibGdkPixbuf {
     init {
         atexit(staticCFunction<Unit> {
             // Need a fully qualified reference to avoid capturing implicitly
-            LibGdkPixbuf.library?.close()
+            library?.close()
         })
     }
 

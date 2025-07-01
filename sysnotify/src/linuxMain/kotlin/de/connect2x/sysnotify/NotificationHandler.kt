@@ -47,7 +47,6 @@ import kotlinx.coroutines.yield
 import libnotify.GError
 import libnotify.GdkColorspace
 import libnotify.NotifyNotification
-import libnotify.gpointer
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
@@ -207,7 +206,7 @@ internal class LinuxNotificationHandler(
             label = "Open",
             callback = staticCFunction { _, _, userData ->
                 val stateRef = userData?.asStableRef<NotificationActivationState>() ?: return@staticCFunction
-                LinuxNotificationHandler.onNotificationActivated(stateRef.get())
+                onNotificationActivated(stateRef.get())
             },
             userData = stateRef.asCPointer(),
             freeFunc = null
@@ -219,7 +218,7 @@ internal class LinuxNotificationHandler(
             detailedSignal = SIGNAL_CLOSED,
             handler = staticCFunction<CPointer<NotifyNotification>, gpointer?, Unit> { _, userData ->
                 val stateRef = userData?.asStableRef<NotificationActivationState>() ?: return@staticCFunction
-                LinuxNotificationHandler.onNotificationClosed(stateRef.get())
+                onNotificationClosed(stateRef.get())
                 stateRef.dispose()
             }.reinterpret(),
             data = stateRef.asCPointer(),

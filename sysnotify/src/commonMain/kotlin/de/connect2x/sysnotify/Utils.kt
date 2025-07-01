@@ -23,11 +23,14 @@ import kotlin.jvm.JvmInline
  */
 internal enum class ColorChannel {
     /** Red channel */
-    R, 
+    R,
+
     /** Green channel */
-    G, 
+    G,
+
     /** Blue channel */
-    B, 
+    B,
+
     /** Alpha channel */
     A;
 
