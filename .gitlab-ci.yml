@@ -74,6 +74,8 @@ build:linux:
   image: $BUILD_LINUX_IMAGE_NAME
   rules:
     - *if-merge-request-or-main
+  before_script:
+    - apt install openjdk-17-jdk -y
   script:
     - ./gradlew
       clean
@@ -91,6 +93,8 @@ test:linux:
   artifacts: *artifact-reports
   rules:
     - *if-merge-request-or-main
+  before_script:
+    - apt install openjdk-17-jdk -y
   script:
     - ./gradlew :sysnotify:{jvm,linuxX64}Test --stacktrace
 
@@ -166,6 +170,8 @@ publish:linux:
   rules:
     - *if-main
     - *if-release
+  before_script:
+    - apt install openjdk-17-jdk -y
   script:
     - ./gradlew
       :sysnotify:publish{KotlinMultiplatform,Js,AndroidRelease}PublicationToGitlabRepository

@@ -73,12 +73,7 @@ kotlin {
                 implementation(project(":sysnotify"))
             }
         }
-        val desktopMain by creating { dependsOn(commonMain) }
-        linuxMain { dependsOn(desktopMain) }
-        macosMain { dependsOn(desktopMain) }
-        mingwMain { dependsOn(desktopMain) }
         jvmMain {
-            dependsOn(desktopMain)
             dependencies {
                 // this is needed to create lock files working on all machines
                 if (System.getProperty("bundleAll") == "true") {
