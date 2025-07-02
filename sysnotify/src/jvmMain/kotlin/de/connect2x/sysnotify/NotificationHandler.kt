@@ -17,7 +17,6 @@
 
 package de.connect2x.sysnotify
 
-import kotlinx.coroutines.runBlocking
 import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 

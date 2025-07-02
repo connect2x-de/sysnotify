@@ -134,7 +134,7 @@ private fun create(
     val handler = createNotificationHandler(
         name.toKString(), id.toKString(), NotificationPriority.entries[priority],
         { notification ->
-            jvmEnvironment { // Ensure thread is attached to JVM from the get-go
+            jvmEnvironment(true) { // Ensure thread is attached to JVM from the get-go
                 memScoped {
                     val data = cValue<SNNotificationData> {
                         title = notification.title?.cstr?.ptr
@@ -194,6 +194,7 @@ private fun getCapabilities(env: JNIEnvVar, clazz: jclass, handler: jlong): jint
 }
 
 private fun requestPermissions(env: JNIEnvVar, clazz: jclass, handler: jlong, callback: jobject) = runBlocking {
+    val globalCallback = callback.newGlobalRef()
     requireNotNull(handler.toCPointer<CPointed>())
         .asStableRef<NotificationHandler>()
         .get()
@@ -201,9 +202,10 @@ private fun requestPermissions(env: JNIEnvVar, clazz: jclass, handler: jlong, ca
             jvmEnvironment {
                 typeNativePermissionCallback.jClass.getMethod("invoke") {
                     JvmBuiltinType.BOOLEAN named "granted"
-                }.call(callback) {
+                }.call(globalCallback) {
                     put("granted", granted)
                 }
+                globalCallback.deleteGlobalRef()
             }
         }
 }

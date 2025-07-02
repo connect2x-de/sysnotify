@@ -64,6 +64,7 @@ fun jniOnLoad(vm: JavaVMVar, reserved: COpaquePointer): jint {
  * done so temporarily. When the scope is left, the thread is automatically detached.
  */
 internal inline fun <reified R> jvmEnvironment(
+    detachAfter: Boolean = false,
     scope: JNIEnvVar.() -> R
 ): R {
     return memScoped {
@@ -82,7 +83,9 @@ internal inline fun <reified R> jvmEnvironment(
         environment = requireNotNull(localEnv.pointed)
         val result = requireNotNull(environment).scope()
         environment = null
-        requireNotNull(vm.DetachCurrentThread)(virtualMachine.ptr)
+        if(detachAfter) {
+            requireNotNull(vm.DetachCurrentThread)(virtualMachine.ptr)
+        }
         result
     }
 }
