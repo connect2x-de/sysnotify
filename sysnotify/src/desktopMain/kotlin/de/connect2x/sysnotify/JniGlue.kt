@@ -198,10 +198,12 @@ private fun requestPermissions(env: JNIEnvVar, clazz: jclass, handler: jlong, ca
         .asStableRef<NotificationHandler>()
         .get()
         .requestPermissions { _, granted ->
-            typeNativePermissionCallback.jClass.getMethod("invoke") {
-                JvmBuiltinType.BOOLEAN named "granted"
-            }.call(callback) {
-                put("granted", granted)
+            jvmEnvironment {
+                typeNativePermissionCallback.jClass.getMethod("invoke") {
+                    JvmBuiltinType.BOOLEAN named "granted"
+                }.call(callback) {
+                    put("granted", granted)
+                }
             }
         }
 }
