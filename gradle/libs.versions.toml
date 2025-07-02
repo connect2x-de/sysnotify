@@ -1,5 +1,5 @@
 [versions]
-jvmTarget = "17"
+jvmTarget = "21"
 c2xConventions = "39087842"
 
 androidGradle = "8.9.3" # https://developer.android.com/build/releases/gradle-plugin

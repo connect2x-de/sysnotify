@@ -19,7 +19,6 @@ package de.connect2x.sysnotify
 
 import co.touchlab.stately.collections.SharedHashMap
 import co.touchlab.stately.collections.SharedLinkedList
-import kotlinx.atomicfu.atomic
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.StableRef
@@ -48,9 +47,13 @@ import libnotify.GError
 import libnotify.GdkColorspace
 import libnotify.NotifyNotification
 import libnotify.gpointer
+import kotlin.concurrent.atomics.AtomicBoolean
+import kotlin.concurrent.atomics.AtomicReference
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
+@OptIn(ExperimentalAtomicApi::class)
 internal class LinuxNotificationHandler(
     override val name: String,
     override val id: String,
@@ -79,7 +82,7 @@ internal class LinuxNotificationHandler(
             state: NotificationActivationState
         ) {
             state.activated = true // Notify close signal handler that we've handled this notification already
-            state.handler.activationHandler?.invoke(state.notification)
+            state.handler.activationHandler.load()?.invoke(state.notification)
         }
     }
 
@@ -110,10 +113,10 @@ internal class LinuxNotificationHandler(
     private val pendingNotifications: SharedLinkedList<Triple<String, Boolean, Notification>> = SharedLinkedList()
     private val notifications: SharedHashMap<String, LinuxNotificationHandle> = SharedHashMap()
 
-    private var shouldDispachNotifications: Boolean by atomic(true)
-    private var shouldHandleEvents: Boolean by atomic(true)
-    private var lastNotification: Notification? by atomic(null)
-    internal var activationHandler: ActivationHandler? by atomic(null)
+    private var shouldDispachNotifications: AtomicBoolean = AtomicBoolean(false)
+    private var shouldHandleEvents: AtomicBoolean = AtomicBoolean(true)
+    private var lastNotification: AtomicReference<Notification?> = AtomicReference(null)
+    internal var activationHandler: AtomicReference<ActivationHandler?> = AtomicReference(null)
 
     init {
         check(LibNotify.notify_init(name) != 0) { "Could not initialize libnotify" }
@@ -121,8 +124,8 @@ internal class LinuxNotificationHandler(
 
     // Flushes notifications from the internal queue to the system periodically
     private val dequeueJob: Job = coroutineScope.launch(start = CoroutineStart.ATOMIC) {
-        while (shouldDispachNotifications) {
-            while (shouldDispachNotifications && pendingNotifications.isNotEmpty()) {
+        while (shouldDispachNotifications.load()) {
+            while (shouldDispachNotifications.load() && pendingNotifications.isNotEmpty()) {
                 val (tag, isSameContent, notification) = pendingNotifications.removeFirst()
                 val handle = create(tag, notification)
                 handle.check<LinuxNotificationHandle>()
@@ -130,7 +133,7 @@ internal class LinuxNotificationHandler(
                 // Minimum required DBus timeouts to prevent dropping notifications
                 val delay = if (isSameContent) timeout else minimumDelay
                 // Only delay if the state hasn't changed since then
-                if (shouldDispachNotifications) delay(delay)
+                if (shouldDispachNotifications.load()) delay(delay)
             }
             yield()
         }
@@ -144,7 +147,7 @@ internal class LinuxNotificationHandler(
         val loopContext = requireNotNull(LibGLib.g_main_loop_get_context(eventLoop)) {
             "Could not obtain GMainContext for event loop"
         }
-        while (shouldHandleEvents) {
+        while (shouldHandleEvents.load()) {
             if (LibGLib.g_main_context_iteration(loopContext, 0) == 1) continue
             yield()
         }
@@ -237,7 +240,7 @@ internal class LinuxNotificationHandler(
         // If this notification is already pending or active, return early
         if (tag in notifications || pendingNotifications.any { it.first == tag }) return NotificationHandle.INVALID
         pendingNotifications += Triple(tag, lastNotification == notification, notification)
-        lastNotification = notification
+        lastNotification.store(notification)
         return LinuxNotificationHandle(tag) // Early return so we don't block
     }
 
@@ -265,7 +268,7 @@ internal class LinuxNotificationHandler(
         if (outdatedIndex == -1) return NotificationHandle.INVALID
         val isSameContent = lastNotification == notification
         pendingNotifications[outdatedIndex] = Triple(tag, isSameContent, notification)
-        lastNotification = notification
+        lastNotification.store(notification)
         return handle
     }
 
@@ -307,11 +310,11 @@ internal class LinuxNotificationHandler(
     override fun close() {
         runBlocking { clearAll() }
         runBlocking {
-            shouldDispachNotifications = false
+            shouldDispachNotifications.store(false)
             dequeueJob.join()
         }
         runBlocking {
-            shouldHandleEvents = false
+            shouldHandleEvents.store(false)
             eventLoopJob.join()
         }
         coroutineScope.cancel()
@@ -320,9 +323,10 @@ internal class LinuxNotificationHandler(
     }
 }
 
+@OptIn(ExperimentalAtomicApi::class)
 actual fun NotificationHandler.withActivationHandler(handler: ActivationHandler): NotificationHandler {
     check<LinuxNotificationHandler>()
-    activationHandler = handler
+    activationHandler.store(handler)
     return this
 }
 
