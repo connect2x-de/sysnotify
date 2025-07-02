@@ -30,7 +30,7 @@ import kotlin.uuid.Uuid
  * @param handler The notification handler that requested the permission
  * @param granted Boolean indicating whether permission was granted (true) or denied (false)
  */
-typealias PermissionCallback = suspend (handler: NotificationHandler, granted: Boolean) -> Unit
+typealias PermissionCallback = (handler: NotificationHandler, granted: Boolean) -> Unit
 
 /**
  * A callback function that is invoked when a user interacts with (clicks/activates) a notification.

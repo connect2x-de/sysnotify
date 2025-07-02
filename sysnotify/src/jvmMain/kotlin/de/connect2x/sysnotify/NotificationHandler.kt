@@ -66,9 +66,7 @@ private class JvmNotificationHandler(
 
     override suspend fun requestPermissions(callback: PermissionCallback) {
         NativeNotificationHandler.requestPermissions(address) {
-            runBlocking {
-                callback(this@JvmNotificationHandler, it)
-            }
+            callback(this@JvmNotificationHandler, it)
         }
     }
 

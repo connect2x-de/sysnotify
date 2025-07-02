@@ -63,7 +63,9 @@ fun jniOnLoad(vm: JavaVMVar, reserved: COpaquePointer): jint {
  * If the current thread is not attached to the current VM instance, it is
  * done so temporarily. When the scope is left, the thread is automatically detached.
  */
-internal inline fun <reified R> jvmEnvironment(scope: JNIEnvVar.() -> R): R {
+internal inline fun <reified R> jvmEnvironment(
+    scope: JNIEnvVar.() -> R
+): R {
     return memScoped {
         if (environment != null) {
             return environment!!.scope()
