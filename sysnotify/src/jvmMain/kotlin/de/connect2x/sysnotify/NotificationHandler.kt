@@ -29,18 +29,16 @@ private class JvmNotificationHandler(
 ) : NotificationHandler {
     var activationHandler: AtomicReference<ActivationHandler?> = AtomicReference(null)
 
-    private val address: Long by lazy {
-        NativeNotificationHandler.create(
-            name,
-            id,
-            priority.ordinal,
-            NativeActivationCallback.create {
-                // Wire activation through to instance activation handler
-                activationHandler.load()?.invoke(it)
-            },
-            isDebugEnabled,
-        )
-    }
+    private val address: Long = NativeNotificationHandler.create(
+        name,
+        id,
+        priority.ordinal,
+        NativeActivationCallback.create {
+            // Wire activation through to instance activation handler
+            activationHandler.load()?.invoke(it)
+        },
+        isDebugEnabled,
+    )
 
     override val platform: NotificationPlatform by lazy {
         NotificationPlatform.entries[NativeNotificationHandler.getPlatform(address)]
