@@ -15,11 +15,9 @@
 
 package de.connect2x.sysnotify
 
-import jdk.incubator.foreign.MemoryAccess
-import jdk.incubator.foreign.MemoryAddress
-import jdk.incubator.foreign.MemorySegment
-import jdk.incubator.foreign.ResourceScope
 import sun.misc.Unsafe
+import java.lang.foreign.MemorySegment
+import java.lang.foreign.ValueLayout
 
 internal interface Memory {
     companion object {
@@ -95,19 +93,16 @@ internal class ForeignMemory : Memory {
     override val systemBitness: Long = System.getProperty("sun.arch.data.model").toLong()
     override val pointerSize: Long = systemBitness shr 3
 
-    private fun Long.asGlobalSegment(): MemorySegment {
-        return MemoryAddress.ofLong(this).asSegment(pointerSize, ResourceScope.globalScope())
-    }
-
     override fun getPointer(address: Long): Long {
-        return MemoryAccess.getAddress(address.asGlobalSegment()).toRawLongValue()
+        return MemorySegment.ofAddress(address).asSlice(0, pointerSize).get(ValueLayout.ADDRESS_UNALIGNED, 0L).address()
     }
 
     override fun getByte(address: Long): Byte {
-        return MemoryAccess.getByte(address.asGlobalSegment())
+        return MemorySegment.ofAddress(address).asSlice(0, Byte.SIZE_BYTES.toLong()).get(ValueLayout.JAVA_BYTE, 0L)
     }
 
     override fun getInt(address: Long): Int {
-        return MemoryAccess.getInt(address.asGlobalSegment())
+        return MemorySegment.ofAddress(address).asSlice(0, Int.SIZE_BYTES.toLong())
+            .get(ValueLayout.JAVA_INT_UNALIGNED, 0L)
     }
 }

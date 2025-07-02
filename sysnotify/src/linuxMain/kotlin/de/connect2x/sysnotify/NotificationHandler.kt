@@ -34,7 +34,6 @@ import kotlinx.cinterop.value
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -113,7 +112,7 @@ internal class LinuxNotificationHandler(
     private val pendingNotifications: SharedLinkedList<Triple<String, Boolean, Notification>> = SharedLinkedList()
     private val notifications: SharedHashMap<String, LinuxNotificationHandle> = SharedHashMap()
 
-    private var shouldDispachNotifications: AtomicBoolean = AtomicBoolean(false)
+    private var shouldDispachNotifications: AtomicBoolean = AtomicBoolean(true)
     private var shouldHandleEvents: AtomicBoolean = AtomicBoolean(true)
     private var lastNotification: AtomicReference<Notification?> = AtomicReference(null)
     internal var activationHandler: AtomicReference<ActivationHandler?> = AtomicReference(null)
@@ -123,7 +122,7 @@ internal class LinuxNotificationHandler(
     }
 
     // Flushes notifications from the internal queue to the system periodically
-    private val dequeueJob: Job = coroutineScope.launch(start = CoroutineStart.ATOMIC) {
+    private val dequeueJob: Job = coroutineScope.launch {
         while (shouldDispachNotifications.load()) {
             while (shouldDispachNotifications.load() && pendingNotifications.isNotEmpty()) {
                 val (tag, isSameContent, notification) = pendingNotifications.removeFirst()
@@ -140,7 +139,7 @@ internal class LinuxNotificationHandler(
     }
 
     // An out-of-band event pump so actions and signals work for our notifications
-    private val eventLoopJob: Job = coroutineScope.launch(start = CoroutineStart.ATOMIC) {
+    private val eventLoopJob: Job = coroutineScope.launch {
         val eventLoop = requireNotNull(LibGLib.g_main_loop_new(null, 0)) {
             "Could not create GMainLoop instance"
         }

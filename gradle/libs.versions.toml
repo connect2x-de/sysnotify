@@ -1,6 +1,6 @@
 [versions]
 jvmTarget = "21"
-c2xConventions = "39087842"
+c2xConventions = "43109500"
 
 androidGradle = "8.9.3" # https://developer.android.com/build/releases/gradle-plugin
 androidCompileSDK = "35"
