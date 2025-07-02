@@ -13,12 +13,14 @@
  * limitations under the License.
  */
 
-@file:OptIn(ExperimentalForeignApi::class, ExperimentalNativeApi::class)
+@file:OptIn(ExperimentalForeignApi::class, ExperimentalNativeApi::class, ExperimentalAtomicApi::class)
 
 package de.connect2x.sysnotify
 
 import jni.JNIEnvVar
 import jni.JNINativeMethod
+import jni.JNI_EDETACHED
+import jni.JNI_EVERSION
 import jni.JNI_OK
 import jni.JNI_VERSION_1_8
 import jni.JavaVMVar
@@ -32,7 +34,6 @@ import kotlinx.cinterop.COpaquePointer
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.alloc
-import kotlinx.cinterop.allocPointerTo
 import kotlinx.cinterop.cstr
 import kotlinx.cinterop.invoke
 import kotlinx.cinterop.memScoped
@@ -42,63 +43,58 @@ import kotlinx.cinterop.reinterpret
 import kotlinx.cinterop.toKStringFromUtf16
 import kotlinx.cinterop.usePinned
 import platform.posix.memcpy
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.experimental.ExperimentalNativeApi
-import kotlin.native.concurrent.ThreadLocal
 
+private const val JNI_VERSION: Int = JNI_VERSION_1_8
 private lateinit var virtualMachine: JavaVMVar
-
-@ThreadLocal
-private var environment: JNIEnvVar? = null
 
 @Suppress("UNUSED_PARAMETER", "UNUSED")
 @CName("JNI_OnLoad")
 fun jniOnLoad(vm: JavaVMVar, reserved: COpaquePointer): jint {
     virtualMachine = vm
     registerNatives()
-    return JNI_VERSION_1_8
+    return JNI_VERSION
 }
 
-/**
- * This functions allows using the JNI environment in any thread context.
- * If the current thread is not attached to the current VM instance, it is
- * done so temporarily. When the scope is left, the thread is automatically detached.
- */
 internal inline fun <reified R> jvmEnvironment(
     scope: JNIEnvVar.() -> R
-): R {
-    return memScoped {
-        if (environment != null) {
-            return environment!!.scope()
+): R = memScoped {
+    val getEnv = requireNotNull(virtualMachine.pointed?.GetEnv) { "Could not get JNI:GetEnv function" }
+    val environment = alloc<JNIEnvVar>()
+    when (getEnv(virtualMachine.ptr, environment.ptr.reinterpret(), JNI_VERSION)) {
+        JNI_OK -> environment.scope()
+        JNI_EDETACHED -> {
+            val attachThread = requireNotNull(virtualMachine.pointed?.AttachCurrentThread) {
+                "Could not get JNI:AttachCurrentThread function"
+            }
+            if (attachThread(virtualMachine.ptr, environment.ptr.reinterpret(), null) != JNI_OK) {
+                error("Could not attach current thread to JVM instance")
+            }
+            val detachThread = requireNotNull(virtualMachine.pointed?.DetachCurrentThread) {
+                "Could not get JNI:DetachCurrentThread function"
+            }
+            detachThread(virtualMachine.ptr)
+            environment.scope()
         }
-        val vm = requireNotNull(virtualMachine.pointed)
-        val localEnv = allocPointerTo<JNIEnvVar>()
-        require(
-            requireNotNull(vm.AttachCurrentThread)(
-                virtualMachine.ptr,
-                localEnv.ptr.reinterpret(),
-                null
-            ) == JNI_OK
-        )
-        environment = requireNotNull(localEnv.pointed)
-        val result = requireNotNull(environment).scope()
-        environment = null
-        if(detachAfter) {
-            requireNotNull(vm.DetachCurrentThread)(virtualMachine.ptr)
-        }
-        result
+
+        JNI_EVERSION -> error("Could not retrieve JNI environment: invalid JNI version")
+        else -> error("Could not retrieve JNI environment: unknown error")
     }
 }
 
-internal inline fun <reified O : jobject> O.newGlobalRef(): O {
-    return jvmEnvironment {
-        requireNotNull(pointed?.NewGlobalRef)(ptr, this@newGlobalRef) as O
+internal inline fun <reified O : jobject> O.newGlobalRef(): O = jvmEnvironment {
+    val function = requireNotNull(pointed?.NewGlobalRef) {
+        "Could not access JNI:NewGlobalRef"
     }
+    function(ptr, this@newGlobalRef) as O
 }
 
-internal inline fun <reified O : jobject> O.deleteGlobalRef() {
-    jvmEnvironment {
-        requireNotNull(pointed?.DeleteGlobalRef)(ptr, this@deleteGlobalRef)
+internal inline fun <reified O : jobject> O.deleteGlobalRef() = jvmEnvironment {
+    val function = requireNotNull(pointed?.DeleteGlobalRef) {
+        "Could not access JNI:DeleteGlobalRef"
     }
+    function(ptr, this@deleteGlobalRef)
 }
 
 @Suppress("NOTHING_TO_INLINE")
@@ -110,19 +106,17 @@ internal inline fun jboolean.toKBoolean(): Boolean = this == 1U.toUByte()
 @Suppress("NOTHING_TO_INLINE")
 internal inline fun jstring.toKString(): String {
     return jvmEnvironment {
-        val data = requireNotNull(
-            requireNotNull(pointed?.GetStringCritical) { "Could not access JNI:GetStringUTFChars function" }(
-                ptr,
-                this@toKString,
-                null
-            )
-        ) { "Could not retrieve string base address" }
+        val acquireString = requireNotNull(pointed?.GetStringCritical) {
+            "Could not access JNI:GetStringUTFChars function"
+        }
+        val data = requireNotNull(acquireString(ptr, this@toKString, null)) {
+            "Could not retrieve string base address"
+        }
         val result = data.toKStringFromUtf16()
-        requireNotNull(pointed?.ReleaseStringCritical) { "Could not access JNI:ReleaseStringUTFChars function" }(
-            ptr,
-            this@toKString,
-            data
-        )
+        val releaseString = requireNotNull(pointed?.ReleaseStringCritical) {
+            "Could not access JNI:ReleaseStringUTFChars function"
+        }
+        releaseString(ptr, this@toKString, data)
         result
     }
 }
@@ -136,19 +130,15 @@ internal inline fun jbyteArray.toByteArray(): ByteArray {
         )
         ByteArray(size).apply {
             usePinned { pinnedArray ->
-                val data =
-                    requireNotNull(pointed?.GetByteArrayElements) { "Could not access JNI:GetPrimitiveArrayCritical function" }(
-                        this@jvmEnvironment.ptr,
-                        this@toByteArray.reinterpret(),
-                        null
-                    )
+                val acquireElements = requireNotNull(pointed?.GetByteArrayElements) {
+                    "Could not access JNI:GetPrimitiveArrayCritical function"
+                }
+                val data = acquireElements(this@jvmEnvironment.ptr, this@toByteArray.reinterpret(), null)
                 memcpy(pinnedArray.addressOf(0), data, size.toULong())
-                requireNotNull(pointed?.ReleaseByteArrayElements) { "Could not access JNI:ReleasePrimitiveArrayCritical function" }(
-                    this@jvmEnvironment.ptr,
-                    this@toByteArray.reinterpret(),
-                    data,
-                    0
-                )
+                val releaseElements = requireNotNull(pointed?.ReleaseByteArrayElements) {
+                    "Could not access JNI:ReleasePrimitiveArrayCritical function"
+                }
+                releaseElements(this@jvmEnvironment.ptr, this@toByteArray.reinterpret(), data, 0)
             }
         }
     }
@@ -164,23 +154,19 @@ internal inline fun jclass.registerNativeFunction(
     method.signature = JvmSignature.of(signature).signatureString.cstr.ptr
     method.fnPtr = address
     jvmEnvironment {
-        requireNotNull(pointed?.RegisterNatives) { "Could not access JNI:RegisterNatives function" }(
-            ptr,
-            this@registerNativeFunction,
-            method.ptr,
-            1
-        )
+        val registerNatives = requireNotNull(pointed?.RegisterNatives) {
+            "Could not access JNI:RegisterNatives function"
+        }
+        registerNatives(ptr, this@registerNativeFunction, method.ptr, 1)
     }
 }
 
 internal inline val JvmRefType.jClass: jclass
     get() = jvmEnvironment {
         memScoped {
-            requireNotNull(
-                requireNotNull(pointed?.FindClass) { "Could not access JNIEnv::FindClass" }(
-                    this@jvmEnvironment.ptr,
-                    objectName.cstr.ptr
-                )
-            ) { "Could not find class '$typeName'" }
+            val findClass = requireNotNull(pointed?.FindClass) { "Could not access JNIEnv::FindClass" }
+            requireNotNull(findClass(this@jvmEnvironment.ptr, objectName.cstr.ptr)) {
+                "Could not find class '$typeName'"
+            }
         }
     }

@@ -134,21 +134,21 @@ private fun create(
     val handler = createNotificationHandler(
         name.toKString(), id.toKString(), NotificationPriority.entries[priority],
         { notification ->
-            jvmEnvironment(true) { // Ensure thread is attached to JVM from the get-go
-                memScoped {
-                    val data = cValue<SNNotificationData> {
-                        title = notification.title?.cstr?.ptr
-                        description = notification.description?.cstr?.ptr
-                        icon_data = notification.icon?.let { allocArrayOf(it.data) }
-                        icon_width = notification.icon?.width ?: 0
-                        icon_height = notification.icon?.height ?: 0
-                        callback_data = notification.callbackData?.cstr?.ptr
-                        dismissible = if (notification.dismissible) 1 else 0
-                        this.priority = notification.priority.ordinal
-                        play_sound = if (notification.playSound) 1 else 0
-                        sound_path = notification.soundPath?.cstr?.ptr
-                        group = notification.group?.cstr?.ptr
-                    }
+            memScoped {
+                val data = cValue<SNNotificationData> {
+                    title = notification.title?.cstr?.ptr
+                    description = notification.description?.cstr?.ptr
+                    icon_data = notification.icon?.let { allocArrayOf(it.data) }
+                    icon_width = notification.icon?.width ?: 0
+                    icon_height = notification.icon?.height ?: 0
+                    callback_data = notification.callbackData?.cstr?.ptr
+                    dismissible = if (notification.dismissible) 1 else 0
+                    this.priority = notification.priority.ordinal
+                    play_sound = if (notification.playSound) 1 else 0
+                    sound_path = notification.soundPath?.cstr?.ptr
+                    group = notification.group?.cstr?.ptr
+                }
+                jvmEnvironment {
                     typeNativeActivationCallback.jClass.getMethod("invoke") {
                         JvmBuiltinType.LONG named "notification"
                     }.call(globalCallback) {

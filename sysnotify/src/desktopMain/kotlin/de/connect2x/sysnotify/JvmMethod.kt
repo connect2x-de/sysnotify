@@ -143,14 +143,16 @@ internal data class JvmMethod(
             val argsBaseAddress = with(args) { associate(signature) }
             val env = requireNotNull(pointed) { "Could not access JNI environment" }
             if (isStatic) {
-                requireNotNull(env.CallStaticVoidMethodA) {
+                val invoker = requireNotNull(env.CallStaticVoidMethodA) {
                     "Could not access JNIEnv::CallStaticVoidMethodA"
-                }(ptr, owner, handle, argsBaseAddress)
+                }
+                invoker(ptr, owner, handle, argsBaseAddress)
             } else {
                 require(instance != null) { "Calling non-static method requires valid instance" }
-                requireNotNull(env.CallVoidMethodA) {
+                val invoker = requireNotNull(env.CallVoidMethodA) {
                     "Could not access JNIEnv::CallVoidMethodA"
-                }(ptr, instance, handle, argsBaseAddress)
+                }
+                invoker(ptr, instance, handle, argsBaseAddress)
             }
         }
     }
@@ -161,25 +163,31 @@ internal inline fun jclass.getMethod(
     name: String,
     isStatic: Boolean = false,
     signature: JvmSignatureBuilder.() -> Unit
-): JvmMethod {
+): JvmMethod = jvmEnvironment {
     val signatureData = JvmSignature.of(signature)
-    val handle = jvmEnvironment {
-        memScoped {
-            requireNotNull(
-                if (isStatic) requireNotNull(pointed?.GetStaticMethodID)(
-                    this@jvmEnvironment.ptr,
-                    this@getMethod,
-                    name.cstr.ptr,
-                    signatureData.signatureString.cstr.ptr
-                )
-                else requireNotNull(pointed?.GetMethodID)(
-                    this@jvmEnvironment.ptr,
-                    this@getMethod,
-                    name.cstr.ptr,
-                    signatureData.signatureString.cstr.ptr
-                )
-            ) { "Could not find method $name${signatureData.signatureString}" }
+    val handle = memScoped {
+        val id = if (isStatic) {
+            val getter = requireNotNull(pointed?.GetStaticMethodID) {
+                "Could not access JNI:GetStaticMethodID"
+            }
+            getter(
+                this@jvmEnvironment.ptr,
+                this@getMethod,
+                name.cstr.ptr,
+                signatureData.signatureString.cstr.ptr
+            )
+        } else {
+            val getter = requireNotNull(pointed?.GetMethodID) {
+                "Could not access JNI:GetMethodID"
+            }
+            getter(
+                this@jvmEnvironment.ptr,
+                this@getMethod,
+                name.cstr.ptr,
+                signatureData.signatureString.cstr.ptr
+            )
         }
+        requireNotNull(id) { "Could not find method $name${signatureData.signatureString}" }
     }
-    return JvmMethod(signatureData, handle, this, isStatic)
+    JvmMethod(signatureData, handle, this@getMethod, isStatic)
 }
