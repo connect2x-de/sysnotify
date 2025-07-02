@@ -15,13 +15,12 @@
 
 package de.connect2x.sysnotify
 
-import sun.misc.Unsafe
 import java.lang.foreign.MemorySegment
 import java.lang.foreign.ValueLayout
 
 internal interface Memory {
     companion object {
-        val instance: Memory by lazy { UnsafeMemory.create() ?: ForeignMemory() }
+        val instance: Memory by lazy { ForeignMemory() }
     }
 
     val systemBitness: Long
@@ -56,53 +55,20 @@ internal interface Memory {
     }
 }
 
-internal class UnsafeMemory private constructor(private val unsafe: Any) : Memory {
-    companion object {
-        @Suppress("DiscouragedPrivateApi")
-        fun create(): UnsafeMemory? {
-            return try {
-                Class.forName("sun.misc.Unsafe").getDeclaredField("theUnsafe").run {
-                    isAccessible = true
-                    val instance = get(null) ?: return null
-                    isAccessible = false
-                    UnsafeMemory(instance)
-                }
-            } catch (error: Throwable) {
-                null
-            }
-        }
-    }
-
-    override val systemBitness: Long = System.getProperty("sun.arch.data.model").toLong()
-    override val pointerSize: Long = systemBitness shr 3
-
-    override fun getPointer(address: Long): Long {
-        return (unsafe as Unsafe).getAddress(address)
-    }
-
-    override fun getByte(address: Long): Byte {
-        return (unsafe as Unsafe).getByte(address)
-    }
-
-    override fun getInt(address: Long): Int {
-        return (unsafe as Unsafe).getInt(address)
-    }
-}
-
 internal class ForeignMemory : Memory {
     override val systemBitness: Long = System.getProperty("sun.arch.data.model").toLong()
     override val pointerSize: Long = systemBitness shr 3
 
     override fun getPointer(address: Long): Long {
-        return MemorySegment.ofAddress(address).asSlice(0, pointerSize).get(ValueLayout.ADDRESS_UNALIGNED, 0L).address()
+        return MemorySegment.ofAddress(address).reinterpret(pointerSize).get(ValueLayout.ADDRESS_UNALIGNED, 0L).address()
     }
 
     override fun getByte(address: Long): Byte {
-        return MemorySegment.ofAddress(address).asSlice(0, Byte.SIZE_BYTES.toLong()).get(ValueLayout.JAVA_BYTE, 0L)
+        return MemorySegment.ofAddress(address).reinterpret(Byte.SIZE_BYTES.toLong()).get(ValueLayout.JAVA_BYTE, 0L)
     }
 
     override fun getInt(address: Long): Int {
-        return MemorySegment.ofAddress(address).asSlice(0, Int.SIZE_BYTES.toLong())
+        return MemorySegment.ofAddress(address).reinterpret(Int.SIZE_BYTES.toLong())
             .get(ValueLayout.JAVA_INT_UNALIGNED, 0L)
     }
 }
