@@ -26,7 +26,6 @@ import de.connect2x.sysnotify.com.sysnotify_handler_destroy
 import de.connect2x.sysnotify.com.sysnotify_handler_pop
 import de.connect2x.sysnotify.com.sysnotify_handler_push
 import de.connect2x.sysnotify.com.sysnotify_handler_update
-import kotlinx.atomicfu.atomic
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.MemScope
 import kotlinx.cinterop.StableRef
@@ -38,8 +37,10 @@ import kotlinx.cinterop.ptr
 import kotlinx.cinterop.staticCFunction
 import kotlinx.cinterop.toCValues
 import kotlinx.cinterop.value
+import kotlin.concurrent.atomics.AtomicReference
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
-@OptIn(ExperimentalForeignApi::class)
+@OptIn(ExperimentalForeignApi::class, ExperimentalAtomicApi::class)
 @Suppress("NOTHING_TO_INLINE")
 internal class WindowsNotificationHandler(
     override val name: String,
@@ -67,7 +68,7 @@ internal class WindowsNotificationHandler(
         isGroupingSupported = false
     )
 
-    internal var activationHandler: ActivationHandler? by atomic(null)
+    internal var activationHandler: AtomicReference<ActivationHandler?> = AtomicReference(null)
 
     override fun close() {
         sysnotify_handler_destroy(address).check()
@@ -114,7 +115,7 @@ internal class WindowsNotificationHandler(
             activate_callback = staticCFunction { _, userData ->
                 userData?.asStableRef<Pair<Notification, WindowsNotificationHandler>>()?.apply {
                     val (currentNotification, currentHandler) = get()
-                    currentHandler.activationHandler?.invoke(currentNotification)
+                    currentHandler.activationHandler.load()?.invoke(currentNotification)
                     dispose()
                 }
             }
@@ -126,9 +127,10 @@ internal class WindowsNotificationHandler(
     }
 }
 
+@OptIn(ExperimentalAtomicApi::class)
 actual fun NotificationHandler.withActivationHandler(handler: ActivationHandler): NotificationHandler {
     check<WindowsNotificationHandler>()
-    activationHandler = handler
+    activationHandler.store(handler)
     return this
 }
 
