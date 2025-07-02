@@ -15,6 +15,6 @@
 
 package de.connect2x.sysnotify
 
-fun interface NativePermissionCallback {
+interface NativePermissionCallback {
     fun invoke(granted: Boolean)
 }
