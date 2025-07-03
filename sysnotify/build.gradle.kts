@@ -152,15 +152,11 @@ kotlin {
             dependsOn(nativeMain)
             dependencies {
                 implementation(libs.kmpJni)
-            }
-        }
-        macosMain { dependsOn(desktopMain) }
-        linuxMain {
-            dependsOn(desktopMain)
-            dependencies {
                 implementation(libs.filament.core)
             }
         }
+        macosMain { dependsOn(desktopMain) }
+        linuxMain { dependsOn(desktopMain) }
         mingwMain { dependsOn(desktopMain) }
 
         val sharedTest by creating {

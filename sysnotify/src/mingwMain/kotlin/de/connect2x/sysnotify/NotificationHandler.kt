@@ -37,6 +37,9 @@ import kotlinx.cinterop.ptr
 import kotlinx.cinterop.staticCFunction
 import kotlinx.cinterop.toCValues
 import kotlinx.cinterop.value
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
@@ -48,10 +51,13 @@ internal class WindowsNotificationHandler(
     override val priority: NotificationPriority,
     private val closeCallback: () -> Unit = {}
 ) : NotificationHandler {
-    internal val address: sn_notification_handler = memScoped {
-        val pointer = alloc<sn_notification_handlerVar>()
-        sysnotify_handler_create(name, id, pointer.ptr).check()
-        requireNotNull(pointer.value) { "Could not create COM adaptor instance" }
+    private val addressMutex: Mutex = Mutex()
+    val address: sn_notification_handler by lazy {
+        memScoped {
+            val pointer = alloc<sn_notification_handlerVar>()
+            sysnotify_handler_create(name, id, pointer.ptr).check()
+            requireNotNull(pointer.value) { "Could not create COM adaptor instance" }
+        }
     }
 
     override val platform: NotificationPlatform = NotificationPlatform.WINDOWS
@@ -71,14 +77,20 @@ internal class WindowsNotificationHandler(
     internal var activationHandler: AtomicReference<ActivationHandler?> = AtomicReference(null)
 
     override fun close() {
-        sysnotify_handler_destroy(address).check()
+        runBlocking {
+            addressMutex.withLock {
+                sysnotify_handler_destroy(address).check()
+            }
+        }
         closeCallback()
     }
 
     override suspend fun push(notification: Notification, tag: String): NotificationHandle {
         return memScoped {
             val content = allocNotification(notification)
-            sysnotify_handler_push(address, content.ptr, tag).check()
+            addressMutex.withLock {
+                sysnotify_handler_push(address, content.ptr, tag).check()
+            }
             WindowsNotificationHandle(tag)
         }
     }
@@ -90,14 +102,16 @@ internal class WindowsNotificationHandler(
         handle.check<WindowsNotificationHandle>()
         memScoped {
             val content = allocNotification(notification)
-            sysnotify_handler_update(address, handle.tag, content.ptr).check()
+            addressMutex.withLock {
+                sysnotify_handler_update(address, handle.tag, content.ptr).check()
+            }
         }
         return handle
     }
 
     override suspend fun pop(handle: NotificationHandle) {
         handle.check<WindowsNotificationHandle>()
-        memScoped {
+        addressMutex.withLock {
             sysnotify_handler_pop(address, handle.tag).check()
         }
     }
@@ -123,7 +137,9 @@ internal class WindowsNotificationHandler(
     }
 
     override suspend fun clearAll() {
-        sysnotify_handler_clear(address)
+        addressMutex.withLock {
+            sysnotify_handler_clear(address)
+        }
     }
 }
 
