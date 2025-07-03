@@ -21,6 +21,7 @@ pluginManagement {
         mavenCentral()
         mavenLocal()
         gradlePluginPortal()
+        maven("https://central.sonatype.com/repository/maven-snapshots")
         maven("https://gitlab.com/api/v4/projects/68438621/packages/maven") // c2x Conventions
     }
 }
@@ -31,6 +32,7 @@ dependencyResolutionManagement {
         google()
         mavenCentral()
         mavenLocal()
+        maven("https://central.sonatype.com/repository/maven-snapshots")
         maven("https://gitlab.com/api/v4/projects/68438621/packages/maven") // c2x Conventions
         maven("https://gitlab.com/api/v4/projects/65231927/packages/maven") // kmp-jni
     }

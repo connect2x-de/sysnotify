@@ -20,6 +20,7 @@ androidx-ui-tooling = "1.7.8" # https://developer.android.com/jetpack/androidx/r
 
 kmpJni = "1.0.1" # https://gitlab.com/connect2x/kmp-jni/-/packages
 sysnotifyBinaries = "v1.2.1" # https://gitlab.com/connect2x/sysnotify-platform-binaries/-/packages/
+filament = "1.3.1.35-SNAPSHOT"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -35,6 +36,7 @@ stately-common = { module = "co.touchlab:stately-common", version.ref = "stately
 stately-collections = { module = "co.touchlab:stately-collections", version.ref = "stately" }
 
 kmpJni = { module = "de.connect2x:kmp-jni", version.ref = "kmpJni" }
+filament-core = { module = "dev.karmakrafts.filament:filament-core", version.ref = "filament" }
 
 [plugins]
 c2xConventions = { id = "de.connect2x.conventions.c2x-conventions", version.ref = "c2xConventions" }

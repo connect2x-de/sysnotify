@@ -19,6 +19,7 @@ package de.connect2x.sysnotify
 
 import co.touchlab.stately.collections.SharedHashMap
 import co.touchlab.stately.collections.SharedLinkedList
+import dev.karmakrafts.filament.Thread
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.StableRef
@@ -31,17 +32,7 @@ import kotlinx.cinterop.reinterpret
 import kotlinx.cinterop.staticCFunction
 import kotlinx.cinterop.usePinned
 import kotlinx.cinterop.value
-import kotlinx.coroutines.CoroutineExceptionHandler
-import kotlinx.coroutines.CoroutineName
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.yield
 import libnotify.GError
 import libnotify.GdkColorspace
 import libnotify.NotifyNotification
@@ -85,6 +76,11 @@ internal class LinuxNotificationHandler(
         }
     }
 
+    init {
+        LibX11.XInitThreads() // Workaround for X11 applications to allow thread creation through pthread
+        check(LibNotify.notify_init(name) != 0) { "Could not initialize libnotify" }
+    }
+
     override val platform: NotificationPlatform = NotificationPlatform.LINUX
     override val hasPermissions: Boolean = true // Desktop on Linux always has permission to send notifications
 
@@ -99,30 +95,39 @@ internal class LinuxNotificationHandler(
         isGroupingSupported = false
     )
 
-    private val coroutineScope: CoroutineScope = CoroutineScope(
-        Dispatchers.Default
-                + CoroutineName("sysnotify-default")
-                + SupervisorJob()
-                + CoroutineExceptionHandler { _, throwable ->
-            // TODO: implement proper logging
-            println("NotificationHandler coroutine could not complete: $throwable")
-        })
-
     private val activationStates: SharedHashMap<String, StableRef<NotificationActivationState>> = SharedHashMap()
     private val pendingNotifications: SharedLinkedList<Triple<String, Boolean, Notification>> = SharedLinkedList()
     private val notifications: SharedHashMap<String, LinuxNotificationHandle> = SharedHashMap()
 
     private var shouldDispachNotifications: AtomicBoolean = AtomicBoolean(true)
-    private var shouldHandleEvents: AtomicBoolean = AtomicBoolean(true)
+
+    //private var shouldHandleEvents: AtomicBoolean = AtomicBoolean(true)
     private var lastNotification: AtomicReference<Notification?> = AtomicReference(null)
     internal var activationHandler: AtomicReference<ActivationHandler?> = AtomicReference(null)
 
-    init {
-        check(LibNotify.notify_init(name) != 0) { "Could not initialize libnotify" }
+    private val isEventLoopRunning: AtomicBoolean = AtomicBoolean(true)
+
+    private val eventLoopThread: Thread = Thread {
+        val mainLoop = requireNotNull(LibGLib.g_main_loop_new(null, 1)) {
+            "Could not create GMainLoop instance"
+        }
+        val mainContext = requireNotNull(LibGLib.g_main_context_default()) {
+            "Could not retrieve GMainContext instance"
+        }
+        while (isEventLoopRunning.load()) {
+            LibGLib.g_main_context_acquire(mainContext)
+            if(LibGLib.g_main_context_iteration(mainContext, 0) == 1) {
+                println("Processing events")
+                LibGLib.g_main_context_release(mainContext)
+                continue
+            }
+            LibGLib.g_main_context_release(mainContext)
+            Thread.sleep(10)
+        }
+        LibGLib.g_main_loop_unref(mainLoop)
     }
 
-    // Flushes notifications from the internal queue to the system periodically
-    private val dequeueJob: Job = coroutineScope.launch {
+    private val dequeueThread: Thread = Thread {
         while (shouldDispachNotifications.load()) {
             while (shouldDispachNotifications.load() && pendingNotifications.isNotEmpty()) {
                 val (tag, isSameContent, notification) = pendingNotifications.removeFirst()
@@ -132,25 +137,10 @@ internal class LinuxNotificationHandler(
                 // Minimum required DBus timeouts to prevent dropping notifications
                 val delay = if (isSameContent) timeout else minimumDelay
                 // Only delay if the state hasn't changed since then
-                if (shouldDispachNotifications.load()) delay(delay)
+                if (shouldDispachNotifications.load()) Thread.sleep(delay.inWholeMilliseconds)
             }
-            yield()
+            Thread.sleep(10)
         }
-    }
-
-    // An out-of-band event pump so actions and signals work for our notifications
-    private val eventLoopJob: Job = coroutineScope.launch {
-        val eventLoop = requireNotNull(LibGLib.g_main_loop_new(null, 0)) {
-            "Could not create GMainLoop instance"
-        }
-        val loopContext = requireNotNull(LibGLib.g_main_loop_get_context(eventLoop)) {
-            "Could not obtain GMainContext for event loop"
-        }
-        while (shouldHandleEvents.load()) {
-            if (LibGLib.g_main_context_iteration(loopContext, 0) == 1) continue
-            yield()
-        }
-        LibGLib.g_main_loop_unref(eventLoop)
     }
 
     private fun setIcon(nativeNotification: CPointer<NotifyNotification>, notification: Notification) {
@@ -308,15 +298,10 @@ internal class LinuxNotificationHandler(
 
     override fun close() {
         runBlocking { clearAll() }
-        runBlocking {
-            shouldDispachNotifications.store(false)
-            dequeueJob.join()
-        }
-        runBlocking {
-            shouldHandleEvents.store(false)
-            eventLoopJob.join()
-        }
-        coroutineScope.cancel()
+        shouldDispachNotifications.store(false)
+        dequeueThread.join()
+        isEventLoopRunning.store(false)
+        eventLoopThread.join()
         LibNotify.notify_uninit()
         closeCallback()
     }

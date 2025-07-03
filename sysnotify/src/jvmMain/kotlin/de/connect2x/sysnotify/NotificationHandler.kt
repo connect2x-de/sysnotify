@@ -62,10 +62,8 @@ private class JvmNotificationHandler(
     }
 
     override suspend fun requestPermissions(callback: PermissionCallback) {
-        NativeNotificationHandler.requestPermissions(address, object : NativePermissionCallback {
-            override fun invoke(granted: Boolean) {
-                callback(this@JvmNotificationHandler, granted)
-            }
+        NativeNotificationHandler.requestPermissions(address, NativePermissionCallback.create {
+            callback(this@JvmNotificationHandler, it)
         })
     }
 

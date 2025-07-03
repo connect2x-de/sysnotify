@@ -56,9 +56,9 @@ private val typeNativePermissionCallback =
     JvmRefType("de.connect2x.sysnotify.NativePermissionCallback")
 private val typeString = JvmRefType("java.lang.String")
 
-internal fun registerNatives() {
-    typeNativeNotificationHandler.jClass.apply {
-        registerNativeFunction("create", staticCFunction(::create)) {
+internal fun registerNatives(env: JNIEnvVar) {
+    typeNativeNotificationHandler.getJClass(env).apply {
+        registerNativeFunction(env, "create", staticCFunction(::create)) {
             typeString named "name"
             typeString named "id"
             JvmBuiltinType.INT named "priority"
@@ -66,26 +66,26 @@ internal fun registerNatives() {
             JvmBuiltinType.BOOLEAN named "isDebugEnabled"
             returns(JvmBuiltinType.LONG)
         }
-        registerNativeFunction("hasPermissions", staticCFunction(::hasPermissions)) {
+        registerNativeFunction(env, "hasPermissions", staticCFunction(::hasPermissions)) {
             JvmBuiltinType.LONG named "handler"
             returns(JvmBuiltinType.BOOLEAN)
         }
-        registerNativeFunction("destroy", staticCFunction(::destroy)) {
+        registerNativeFunction(env, "destroy", staticCFunction(::destroy)) {
             JvmBuiltinType.LONG named "handler"
         }
-        registerNativeFunction("getPlatform", staticCFunction(::getPlatform)) {
-            JvmBuiltinType.LONG named "handler"
-            returns(JvmBuiltinType.INT)
-        }
-        registerNativeFunction("getCapabilities", staticCFunction(::getCapabilities)) {
+        registerNativeFunction(env, "getPlatform", staticCFunction(::getPlatform)) {
             JvmBuiltinType.LONG named "handler"
             returns(JvmBuiltinType.INT)
         }
-        registerNativeFunction("requestPermissions", staticCFunction(::requestPermissions)) {
+        registerNativeFunction(env, "getCapabilities", staticCFunction(::getCapabilities)) {
+            JvmBuiltinType.LONG named "handler"
+            returns(JvmBuiltinType.INT)
+        }
+        registerNativeFunction(env, "requestPermissions", staticCFunction(::requestPermissions)) {
             JvmBuiltinType.LONG named "handler"
             typeNativePermissionCallback named "callback"
         }
-        registerNativeFunction("push", staticCFunction(::push)) {
+        registerNativeFunction(env, "push", staticCFunction(::push)) {
             JvmBuiltinType.LONG named "handler"
             typeString named "tag"
             typeString named "title"
@@ -99,7 +99,7 @@ internal fun registerNatives() {
             typeString named "callbackData"
             returns(JvmBuiltinType.LONG)
         }
-        registerNativeFunction("update", staticCFunction(::update)) {
+        registerNativeFunction(env, "update", staticCFunction(::update)) {
             JvmBuiltinType.LONG named "handler"
             JvmBuiltinType.LONG named "notification"
             typeString named "title"
@@ -111,11 +111,11 @@ internal fun registerNatives() {
             typeString named "callbackData"
             returns(JvmBuiltinType.LONG)
         }
-        registerNativeFunction("pop", staticCFunction(::pop)) {
+        registerNativeFunction(env, "pop", staticCFunction(::pop)) {
             JvmBuiltinType.LONG named "handler"
             JvmBuiltinType.LONG named "notification"
         }
-        registerNativeFunction("clearAll", staticCFunction(::clearAll)) {
+        registerNativeFunction(env, "clearAll", staticCFunction(::clearAll)) {
             JvmBuiltinType.LONG named "handler"
         }
     }
@@ -130,9 +130,9 @@ private fun create(
     activationCallback: jobject,
     isDebugEnabled: jboolean,
 ): jlong {
-    val globalCallback = activationCallback.newGlobalRef()
+    val globalCallback = activationCallback.newGlobalRef(env)
     val handler = createNotificationHandler(
-        name.toKString(), id.toKString(), NotificationPriority.entries[priority],
+        name.toKString(env), id.toKString(env), NotificationPriority.entries[priority],
         { notification ->
             memScoped {
                 val data = cValue<SNNotificationData> {
@@ -149,7 +149,7 @@ private fun create(
                     group = notification.group?.cstr?.ptr
                 }
                 jvmEnvironment {
-                    typeNativeActivationCallback.jClass.getMethod("invoke") {
+                    typeNativeActivationCallback.getJClass(this).getMethod("invoke") {
                         JvmBuiltinType.LONG named "notification"
                     }.call(globalCallback) {
                         put("notification", data.ptr.rawValue.toLong())
@@ -157,7 +157,11 @@ private fun create(
                 }
             }
         },
-        { globalCallback.deleteGlobalRef() },
+        {
+            jvmEnvironment {
+                globalCallback.deleteGlobalRef(this)
+            }
+        },
         isDebugEnabled = isDebugEnabled.toKBoolean(),
     )
     return StableRef.create(handler).asCPointer().rawValue.toLong()
@@ -194,18 +198,18 @@ private fun getCapabilities(env: JNIEnvVar, clazz: jclass, handler: jlong): jint
 }
 
 private fun requestPermissions(env: JNIEnvVar, clazz: jclass, handler: jlong, callback: jobject) = runBlocking {
-    val globalCallback = callback.newGlobalRef()
+    val globalCallback = callback.newGlobalRef(env)
     requireNotNull(handler.toCPointer<CPointed>())
         .asStableRef<NotificationHandler>()
         .get()
         .requestPermissions { _, granted ->
             jvmEnvironment {
-                typeNativePermissionCallback.jClass.getMethod("invoke") {
+                typeNativePermissionCallback.getJClass(this).getMethod("invoke") {
                     JvmBuiltinType.BOOLEAN named "granted"
                 }.call(globalCallback) {
                     put("granted", granted)
                 }
-                globalCallback.deleteGlobalRef()
+                globalCallback.deleteGlobalRef(this)
             }
         }
 }
@@ -230,14 +234,14 @@ private fun push(
         .get()
         .push(
             Notification(
-                title = title?.toKString() ?: "Unknown",
-                description = description?.toKString(),
-                icon = icon?.let { NotificationIcon(it.toByteArray(), iconWidth, iconHeight) },
+                title = title?.toKString(env) ?: "Unknown",
+                description = description?.toKString(env),
+                icon = icon?.let { NotificationIcon(it.toByteArray(env), iconWidth, iconHeight) },
                 playSound = playSound.toKBoolean(),
-                soundPath = soundPath?.toKString(),
-                group = group?.toKString(),
-                callbackData = callbackData?.toKString()
-            ), tag.toKString()
+                soundPath = soundPath?.toKString(env),
+                group = group?.toKString(env),
+                callbackData = callbackData?.toKString(env)
+            ), tag.toKString(env)
         )
 }.let { StableRef.create(it).asCPointer().rawValue.toLong() }
 
@@ -262,11 +266,11 @@ private fun update(
             .get().update(
                 handle.get(),
                 Notification(
-                    title = title?.toKString() ?: "Unknown",
-                    description = description?.toKString(),
-                    icon = icon?.let { NotificationIcon(it.toByteArray(), iconWidth, iconHeight) },
-                    group = group?.toKString(),
-                    callbackData = callbackData?.toKString()
+                    title = title?.toKString(env) ?: "Unknown",
+                    description = description?.toKString(env),
+                    icon = icon?.let { NotificationIcon(it.toByteArray(env), iconWidth, iconHeight) },
+                    group = group?.toKString(env),
+                    callbackData = callbackData?.toKString(env)
                 )
             )
     }.let { StableRef.create(it).asCPointer().rawValue.toLong() }

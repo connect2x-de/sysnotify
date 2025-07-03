@@ -30,6 +30,12 @@ import libnotify.gboolean
 import libnotify.gsize
 import platform.posix.atexit
 
+private typealias _g_main_context_new = () -> CPointer<GMainContext>
+private typealias _g_main_context_acquire = (CPointer<GMainContext>) -> gboolean
+private typealias _g_main_context_release = (CPointer<GMainContext>) -> Unit
+private typealias _g_main_context_unref = (CPointer<GMainContext>) -> Unit
+private typealias _g_main_context_default = () -> CPointer<GMainContext>
+
 private typealias _g_bytes_new_static = (
     address: COpaquePointer?,
     size: gsize
@@ -65,6 +71,31 @@ internal object LibGLib {
             // Need a fully qualified reference to avoid capturing implicitly
             LibGLib.library?.close()
         })
+    }
+
+    fun g_main_context_new(): CPointer<GMainContext>? {
+        return library?.findFunction<_g_main_context_new>("g_main_context_new")
+            ?.invoke()
+    }
+
+    fun g_main_context_acquire(context: CPointer<GMainContext>): Boolean {
+        return library?.findFunction<_g_main_context_acquire>("g_main_context_acquire")
+            ?.invoke(context) == 1
+    }
+
+    fun g_main_context_release(context: CPointer<GMainContext>) {
+        library?.findFunction<_g_main_context_release>("g_main_context_release")
+            ?.invoke(context)
+    }
+
+    fun g_main_context_unref(context: CPointer<GMainContext>) {
+        library?.findFunction<_g_main_context_unref>("g_main_context_unref")
+            ?.invoke(context)
+    }
+
+    fun g_main_context_default(): CPointer<GMainContext>? {
+        return library?.findFunction<_g_main_context_default>("g_main_context_default")
+            ?.invoke()
     }
 
     /**

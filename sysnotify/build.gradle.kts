@@ -155,7 +155,12 @@ kotlin {
             }
         }
         macosMain { dependsOn(desktopMain) }
-        linuxMain { dependsOn(desktopMain) }
+        linuxMain {
+            dependsOn(desktopMain)
+            dependencies {
+                implementation(libs.filament.core)
+            }
+        }
         mingwMain { dependsOn(desktopMain) }
 
         val sharedTest by creating {
