@@ -117,7 +117,6 @@ internal class LinuxNotificationHandler(
         while (isEventLoopRunning.load()) {
             LibGLib.g_main_context_acquire(mainContext)
             if(LibGLib.g_main_context_iteration(mainContext, 0) == 1) {
-                println("Processing events")
                 LibGLib.g_main_context_release(mainContext)
                 continue
             }
