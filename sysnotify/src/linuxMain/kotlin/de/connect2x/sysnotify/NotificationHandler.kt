@@ -108,6 +108,7 @@ internal class LinuxNotificationHandler(
     private val isEventLoopRunning: AtomicBoolean = AtomicBoolean(true)
 
     private val eventLoopThread: Thread = Thread {
+        Thread.name = "Sysnotify Event Thread"
         val mainLoop = requireNotNull(LibGLib.g_main_loop_new(null, 1)) {
             "Could not create GMainLoop instance"
         }
@@ -127,6 +128,7 @@ internal class LinuxNotificationHandler(
     }
 
     private val dequeueThread: Thread = Thread {
+        Thread.name = "Sysnotify Notification Thread"
         while (shouldDispachNotifications.load()) {
             while (shouldDispachNotifications.load() && pendingNotifications.isNotEmpty()) {
                 val (tag, isSameContent, notification) = pendingNotifications.removeFirst()
