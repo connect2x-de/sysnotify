@@ -17,6 +17,8 @@ variables:
   GRADLE_USER_HOME: $CI_PROJECT_DIR/.gradle
   KONAN_DATA_DIR: $CI_PROJECT_DIR/.konan
   BUILD_LINUX_IMAGE_NAME: registry.gitlab.com/trixnity/trixnity/trixnity-build-linux:latest
+  LINUX_DEPENDENCIES: >
+    libglib2.0-0 libgdk-pixbuf-2.0-0 libnotify4 libnotify-bin libx11-6
   SYSNOTIFY_DEBUG: 1
 
 .artifact-reports: &artifact-reports
@@ -76,7 +78,7 @@ build:linux:
     - *if-merge-request-or-main
   before_script:
     - apt update -y
-    - apt install openjdk-17-jdk -y
+    - apt install -y $LINUX_DEPENDENCIES
   script:
     - ./gradlew
       clean
@@ -96,7 +98,7 @@ test:linux:
     - *if-merge-request-or-main
   before_script:
     - apt update -y
-    - apt install openjdk-17-jdk -y
+    - apt install -y $LINUX_DEPENDENCIES
   script:
     - ./gradlew :sysnotify:{jvm,linuxX64}Test --stacktrace
 
@@ -174,7 +176,7 @@ publish:linux:
     - *if-release
   before_script:
     - apt update -y
-    - apt install openjdk-17-jdk -y
+    - apt install -y $LINUX_DEPENDENCIES
   script:
     - ./gradlew
       :sysnotify:publish{KotlinMultiplatform,Js,AndroidRelease}PublicationToGitlabRepository
