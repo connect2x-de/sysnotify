@@ -55,6 +55,7 @@ kotlin {
             }
         }
     }
+    applyDefaultHierarchyTemplate()
     sourceSets {
         androidMain {
             dependencies {

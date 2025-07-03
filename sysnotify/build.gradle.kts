@@ -57,6 +57,7 @@ fun DefaultCInteropSettings.includePlatformBinaries(target: KotlinNativeTarget) 
 }
 
 kotlin {
+    withSourcesJar(true)
     compilerOptions {
         freeCompilerArgs.add("-opt-in=kotlin.uuid.ExperimentalUuidApi")
     }
@@ -123,7 +124,6 @@ kotlin {
         }
     }
     applyDefaultHierarchyTemplate()
-    withSourcesJar(true)
     sourceSets {
         val commonMain by getting {
             dependencies {
