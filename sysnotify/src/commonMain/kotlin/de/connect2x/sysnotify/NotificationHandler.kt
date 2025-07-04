@@ -68,6 +68,9 @@ interface NotificationHandler : AutoCloseable {
      */
     val id: String
 
+    val appId: String
+        get() = id
+
     /**
      * The platform on which the current notification handler is implemented.
      * See [NotificationPlatform] for all possible values.

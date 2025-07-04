@@ -68,8 +68,9 @@ internal object LibGLib {
 
     init {
         atexit(staticCFunction<Unit> {
-            // Need a fully qualified reference to avoid capturing implicitly
-            LibGLib.library?.close()
+            LibGLib.apply {
+                library?.close()
+            }
         })
     }
 

@@ -17,12 +17,22 @@ package de.connect2x.sysnotify
 
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.invoke
+import kotlinx.cinterop.staticCFunction
+import platform.posix.atexit
 
 private typealias _XInitThreads = () -> Int
 
 @OptIn(ExperimentalForeignApi::class)
 internal object LibX11 {
     private val library: SharedLibrary? = SharedLibrary.open(arrayOf("libX11.so.6", "libX11.so"))
+
+    init {
+        atexit(staticCFunction<Unit> {
+            LibX11.apply {
+                library?.close()
+            }
+        })
+    }
 
     fun XInitThreads(): Int {
         return library?.findFunction<_XInitThreads>("XInitThreads")?.invoke() ?: 0

@@ -98,49 +98,59 @@ internal class LinuxNotificationHandler(
     private val activationStates: SharedHashMap<String, StableRef<NotificationActivationState>> = SharedHashMap()
     private val pendingNotifications: SharedLinkedList<Triple<String, Boolean, Notification>> = SharedLinkedList()
     private val notifications: SharedHashMap<String, LinuxNotificationHandle> = SharedHashMap()
-
     private var shouldDispachNotifications: AtomicBoolean = AtomicBoolean(true)
-
-    //private var shouldHandleEvents: AtomicBoolean = AtomicBoolean(true)
     private var lastNotification: AtomicReference<Notification?> = AtomicReference(null)
     internal var activationHandler: AtomicReference<ActivationHandler?> = AtomicReference(null)
-
     private val isEventLoopRunning: AtomicBoolean = AtomicBoolean(true)
+    private val errorOnExternalThread: AtomicBoolean = AtomicBoolean(false)
+
+    private inline fun handleThreadErrors(block: () -> Unit) {
+        try {
+            block()
+        } catch(error: Throwable) {
+            errorOnExternalThread.store(true)
+        }
+    }
 
     private val eventLoopThread: Thread = Thread {
         Thread.name = "Sysnotify Event Thread"
-        val mainLoop = requireNotNull(LibGLib.g_main_loop_new(null, 1)) {
-            "Could not create GMainLoop instance"
-        }
-        val mainContext = requireNotNull(LibGLib.g_main_context_default()) {
-            "Could not retrieve GMainContext instance"
-        }
-        while (isEventLoopRunning.load()) {
-            LibGLib.g_main_context_acquire(mainContext)
-            if(LibGLib.g_main_context_iteration(mainContext, 0) == 1) {
-                LibGLib.g_main_context_release(mainContext)
-                continue
+        handleThreadErrors {
+            val mainContext = requireNotNull(LibGLib.g_main_context_default()) {
+                "Could not retrieve default main context"
             }
-            LibGLib.g_main_context_release(mainContext)
-            Thread.sleep(10)
+            val mainLoop = requireNotNull(LibGLib.g_main_loop_new(mainContext, 1)) {
+                "Could not create main loop"
+            }
+            while (isEventLoopRunning.load() && !errorOnExternalThread.load()) {
+                LibGLib.g_main_context_acquire(mainContext)
+                if(LibGLib.g_main_context_iteration(mainContext, 0) == 1) {
+                    LibGLib.g_main_context_release(mainContext)
+                    continue
+                }
+                LibGLib.g_main_context_release(mainContext)
+                Thread.yield()
+            }
+            LibGLib.g_main_loop_unref(mainLoop)
         }
-        LibGLib.g_main_loop_unref(mainLoop)
     }
 
     private val dequeueThread: Thread = Thread {
         Thread.name = "Sysnotify Notification Thread"
-        while (shouldDispachNotifications.load()) {
-            while (shouldDispachNotifications.load() && pendingNotifications.isNotEmpty()) {
-                val (tag, isSameContent, notification) = pendingNotifications.removeFirst()
-                val handle = create(tag, notification)
-                handle.check<LinuxNotificationHandle>()
-                notifications[tag] = handle
-                // Minimum required DBus timeouts to prevent dropping notifications
-                val delay = if (isSameContent) timeout else minimumDelay
-                // Only delay if the state hasn't changed since then
-                if (shouldDispachNotifications.load()) Thread.sleep(delay.inWholeMilliseconds)
+        fun isRunning(): Boolean = shouldDispachNotifications.load() && !errorOnExternalThread.load()
+        handleThreadErrors {
+            while (isRunning()) {
+                while (isRunning() && pendingNotifications.isNotEmpty()) {
+                    val (tag, isSameContent, notification) = pendingNotifications.removeFirst()
+                    val handle = create(tag, notification)
+                    handle.check<LinuxNotificationHandle>()
+                    notifications[tag] = handle
+                    // Minimum required DBus timeouts to prevent dropping notifications
+                    val delay = if (isSameContent) timeout else minimumDelay
+                    // Only delay if the state hasn't changed since then
+                    if (shouldDispachNotifications.load()) Thread.sleep(delay.inWholeMilliseconds)
+                }
+                Thread.yield()
             }
-            Thread.sleep(10)
         }
     }
 
@@ -162,6 +172,7 @@ internal class LinuxNotificationHandler(
     }
 
     private fun show(notification: CPointer<NotifyNotification>): Boolean {
+        if(errorOnExternalThread.load()) return false
         memScoped {
             val errorAddress = allocPointerTo<GError>()
             if (LibNotify.notify_notification_show(notification, errorAddress.ptr) == 0) {
@@ -173,6 +184,8 @@ internal class LinuxNotificationHandler(
     }
 
     private fun create(tag: String, notification: Notification): NotificationHandle {
+        if(errorOnExternalThread.load()) return NotificationHandle.INVALID
+
         val notificationAddress = LibNotify.notify_notification_new(
             summary = notification.title,
             body = notification.description,
@@ -228,13 +241,14 @@ internal class LinuxNotificationHandler(
 
     override suspend fun push(notification: Notification, tag: String): NotificationHandle {
         // If this notification is already pending or active, return early
-        if (tag in notifications || pendingNotifications.any { it.first == tag }) return NotificationHandle.INVALID
+        if (tag in notifications || pendingNotifications.any { it.first == tag } || errorOnExternalThread.load()) return NotificationHandle.INVALID
         pendingNotifications += Triple(tag, lastNotification == notification, notification)
         lastNotification.store(notification)
         return LinuxNotificationHandle(tag) // Early return so we don't block
     }
 
     override suspend fun update(handle: NotificationHandle, notification: Notification): NotificationHandle {
+        if(errorOnExternalThread.load()) return NotificationHandle.INVALID
         handle.check<LinuxNotificationHandle>()
         val tag = handle.tag
         // If the notification is already active, just update it immediately
@@ -263,6 +277,7 @@ internal class LinuxNotificationHandler(
     }
 
     override suspend fun pop(handle: NotificationHandle) {
+        if(errorOnExternalThread.load()) return
         handle.check<LinuxNotificationHandle>()
         val tag = handle.tag
         // If the notification is already active, close it
@@ -285,6 +300,7 @@ internal class LinuxNotificationHandler(
     }
 
     override suspend fun clearAll() {
+        if(errorOnExternalThread.load()) return
         for ((_, notification) in notifications) {
             memScoped {
                 val errorAddress = allocPointerTo<GError>()

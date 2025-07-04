@@ -51,8 +51,9 @@ object LibGObject {
 
     init {
         atexit(staticCFunction<Unit> {
-            // Need a fully qualified reference to avoid capturing implicitly
-            LibGObject.library?.close()
+            LibGObject.apply {
+                library?.close()
+            }
         })
     }
 
