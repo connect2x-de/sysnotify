@@ -24,7 +24,8 @@ import libnotify.NotifyNotification
 import kotlin.uuid.Uuid
 
 internal class LinuxNotificationHandle(
-    override val tag: String = Uuid.random().toHexString()
+    override val tag: String = Uuid.random().toHexString(),
+    val handler: LinuxNotificationHandler
 ) : NotificationHandle {
     var address: CPointer<NotifyNotification>? by atomic(null)
 }
