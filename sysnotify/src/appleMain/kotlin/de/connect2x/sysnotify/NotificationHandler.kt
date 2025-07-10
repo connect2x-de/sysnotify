@@ -39,6 +39,7 @@ import kotlin.experimental.ExperimentalNativeApi
 
 @OptIn(ExperimentalNativeApi::class, ExperimentalAtomicApi::class)
 internal class AppleNotificationHandler(
+    override val appId: String,
     override val name: String,
     override val id: String,
     override val priority: NotificationPriority,
@@ -191,6 +192,7 @@ actual fun NotificationHandler( // @formatter:off
     id: String,
     priority: NotificationPriority,
     isDebugEnabled: Boolean,
+    appId: String
 ): NotificationHandler { // @formatter:on
-    return AppleNotificationHandler(name, id, priority, closeCallback = {}, isDebugEnabled)
+    return AppleNotificationHandler(appId, name, id, priority, closeCallback = {}, isDebugEnabled)
 }

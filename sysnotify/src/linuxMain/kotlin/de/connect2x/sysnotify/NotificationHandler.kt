@@ -45,6 +45,7 @@ import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalAtomicApi::class)
 internal class LinuxNotificationHandler(
+    override val appId: String,
     override val name: String,
     override val id: String,
     override val priority: NotificationPriority,
@@ -128,7 +129,7 @@ internal class LinuxNotificationHandler(
                     continue
                 }
                 LibGLib.g_main_context_release(mainContext)
-                Thread.yield()
+                Thread.sleep(10)
             }
             LibGLib.g_main_loop_unref(mainLoop)
         }
@@ -149,7 +150,7 @@ internal class LinuxNotificationHandler(
                     // Only delay if the state hasn't changed since then
                     if (shouldDispachNotifications.load()) Thread.sleep(delay.inWholeMilliseconds)
                 }
-                Thread.yield()
+                Thread.sleep(10)
             }
         }
     }
@@ -336,8 +337,9 @@ actual fun NotificationHandler(
     id: String,
     priority: NotificationPriority,
     isDebugEnabled: Boolean,
+    appId: String
 ): NotificationHandler = try {
-    LinuxNotificationHandler(name, id, priority)
+    LinuxNotificationHandler(appId, name, id, priority)
 } catch(error: Throwable) {
     NoopNotificationHandler
 }

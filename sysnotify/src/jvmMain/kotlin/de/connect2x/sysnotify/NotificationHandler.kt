@@ -22,6 +22,7 @@ import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 @OptIn(ExperimentalAtomicApi::class)
 private class JvmNotificationHandler(
+    override val appId: String,
     override val name: String,
     override val id: String,
     override val priority: NotificationPriority,
@@ -38,6 +39,7 @@ private class JvmNotificationHandler(
             activationHandler.load()?.invoke(it)
         },
         isDebugEnabled,
+        appId
     )
 
     override val platform: NotificationPlatform by lazy {
@@ -131,6 +133,7 @@ actual fun NotificationHandler( // @formatter:off
     id: String,
     priority: NotificationPriority,
     isDebugEnabled: Boolean,
+    appId: String
 ): NotificationHandler { // @formatter:on
-    return JvmNotificationHandler(name, id, priority, isDebugEnabled)
+    return JvmNotificationHandler(appId, name, id, priority, isDebugEnabled)
 }

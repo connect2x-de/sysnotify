@@ -40,6 +40,7 @@ import org.w3c.notifications.NotificationPermission as JsNotificationPermission
 // https://developer.mozilla.org/en-US/docs/Web/API/Notification
 @OptIn(ExperimentalAtomicApi::class)
 private class WebNotificationHandler(
+    override val appId: String,
     override val name: String,
     override val id: String,
     override val priority: NotificationPriority
@@ -172,6 +173,7 @@ actual fun NotificationHandler( // @formatter:off
     id: String,
     priority: NotificationPriority,
     isDebugEnabled: Boolean,
+    appId: String
 ): NotificationHandler { // @formatter:on
-    return WebNotificationHandler(name, id, priority)
+    return WebNotificationHandler(appId, name, id, priority)
 }

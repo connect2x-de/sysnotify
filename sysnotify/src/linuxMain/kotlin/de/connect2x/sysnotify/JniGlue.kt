@@ -22,7 +22,8 @@ internal actual fun createNotificationHandler(
     activationHandler: ActivationHandler,
     closeCallback: () -> Unit,
     isDebugEnabled: Boolean,
+    appId: String
 ): NotificationHandler {
-    return LinuxNotificationHandler(name, id, priority, closeCallback)
+    return LinuxNotificationHandler(appId, name, id, priority, closeCallback)
         .withActivationHandler(activationHandler)
 }

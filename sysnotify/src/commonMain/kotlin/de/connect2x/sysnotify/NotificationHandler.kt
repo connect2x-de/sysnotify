@@ -62,14 +62,16 @@ interface NotificationHandler : AutoCloseable {
 
     /**
      * The internal ID of the notification handler.
+     */
+    val id: String
+
+    /**
+     * The global application ID of this notification handler.
      * This usually follows the underlying platform's naming conventions;
      * A standard convention of <tld>.<company>.<product> must be used
      * to guarantee correct platform-specific conversion under the hood.
      */
-    val id: String
-
     val appId: String
-        get() = id
 
     /**
      * The platform on which the current notification handler is implemented.
@@ -213,6 +215,7 @@ expect fun NotificationHandler(
     id: String = name,
     priority: NotificationPriority = NotificationPriority.DEFAULT,
     isDebugEnabled: Boolean = false,
+    appId: String = id
 ): NotificationHandler
 
 /**
@@ -229,6 +232,7 @@ expect fun NotificationHandler(
 object NoopNotificationHandler : NotificationHandler {
     override val name: String = "NOOP"
     override val id: String = "no.op.noop"
+    override val appId: String = id
     override val platform: NotificationPlatform = NotificationPlatform.UNKNOWN
     override val hasPermissions: Boolean = false
     override val capabilities: NotificationCapabilities = NotificationCapabilities(0U)

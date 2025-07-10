@@ -44,6 +44,7 @@ import kotlin.concurrent.atomics.ExperimentalAtomicApi
 @OptIn(ExperimentalForeignApi::class, ExperimentalAtomicApi::class)
 @Suppress("NOTHING_TO_INLINE")
 internal class WindowsNotificationHandler(
+    override val appId: String,
     override val name: String,
     override val id: String,
     override val priority: NotificationPriority,
@@ -51,7 +52,8 @@ internal class WindowsNotificationHandler(
 ) : NotificationHandler {
     val address: sn_notification_handler = memScoped {
         val pointer = alloc<sn_notification_handlerVar>()
-        sysnotify_handler_create(name, id, pointer.ptr).check()
+        // The native notification handler only cares about the actual app ID, not the handler specific ID
+        sysnotify_handler_create(name, appId, pointer.ptr).check()
         requireNotNull(pointer.value) { "Could not create COM adaptor instance" }
     }
 
@@ -140,4 +142,5 @@ actual fun NotificationHandler(
     id: String,
     priority: NotificationPriority,
     isDebugEnabled: Boolean,
-): NotificationHandler = WindowsNotificationHandler(name, id, priority)
+    appId: String
+): NotificationHandler = WindowsNotificationHandler(appId, name, id, priority)

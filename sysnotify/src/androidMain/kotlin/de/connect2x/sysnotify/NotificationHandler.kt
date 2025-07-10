@@ -60,6 +60,7 @@ typealias ActivationFactory = (context: Context, notification: Notification) -> 
 
 @OptIn(ExperimentalAtomicApi::class)
 internal class AndroidNotificationHandler( // @formatter:off
+    override val appId: String,
     override val name: String,
     override val id: String,
     override val priority: NotificationPriority,
@@ -438,6 +439,7 @@ actual fun NotificationHandler( // @formatter:off
     id: String,
     priority: NotificationPriority,
     isDebugEnabled: Boolean,
+    appId: String
 ): NotificationHandler { // @formatter:on
-    return AndroidNotificationHandler(name, id, priority)
+    return AndroidNotificationHandler(appId, name, id, priority)
 }
