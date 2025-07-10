@@ -13,8 +13,6 @@
  * limitations under the License.
  */
 
-import de.connect2x.conventions.authenticatedPackageRegistry
-import de.connect2x.conventions.c2xOrganization
 import de.connect2x.conventions.configureJava
 import de.connect2x.conventions.withVersionSuffix
 

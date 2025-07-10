@@ -152,7 +152,6 @@ kotlin {
             dependsOn(nativeMain)
             dependencies {
                 implementation(libs.kmpJni)
-                implementation(libs.filament.core)
             }
         }
         macosMain { dependsOn(desktopMain) }
