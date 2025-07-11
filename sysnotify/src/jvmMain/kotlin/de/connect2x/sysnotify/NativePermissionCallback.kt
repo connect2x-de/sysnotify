@@ -15,6 +15,14 @@
 
 package de.connect2x.sysnotify
 
-fun interface NativePermissionCallback {
+interface NativePermissionCallback {
+    companion object {
+        inline fun create(crossinline block: (granted: Boolean) -> Unit): NativePermissionCallback = object : NativePermissionCallback {
+            override fun invoke(granted: Boolean) {
+                block(granted)
+            }
+        }
+    }
+
     fun invoke(granted: Boolean)
 }

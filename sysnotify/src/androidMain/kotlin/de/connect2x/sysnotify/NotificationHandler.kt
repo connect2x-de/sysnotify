@@ -28,9 +28,11 @@ import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.graphics.drawable.IconCompat
+import androidx.core.net.toUri
 import co.touchlab.stately.collections.SharedLinkedList
 import kotlinx.coroutines.runBlocking
-import java.util.concurrent.atomic.AtomicReference
+import kotlin.concurrent.atomics.AtomicReference
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import android.app.NotificationChannel as AndroidNotificationChannel
@@ -56,7 +58,9 @@ typealias ActivityGetter = () -> Activity?
  */
 typealias ActivationFactory = (context: Context, notification: Notification) -> Intent
 
+@OptIn(ExperimentalAtomicApi::class)
 internal class AndroidNotificationHandler( // @formatter:off
+    override val appId: String,
     override val name: String,
     override val id: String,
     override val priority: NotificationPriority,
@@ -82,12 +86,12 @@ internal class AndroidNotificationHandler( // @formatter:off
         get() = hasNotificationPermissions(context)
 
     internal fun getOrCreateChannel(): AndroidNotificationChannel {
-        val current = channel.get()
+        val current = channel.load()
         if (current != null) return current
         val new = AndroidNotificationChannel(
             id, name, priority.nativeImportance
         ).apply { manager.createNotificationChannel(this) }
-        channel.set(new)
+        channel.store(new)
         return new
     }
 
@@ -124,7 +128,7 @@ internal class AndroidNotificationHandler( // @formatter:off
                 setGroup(notification.group)
 
                 // Setup sound
-                if (notification.playSound) notification.soundPath?.let { setSound(Uri.parse(it)) }
+                if (notification.playSound) notification.soundPath?.let { setSound(it.toUri()) }
                 else {
                     setSilent(true)
                     setSound(null)
@@ -144,7 +148,7 @@ internal class AndroidNotificationHandler( // @formatter:off
                     PendingIntent.getActivity(
                         context,
                         0,
-                        activationIntent.get()?.let { it(context, notification) }
+                        activationIntent.load()?.let { it(context, notification) }
                             ?: context.getDefaultActivationFactory()(context, notification),
                         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                     )
@@ -200,11 +204,12 @@ internal class AndroidNotificationHandler( // @formatter:off
  * @throws ClassCastException if the handler is not an AndroidNotificationHandler
  * @throws IllegalStateException if no context has been set
  */
+@OptIn(ExperimentalAtomicApi::class)
 val NotificationHandler.context: Context
     get() {
         check<AndroidNotificationHandler>()
-        return activityGetter.get()?.invoke()
-            ?: requireNotNull(contextGetter.get()?.invoke()) {
+        return activityGetter.load()?.invoke()
+            ?: requireNotNull(contextGetter.load()?.invoke()) {
                 "No context associated with NotificationHandler, use withContext() to set it"
             }
     }
@@ -216,10 +221,11 @@ val NotificationHandler.context: Context
  * @throws ClassCastException if the handler is not an AndroidNotificationHandler
  * @throws IllegalStateException if no activity getter has been set
  */
+@OptIn(ExperimentalAtomicApi::class)
 val NotificationHandler.activity: Activity?
     get() {
         check<AndroidNotificationHandler>()
-        return activityGetter.get()?.invoke()
+        return activityGetter.load()?.invoke()
     }
 
 /**
@@ -231,9 +237,10 @@ val NotificationHandler.activity: Activity?
  * @return This NotificationHandler for method chaining
  * @throws ClassCastException if the handler is not an AndroidNotificationHandler
  */
+@OptIn(ExperimentalAtomicApi::class)
 fun NotificationHandler.withContext(getter: () -> Context): NotificationHandler {
     check<AndroidNotificationHandler>()
-    contextGetter.set(getter)
+    contextGetter.store(getter)
     getOrCreateChannel() // Make sure channel is created once context is available
     return this
 }
@@ -248,9 +255,10 @@ fun NotificationHandler.withContext(getter: () -> Context): NotificationHandler 
  * @return This NotificationHandler for method chaining
  * @throws ClassCastException if the handler is not an AndroidNotificationHandler
  */
+@OptIn(ExperimentalAtomicApi::class)
 fun NotificationHandler.withActivity(getter: () -> Activity): NotificationHandler {
     check<AndroidNotificationHandler>()
-    activityGetter.set(getter)
+    activityGetter.store(getter)
     getOrCreateChannel() // Make sure channel is created once activity is available
     return this
 }
@@ -266,9 +274,10 @@ fun NotificationHandler.withActivity(getter: () -> Activity): NotificationHandle
  * @return This NotificationHandler for method chaining
  * @throws ClassCastException if the handler is not an AndroidNotificationHandler
  */
+@OptIn(ExperimentalAtomicApi::class)
 fun NotificationHandler.withActivationFactory(factory: ActivationFactory): NotificationHandler {
     check<AndroidNotificationHandler>()
-    activationIntent.set(factory)
+    activationIntent.store(factory)
     return this
 }
 
@@ -430,6 +439,7 @@ actual fun NotificationHandler( // @formatter:off
     id: String,
     priority: NotificationPriority,
     isDebugEnabled: Boolean,
+    appId: String
 ): NotificationHandler { // @formatter:on
-    return AndroidNotificationHandler(name, id, priority)
+    return AndroidNotificationHandler(appId, name, id, priority)
 }

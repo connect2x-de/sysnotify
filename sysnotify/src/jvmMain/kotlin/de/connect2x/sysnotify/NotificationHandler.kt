@@ -17,12 +17,12 @@
 
 package de.connect2x.sysnotify
 
-import kotlinx.coroutines.runBlocking
 import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 @OptIn(ExperimentalAtomicApi::class)
 private class JvmNotificationHandler(
+    override val appId: String,
     override val name: String,
     override val id: String,
     override val priority: NotificationPriority,
@@ -30,18 +30,17 @@ private class JvmNotificationHandler(
 ) : NotificationHandler {
     var activationHandler: AtomicReference<ActivationHandler?> = AtomicReference(null)
 
-    private val address: Long by lazy {
-        NativeNotificationHandler.create(
-            name,
-            id,
-            priority.ordinal,
-            NativeActivationCallback.create {
-                // Wire activation through to instance activation handler
-                activationHandler.load()?.invoke(it)
-            },
-            isDebugEnabled,
-        )
-    }
+    private val address: Long = NativeNotificationHandler.create(
+        name,
+        id,
+        priority.ordinal,
+        NativeActivationCallback.create {
+            // Wire activation through to instance activation handler
+            activationHandler.load()?.invoke(it)
+        },
+        isDebugEnabled,
+        appId
+    )
 
     override val platform: NotificationPlatform by lazy {
         NotificationPlatform.entries[NativeNotificationHandler.getPlatform(address)]
@@ -65,11 +64,9 @@ private class JvmNotificationHandler(
     }
 
     override suspend fun requestPermissions(callback: PermissionCallback) {
-        NativeNotificationHandler.requestPermissions(address) {
-            runBlocking {
-                callback(this@JvmNotificationHandler, it)
-            }
-        }
+        NativeNotificationHandler.requestPermissions(address, NativePermissionCallback.create {
+            callback(this@JvmNotificationHandler, it)
+        })
     }
 
     override suspend fun push(notification: Notification, tag: String): NotificationHandle {
@@ -136,6 +133,7 @@ actual fun NotificationHandler( // @formatter:off
     id: String,
     priority: NotificationPriority,
     isDebugEnabled: Boolean,
+    appId: String
 ): NotificationHandler { // @formatter:on
-    return JvmNotificationHandler(name, id, priority, isDebugEnabled)
+    return JvmNotificationHandler(appId, name, id, priority, isDebugEnabled)
 }

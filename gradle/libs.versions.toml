@@ -1,6 +1,6 @@
 [versions]
-jvmTarget = "17"
-c2xConventions = "39087842"
+jvmTarget = "21"
+c2xConventions = "43109500"
 
 androidGradle = "8.9.3" # https://developer.android.com/build/releases/gradle-plugin
 androidCompileSDK = "35"
@@ -8,7 +8,7 @@ androidMinimalSDK = "28"
 androidxCore = "1.16.0" # https://developer.android.com/jetpack/androidx/releases/core
 androidxActivityKtx = "1.10.1" # https://mvnrepository.com/artifact/androidx.activity/activity-ktx
 
-sysnotify = "1.8.1"
+sysnotify = "1.9.0"
 kotlin = "2.1.21" # https://github.com/JetBrains/kotlin/releases
 kotlinx-coroutines = "1.10.2" # https://github.com/Kotlin/kotlinx.coroutines/releases
 stately = "2.1.0" # https://github.com/touchlab/Stately/releases
@@ -19,7 +19,7 @@ androidx-activityCompose = "1.10.1" # https://developer.android.com/jetpack/andr
 androidx-ui-tooling = "1.7.8" # https://developer.android.com/jetpack/androidx/releases/compose-ui
 
 kmpJni = "1.0.1" # https://gitlab.com/connect2x/kmp-jni/-/packages
-sysnotifyBinaries = "DEV-44ed6780" # https://gitlab.com/connect2x/sysnotify-platform-binaries/-/packages/
+sysnotifyBinaries = "v1.2.2" # https://gitlab.com/connect2x/sysnotify-platform-binaries/-/packages/
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }

@@ -26,7 +26,6 @@ import de.connect2x.sysnotify.com.sysnotify_handler_destroy
 import de.connect2x.sysnotify.com.sysnotify_handler_pop
 import de.connect2x.sysnotify.com.sysnotify_handler_push
 import de.connect2x.sysnotify.com.sysnotify_handler_update
-import kotlinx.atomicfu.atomic
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.MemScope
 import kotlinx.cinterop.StableRef
@@ -38,18 +37,23 @@ import kotlinx.cinterop.ptr
 import kotlinx.cinterop.staticCFunction
 import kotlinx.cinterop.toCValues
 import kotlinx.cinterop.value
+import kotlinx.coroutines.runBlocking
+import kotlin.concurrent.atomics.AtomicReference
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
-@OptIn(ExperimentalForeignApi::class)
+@OptIn(ExperimentalForeignApi::class, ExperimentalAtomicApi::class)
 @Suppress("NOTHING_TO_INLINE")
 internal class WindowsNotificationHandler(
+    override val appId: String,
     override val name: String,
     override val id: String,
     override val priority: NotificationPriority,
     private val closeCallback: () -> Unit = {}
 ) : NotificationHandler {
-    internal val address: sn_notification_handler = memScoped {
+    val address: sn_notification_handler = memScoped {
         val pointer = alloc<sn_notification_handlerVar>()
-        sysnotify_handler_create(name, id, pointer.ptr).check()
+        // The native notification handler only cares about the actual app ID, not the handler specific ID
+        sysnotify_handler_create(name, appId, pointer.ptr).check()
         requireNotNull(pointer.value) { "Could not create COM adaptor instance" }
     }
 
@@ -67,10 +71,12 @@ internal class WindowsNotificationHandler(
         isGroupingSupported = false
     )
 
-    internal var activationHandler: ActivationHandler? by atomic(null)
+    internal var activationHandler: AtomicReference<ActivationHandler?> = AtomicReference(null)
 
     override fun close() {
-        sysnotify_handler_destroy(address).check()
+        runBlocking {
+            sysnotify_handler_destroy(address).check()
+        }
         closeCallback()
     }
 
@@ -96,9 +102,7 @@ internal class WindowsNotificationHandler(
 
     override suspend fun pop(handle: NotificationHandle) {
         handle.check<WindowsNotificationHandle>()
-        memScoped {
-            sysnotify_handler_pop(address, handle.tag).check()
-        }
+        sysnotify_handler_pop(address, handle.tag).check()
     }
 
     private fun MemScope.allocNotification(notification: Notification): sn_notification_content {
@@ -114,7 +118,7 @@ internal class WindowsNotificationHandler(
             activate_callback = staticCFunction { _, userData ->
                 userData?.asStableRef<Pair<Notification, WindowsNotificationHandler>>()?.apply {
                     val (currentNotification, currentHandler) = get()
-                    currentHandler.activationHandler?.invoke(currentNotification)
+                    currentHandler.activationHandler.load()?.invoke(currentNotification)
                     dispose()
                 }
             }
@@ -126,9 +130,10 @@ internal class WindowsNotificationHandler(
     }
 }
 
+@OptIn(ExperimentalAtomicApi::class)
 actual fun NotificationHandler.withActivationHandler(handler: ActivationHandler): NotificationHandler {
     check<WindowsNotificationHandler>()
-    activationHandler = handler
+    activationHandler.store(handler)
     return this
 }
 
@@ -137,4 +142,5 @@ actual fun NotificationHandler(
     id: String,
     priority: NotificationPriority,
     isDebugEnabled: Boolean,
-): NotificationHandler = WindowsNotificationHandler(name, id, priority)
+    appId: String
+): NotificationHandler = WindowsNotificationHandler(appId, name, id, priority)

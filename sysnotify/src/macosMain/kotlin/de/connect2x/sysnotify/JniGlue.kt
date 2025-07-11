@@ -22,7 +22,8 @@ internal actual fun createNotificationHandler(
     activationHandler: ActivationHandler,
     closeCallback: () -> Unit,
     isDebugEnabled: Boolean,
+    appId: String
 ): NotificationHandler {
-    return AppleNotificationHandler(name, id, priority, closeCallback, isDebugEnabled)
+    return AppleNotificationHandler(appId, name, id, priority, closeCallback, isDebugEnabled)
         .withActivationHandler(activationHandler)
 }

@@ -19,7 +19,6 @@ package de.connect2x.sysnotify
 
 import co.touchlab.stately.collections.SharedHashMap
 import co.touchlab.stately.collections.SharedLinkedList
-import kotlinx.atomicfu.atomic
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.StableRef
@@ -32,26 +31,29 @@ import kotlinx.cinterop.reinterpret
 import kotlinx.cinterop.staticCFunction
 import kotlinx.cinterop.usePinned
 import kotlinx.cinterop.value
-import kotlinx.coroutines.CoroutineExceptionHandler
-import kotlinx.coroutines.CoroutineName
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.CoroutineStart
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.yield
 import libnotify.GError
 import libnotify.GdkColorspace
 import libnotify.NotifyNotification
-import libnotify.gpointer
+import platform.posix.atexit
+import kotlin.collections.set
+import kotlin.concurrent.atomics.AtomicBoolean
+import kotlin.concurrent.atomics.AtomicReference
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
+import libnotify.gpointer // DO NOT REMOVE THIS!
 
+private data class PendingNotification(
+    val tag: String,
+    val isSameContent: Boolean,
+    val notification: Notification,
+    val handler: LinuxNotificationHandler
+)
+
+@OptIn(ExperimentalAtomicApi::class)
 internal class LinuxNotificationHandler(
+    override val appId: String,
     override val name: String,
     override val id: String,
     override val priority: NotificationPriority,
@@ -79,8 +81,169 @@ internal class LinuxNotificationHandler(
             state: NotificationActivationState
         ) {
             state.activated = true // Notify close signal handler that we've handled this notification already
-            state.handler.activationHandler?.invoke(state.notification)
+            state.handler.activationHandler.load()?.invoke(state.notification)
         }
+
+        private val isEventLoopRunning: AtomicBoolean = AtomicBoolean(true)
+        private val errorOnExternalThread: AtomicBoolean = AtomicBoolean(false)
+        private var shouldDispachNotifications: AtomicBoolean = AtomicBoolean(true)
+        private val pendingNotifications: SharedLinkedList<PendingNotification> = SharedLinkedList()
+        private val notifications: SharedHashMap<String, LinuxNotificationHandle> = SharedHashMap()
+        private val activationStates: SharedHashMap<String, StableRef<NotificationActivationState>> = SharedHashMap()
+
+        private inline fun handleThreadErrors(block: () -> Unit) {
+            try {
+                block()
+            } catch (error: Throwable) {
+                errorOnExternalThread.store(true)
+            }
+        }
+
+        private val eventLoopThread: Thread = Thread {
+            Thread.name = "Sysnotify Event Thread"
+            handleThreadErrors {
+                val mainContext = requireNotNull(LibGLib.g_main_context_default()) {
+                    "Could not retrieve default main context"
+                }
+                val mainLoop = requireNotNull(LibGLib.g_main_loop_new(mainContext, 1)) {
+                    "Could not create main loop"
+                }
+                while (isEventLoopRunning.load() && !errorOnExternalThread.load()) {
+                    LibGLib.g_main_context_acquire(mainContext)
+                    if (LibGLib.g_main_context_iteration(mainContext, 0) == 1) {
+                        LibGLib.g_main_context_release(mainContext)
+                        continue
+                    }
+                    LibGLib.g_main_context_release(mainContext)
+                    Thread.sleep(10)
+                }
+                LibGLib.g_main_loop_unref(mainLoop)
+            }
+        }
+
+        private val dequeueThread: Thread = Thread {
+            Thread.name = "Sysnotify Notification Thread"
+            fun isRunning(): Boolean = shouldDispachNotifications.load() && !errorOnExternalThread.load()
+            handleThreadErrors {
+                while (isRunning()) {
+                    while (isRunning() && pendingNotifications.isNotEmpty()) {
+                        val (tag, isSameContent, notification, handler) = pendingNotifications.removeFirst()
+                        val handle = create(tag, notification, handler)
+                        handle.check<LinuxNotificationHandle>()
+                        notifications[tag] = handle
+                        // Minimum required DBus timeouts to prevent dropping notifications
+                        val delay = if (isSameContent) timeout else minimumDelay
+                        // Only delay if the state hasn't changed since then
+                        if (shouldDispachNotifications.load()) Thread.sleep(delay.inWholeMilliseconds)
+                    }
+                    Thread.sleep(10)
+                }
+            }
+        }
+
+        init {
+            atexit(staticCFunction<Unit> {
+                LinuxNotificationHandler.apply {
+                    shouldDispachNotifications.store(false)
+                    dequeueThread.join()
+                    isEventLoopRunning.store(false)
+                    eventLoopThread.join()
+                }
+            })
+        }
+
+        private fun create(
+            tag: String,
+            notification: Notification,
+            handler: LinuxNotificationHandler
+        ): NotificationHandle {
+            if (errorOnExternalThread.load()) return NotificationHandle.INVALID
+
+            val notificationAddress = LibNotify.notify_notification_new(
+                summary = notification.title,
+                body = notification.description,
+                icon = DEFAULT_ICON
+            ) ?: return NotificationHandle.INVALID
+
+            LibNotify.notify_notification_set_app_name(notificationAddress, handler.name)
+            LibNotify.notify_notification_set_timeout(notificationAddress, timeout.inWholeMilliseconds.toInt())
+            LibNotify.notify_notification_set_urgency(notificationAddress, notification.priority.urgency)
+
+            if (notification.playSound) {
+                val soundPath = notification.soundPath ?: DEFAULT_SOUND
+                LibNotify.notify_notification_set_hint_string(notificationAddress, HINT_SOUND_FILE, soundPath)
+            }
+            setIcon(notificationAddress, notification)
+
+            // We create a new state for this notification and create a stable reference to it
+            val stateRef = StableRef.create(NotificationActivationState(handler, tag, notification))
+            activationStates[tag] = stateRef
+
+            // Register activation callback
+            LibNotify.notify_notification_add_action(
+                notification = notificationAddress,
+                action = ACTION_OPEN,
+                label = "Open",
+                callback = staticCFunction { _, _, userData ->
+                    val stateRef = userData?.asStableRef<NotificationActivationState>() ?: return@staticCFunction
+                    onNotificationActivated(stateRef.get())
+                },
+                userData = stateRef.asCPointer(),
+                freeFunc = null
+            )
+
+            // Register close callback using a GObject signal
+            LibGObject.g_signal_connect_data(
+                instance = notificationAddress.reinterpret(),
+                detailedSignal = SIGNAL_CLOSED,
+                handler = staticCFunction<CPointer<NotifyNotification>, gpointer?, Unit> { _, userData ->
+                    val stateRef = userData?.asStableRef<NotificationActivationState>() ?: return@staticCFunction
+                    onNotificationClosed(stateRef.get())
+                    stateRef.dispose()
+                }.reinterpret(),
+                data = stateRef.asCPointer(),
+                destroyData = null,
+                connectFlags = 0U
+            )
+
+            return if (show(notificationAddress)) LinuxNotificationHandle(tag, handler).apply {
+                address = notificationAddress
+            }
+            else NotificationHandle.INVALID
+        }
+
+        private fun setIcon(nativeNotification: CPointer<NotifyNotification>, notification: Notification) {
+            notification.icon?.let { icon ->
+                val width = icon.width
+                val height = icon.height
+                if (width <= 0 || height <= 0) return // Return if our size is invalid
+                icon.data.usePinned { pinnedArray ->
+                    val data = LibGLib.g_bytes_new_static(pinnedArray.addressOf(0), icon.data.size.toULong())
+                    val buffer = LibGdkPixbuf.gdk_pixbuf_new_from_bytes(
+                        data, GdkColorspace.GDK_COLORSPACE_RGB, 1, 8, width, height, width shl 2
+                    )
+                    LibNotify.notify_notification_set_icon_from_pixbuf(nativeNotification, buffer)
+                    LibGdkPixbuf.gdk_pixbuf_unref(buffer)
+                    LibGLib.g_bytes_unref(data)
+                }
+            }
+        }
+
+        private fun show(notification: CPointer<NotifyNotification>): Boolean {
+            if (errorOnExternalThread.load()) return false
+            memScoped {
+                val errorAddress = allocPointerTo<GError>()
+                if (LibNotify.notify_notification_show(notification, errorAddress.ptr) == 0) {
+                    errorAddress.value?.freeAndThrow()
+                    return false // Return if we fall through, which doesn't happen, but no _Noreturn..
+                }
+            }
+            return true
+        }
+    }
+
+    init {
+        check(LibNotify.notify_init(name) != 0) { "Could not initialize libnotify" }
     }
 
     override val platform: NotificationPlatform = NotificationPlatform.LINUX
@@ -97,151 +260,19 @@ internal class LinuxNotificationHandler(
         isGroupingSupported = false
     )
 
-    private val coroutineScope: CoroutineScope = CoroutineScope(
-        Dispatchers.Default
-                + CoroutineName("sysnotify-default")
-                + SupervisorJob()
-                + CoroutineExceptionHandler { _, throwable ->
-            // TODO: implement proper logging
-            println("NotificationHandler coroutine could not complete: $throwable")
-        })
-
-    private val activationStates: SharedHashMap<String, StableRef<NotificationActivationState>> = SharedHashMap()
-    private val pendingNotifications: SharedLinkedList<Triple<String, Boolean, Notification>> = SharedLinkedList()
-    private val notifications: SharedHashMap<String, LinuxNotificationHandle> = SharedHashMap()
-
-    private var shouldDispachNotifications: Boolean by atomic(true)
-    private var shouldHandleEvents: Boolean by atomic(true)
-    private var lastNotification: Notification? by atomic(null)
-    internal var activationHandler: ActivationHandler? by atomic(null)
-
-    init {
-        check(LibNotify.notify_init(name) != 0) { "Could not initialize libnotify" }
-    }
-
-    // Flushes notifications from the internal queue to the system periodically
-    private val dequeueJob: Job = coroutineScope.launch(start = CoroutineStart.ATOMIC) {
-        while (shouldDispachNotifications) {
-            while (shouldDispachNotifications && pendingNotifications.isNotEmpty()) {
-                val (tag, isSameContent, notification) = pendingNotifications.removeFirst()
-                val handle = create(tag, notification)
-                handle.check<LinuxNotificationHandle>()
-                notifications[tag] = handle
-                // Minimum required DBus timeouts to prevent dropping notifications
-                val delay = if (isSameContent) timeout else minimumDelay
-                // Only delay if the state hasn't changed since then
-                if (shouldDispachNotifications) delay(delay)
-            }
-            yield()
-        }
-    }
-
-    // An out-of-band event pump so actions and signals work for our notifications
-    private val eventLoopJob: Job = coroutineScope.launch(start = CoroutineStart.ATOMIC) {
-        val eventLoop = requireNotNull(LibGLib.g_main_loop_new(null, 0)) {
-            "Could not create GMainLoop instance"
-        }
-        val loopContext = requireNotNull(LibGLib.g_main_loop_get_context(eventLoop)) {
-            "Could not obtain GMainContext for event loop"
-        }
-        while (shouldHandleEvents) {
-            if (LibGLib.g_main_context_iteration(loopContext, 0) == 1) continue
-            yield()
-        }
-        LibGLib.g_main_loop_unref(eventLoop)
-    }
-
-    private fun setIcon(nativeNotification: CPointer<NotifyNotification>, notification: Notification) {
-        notification.icon?.let { icon ->
-            val width = icon.width
-            val height = icon.height
-            if (width <= 0 || height <= 0) return // Return if our size is invalid
-            icon.data.usePinned { pinnedArray ->
-                val data = LibGLib.g_bytes_new_static(pinnedArray.addressOf(0), icon.data.size.toULong())
-                val buffer = LibGdkPixbuf.gdk_pixbuf_new_from_bytes(
-                    data, GdkColorspace.GDK_COLORSPACE_RGB, 1, 8, width, height, width shl 2
-                )
-                LibNotify.notify_notification_set_icon_from_pixbuf(nativeNotification, buffer)
-                LibGdkPixbuf.gdk_pixbuf_unref(buffer)
-                LibGLib.g_bytes_unref(data)
-            }
-        }
-    }
-
-    private fun show(notification: CPointer<NotifyNotification>): Boolean {
-        memScoped {
-            val errorAddress = allocPointerTo<GError>()
-            if (LibNotify.notify_notification_show(notification, errorAddress.ptr) == 0) {
-                errorAddress.value?.freeAndThrow()
-                return false // Return if we fall through, which doesn't happen, but no _Noreturn..
-            }
-        }
-        return true
-    }
-
-    private fun create(tag: String, notification: Notification): NotificationHandle {
-        val notificationAddress = LibNotify.notify_notification_new(
-            summary = notification.title,
-            body = notification.description,
-            icon = DEFAULT_ICON
-        ) ?: return NotificationHandle.INVALID
-
-        LibNotify.notify_notification_set_app_name(notificationAddress, name)
-        LibNotify.notify_notification_set_timeout(notificationAddress, timeout.inWholeMilliseconds.toInt())
-        LibNotify.notify_notification_set_urgency(notificationAddress, notification.priority.urgency)
-
-        if (notification.playSound) {
-            val soundPath = notification.soundPath ?: DEFAULT_SOUND
-            LibNotify.notify_notification_set_hint_string(notificationAddress, HINT_SOUND_FILE, soundPath)
-        }
-        setIcon(notificationAddress, notification)
-
-        // We create a new state for this notification and create a stable reference to it
-        val stateRef = StableRef.create(NotificationActivationState(this, tag, notification))
-        activationStates[tag] = stateRef
-
-        // Register activation callback
-        LibNotify.notify_notification_add_action(
-            notification = notificationAddress,
-            action = ACTION_OPEN,
-            label = "Open",
-            callback = staticCFunction { _, _, userData ->
-                val stateRef = userData?.asStableRef<NotificationActivationState>() ?: return@staticCFunction
-                onNotificationActivated(stateRef.get())
-            },
-            userData = stateRef.asCPointer(),
-            freeFunc = null
-        )
-
-        // Register close callback using a GObject signal
-        LibGObject.g_signal_connect_data(
-            instance = notificationAddress.reinterpret(),
-            detailedSignal = SIGNAL_CLOSED,
-            handler = staticCFunction<CPointer<NotifyNotification>, gpointer?, Unit> { _, userData ->
-                val stateRef = userData?.asStableRef<NotificationActivationState>() ?: return@staticCFunction
-                onNotificationClosed(stateRef.get())
-                stateRef.dispose()
-            }.reinterpret(),
-            data = stateRef.asCPointer(),
-            destroyData = null,
-            connectFlags = 0U
-        )
-
-        return if (show(notificationAddress)) LinuxNotificationHandle(tag).apply {
-            address = notificationAddress
-        }
-        else NotificationHandle.INVALID
-    }
+    private var lastNotification: AtomicReference<Notification?> = AtomicReference(null)
+    internal var activationHandler: AtomicReference<ActivationHandler?> = AtomicReference(null)
 
     override suspend fun push(notification: Notification, tag: String): NotificationHandle {
         // If this notification is already pending or active, return early
-        if (tag in notifications || pendingNotifications.any { it.first == tag }) return NotificationHandle.INVALID
-        pendingNotifications += Triple(tag, lastNotification == notification, notification)
-        lastNotification = notification
-        return LinuxNotificationHandle(tag) // Early return so we don't block
+        if (tag in notifications || pendingNotifications.any { it.tag == tag } || errorOnExternalThread.load()) return NotificationHandle.INVALID
+        pendingNotifications += PendingNotification(tag, lastNotification == notification, notification, this)
+        lastNotification.store(notification)
+        return LinuxNotificationHandle(tag, this) // Early return so we don't block
     }
 
     override suspend fun update(handle: NotificationHandle, notification: Notification): NotificationHandle {
+        if (errorOnExternalThread.load()) return NotificationHandle.INVALID
         handle.check<LinuxNotificationHandle>()
         val tag = handle.tag
         // If the notification is already active, just update it immediately
@@ -260,16 +291,17 @@ internal class LinuxNotificationHandler(
         }
         // Otherwise update the pending notification associated with the given tag
         val outdatedEntry =
-            pendingNotifications.find { it.first == tag } ?: return NotificationHandle.INVALID
+            pendingNotifications.find { it.tag == tag } ?: return NotificationHandle.INVALID
         val outdatedIndex = pendingNotifications.indexOf(outdatedEntry)
         if (outdatedIndex == -1) return NotificationHandle.INVALID
         val isSameContent = lastNotification == notification
-        pendingNotifications[outdatedIndex] = Triple(tag, isSameContent, notification)
-        lastNotification = notification
+        pendingNotifications[outdatedIndex] = PendingNotification(tag, isSameContent, notification, this)
+        lastNotification.store(notification)
         return handle
     }
 
     override suspend fun pop(handle: NotificationHandle) {
+        if (errorOnExternalThread.load()) return
         handle.check<LinuxNotificationHandle>()
         val tag = handle.tag
         // If the notification is already active, close it
@@ -287,42 +319,37 @@ internal class LinuxNotificationHandler(
             return
         }
         // Otherwise dequeue the pending notification early
-        val outdatedEntry = pendingNotifications.find { it.first == tag } ?: return
+        val outdatedEntry = pendingNotifications.find { it.tag == tag } ?: return
         pendingNotifications -= outdatedEntry
     }
 
     override suspend fun clearAll() {
-        for ((_, notification) in notifications) {
+        if (errorOnExternalThread.load()) return
+        val activeToRemove = notifications.filter { it.value.handler === this }
+        for ((tag, notification) in activeToRemove) {
             memScoped {
                 val errorAddress = allocPointerTo<GError>()
                 if (LibNotify.notify_notification_close(notification.address, errorAddress.ptr) == 0) {
                     errorAddress.value?.freeAndThrow()
                 }
             }
+            notifications -= tag
         }
-        notifications.clear()
-        pendingNotifications.clear()
+        val pendingToRemove = pendingNotifications.filter { it.handler === this }
+        pendingToRemove.forEach(pendingNotifications::remove)
     }
 
     override fun close() {
         runBlocking { clearAll() }
-        runBlocking {
-            shouldDispachNotifications = false
-            dequeueJob.join()
-        }
-        runBlocking {
-            shouldHandleEvents = false
-            eventLoopJob.join()
-        }
-        coroutineScope.cancel()
         LibNotify.notify_uninit()
         closeCallback()
     }
 }
 
+@OptIn(ExperimentalAtomicApi::class)
 actual fun NotificationHandler.withActivationHandler(handler: ActivationHandler): NotificationHandler {
     check<LinuxNotificationHandler>()
-    activationHandler = handler
+    activationHandler.store(handler)
     return this
 }
 
@@ -331,4 +358,9 @@ actual fun NotificationHandler(
     id: String,
     priority: NotificationPriority,
     isDebugEnabled: Boolean,
-): NotificationHandler = LinuxNotificationHandler(name, id, priority)
+    appId: String
+): NotificationHandler = try {
+    LinuxNotificationHandler(appId, name, id, priority)
+} catch (error: Throwable) {
+    NoopNotificationHandler
+}

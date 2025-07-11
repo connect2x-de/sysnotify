@@ -16,8 +16,8 @@
 package de.connect2x.sysnotify
 
 import co.touchlab.stately.collections.SharedHashMap
-import kotlinx.atomicfu.atomic
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -33,10 +33,13 @@ import platform.UserNotifications.UNNotificationCategoryOptionNone
 import platform.UserNotifications.UNNotificationRequest
 import platform.UserNotifications.UNNotificationSound
 import platform.UserNotifications.UNUserNotificationCenter
+import kotlin.concurrent.atomics.AtomicBoolean
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.experimental.ExperimentalNativeApi
 
-@OptIn(ExperimentalNativeApi::class)
+@OptIn(ExperimentalNativeApi::class, ExperimentalAtomicApi::class)
 internal class AppleNotificationHandler(
+    override val appId: String,
     override val name: String,
     override val id: String,
     override val priority: NotificationPriority,
@@ -46,7 +49,10 @@ internal class AppleNotificationHandler(
     @OptIn(ExperimentalForeignApi::class)
 
     override val platform: NotificationPlatform = NotificationPlatform.APPLE
-    override var hasPermissions: Boolean by atomic(false)
+    val _hasPermissions: AtomicBoolean = AtomicBoolean(false)
+
+    override val hasPermissions: Boolean
+        get() = _hasPermissions.load()
 
     override val capabilities: NotificationCapabilities = NotificationCapabilities(
         isTitleSupported = true,
@@ -83,27 +89,27 @@ internal class AppleNotificationHandler(
     }
 
     override suspend fun requestPermissions(callback: PermissionCallback) {
-        if (hasPermissions) return
-        var isWaitingForAction by atomic(true)
+        if (_hasPermissions.load()) return
+        val barrier = CompletableDeferred<Unit>()
         notificationCenter?.requestAuthorizationWithOptions(
             UNAuthorizationOptionSound or UNAuthorizationOptionBadge or UNAuthorizationOptionAlert
         ) { granted, error ->
-            hasPermissions = granted
-            isWaitingForAction = false
+            _hasPermissions.store(granted)
+            barrier.complete(Unit)
             error?.localizedDescription?.let {
                 println("Could not request permission: $it")
             }
         } ?: return
         coroutineScope {
             launch {
-                while (isWaitingForAction) yield()
-                callback(this@AppleNotificationHandler, hasPermissions)
+                barrier.await()
+                callback(this@AppleNotificationHandler, _hasPermissions.load())
             }
         }
     }
 
     override suspend fun push(notification: Notification, tag: String): NotificationHandle {
-        if (!hasPermissions) return NotificationHandle.INVALID
+        if (!_hasPermissions.load()) return NotificationHandle.INVALID
         val handle = AppleNotificationHandle(tag)
 
         val content = UNMutableNotificationContent().apply {
@@ -136,7 +142,7 @@ internal class AppleNotificationHandler(
 
     @Suppress("UNCHECKED_CAST")
     override suspend fun pop(handle: NotificationHandle) {
-        if (!hasPermissions) return
+        if (!_hasPermissions.load()) return
         handle.check<AppleNotificationHandle>()
 
         val identifier = handle.tag
@@ -162,13 +168,13 @@ internal class AppleNotificationHandler(
     }
 
     override suspend fun clearAll() {
-        if (!hasPermissions) return
+        if (!_hasPermissions.load()) return
         notificationCenter?.removeAllPendingNotificationRequests()
         notificationCenter?.removeAllDeliveredNotifications()
     }
 
     override fun close() {
-        if (!hasPermissions) return
+        if (!_hasPermissions.load()) return
         closeCallback()
         runBlocking { clearAll() }
         notificationCategories.clear()
@@ -186,6 +192,7 @@ actual fun NotificationHandler( // @formatter:off
     id: String,
     priority: NotificationPriority,
     isDebugEnabled: Boolean,
+    appId: String
 ): NotificationHandler { // @formatter:on
-    return AppleNotificationHandler(name, id, priority, closeCallback = {}, isDebugEnabled)
+    return AppleNotificationHandler(appId, name, id, priority, closeCallback = {}, isDebugEnabled)
 }

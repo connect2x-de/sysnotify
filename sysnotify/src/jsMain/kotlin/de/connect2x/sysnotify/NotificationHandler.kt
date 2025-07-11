@@ -16,7 +16,6 @@
 package de.connect2x.sysnotify
 
 import co.touchlab.stately.collections.SharedHashMap
-import kotlinx.atomicfu.atomic
 import kotlinx.browser.document
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
@@ -30,6 +29,7 @@ import org.w3c.dom.ImageData
 import org.w3c.dom.url.URL
 import org.w3c.notifications.GRANTED
 import org.w3c.notifications.NotificationOptions
+import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.io.encoding.ExperimentalEncodingApi
@@ -40,6 +40,7 @@ import org.w3c.notifications.NotificationPermission as JsNotificationPermission
 // https://developer.mozilla.org/en-US/docs/Web/API/Notification
 @OptIn(ExperimentalAtomicApi::class)
 private class WebNotificationHandler(
+    override val appId: String,
     override val name: String,
     override val id: String,
     override val priority: NotificationPriority
@@ -47,16 +48,19 @@ private class WebNotificationHandler(
     private val notifications: SharedHashMap<String, JsNotification> = SharedHashMap()
 
     override val platform: NotificationPlatform = NotificationPlatform.WEB
-    override var hasPermissions: Boolean by atomic(false)
+    private val _hasPermissions: AtomicBoolean = AtomicBoolean(false)
+
+    override val hasPermissions: Boolean
+        get() = _hasPermissions.load()
 
     override val capabilities: NotificationCapabilities = NotificationCapabilities(
         isTitleSupported = true,
         isDescriptionSupported = true,
         isIconSupported = true,
-        isActionSupported = false,
+        isActionSupported = true,
         isPopSupported = true,
         isSoundSupported = true,
-        isCustomSoundSupported = false,
+        isCustomSoundSupported = true,
         isGroupingSupported = false
     )
 
@@ -69,13 +73,13 @@ private class WebNotificationHandler(
     }
 
     override suspend fun requestPermissions(callback: PermissionCallback) {
-        if (hasPermissions) {
+        if (_hasPermissions.load()) {
             callback(this, true)
             return
         }
         // https://developer.mozilla.org/en-US/docs/Web/API/Notification/requestPermission_static
         val perms = JsNotification.requestPermission().await()
-        hasPermissions = perms === JsNotificationPermission.GRANTED
+        _hasPermissions.store(perms === JsNotificationPermission.GRANTED)
         callback(this, hasPermissions)
     }
 
@@ -97,7 +101,7 @@ private class WebNotificationHandler(
 
     @OptIn(ExperimentalEncodingApi::class, ExperimentalUuidApi::class)
     override suspend fun push(notification: Notification, tag: String): NotificationHandle {
-        if (!hasPermissions) return NotificationHandle.INVALID
+        if (!_hasPermissions.load()) return NotificationHandle.INVALID
         val iconUrl = encodeIcon(notification)
         return WebNotificationHandle(
             instance = JsNotification(
@@ -133,14 +137,14 @@ private class WebNotificationHandler(
     }
 
     override suspend fun pop(handle: NotificationHandle) {
-        if (!hasPermissions) return
+        if (!_hasPermissions.load()) return
         handle.check<WebNotificationHandle>()
         handle.instance?.close()
         notifications -= handle.tag
     }
 
     override suspend fun clearAll() {
-        if (!hasPermissions) return
+        if (!_hasPermissions.load()) return
         for ((_, notification) in notifications) {
             notification.close()
         }
@@ -169,6 +173,7 @@ actual fun NotificationHandler( // @formatter:off
     id: String,
     priority: NotificationPriority,
     isDebugEnabled: Boolean,
+    appId: String
 ): NotificationHandler { // @formatter:on
-    return WebNotificationHandler(name, id, priority)
+    return WebNotificationHandler(appId, name, id, priority)
 }
