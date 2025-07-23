@@ -13,14 +13,13 @@
  * limitations under the License.
  */
 
+@file:Suppress("DiscouragedPrivateApi")
+
 package de.connect2x.sysnotify
 
-import jdk.incubator.foreign.MemoryAccess
-import jdk.incubator.foreign.MemoryAddress
-import jdk.incubator.foreign.MemorySegment
-import jdk.incubator.foreign.ResourceScope
+import sun.misc.Unsafe
 
-private val memoryInstance: Memory by lazy { ForeignMemory() }
+private val memoryInstance: Memory by lazy { UnsafeMemory() }
 
 internal interface Memory {
     companion object : Memory by memoryInstance
@@ -57,23 +56,23 @@ internal interface Memory {
     }
 }
 
-internal class ForeignMemory : Memory {
+internal class UnsafeMemory : Memory {
+    private val unsafe: Unsafe = try {
+        val field = Unsafe::class.java.getDeclaredField("theUnsafe")
+        field.isAccessible = true
+        try {
+            field.get(null) as Unsafe
+        } finally {
+            field.isAccessible = false
+        }
+    } catch (error: Throwable) {
+        throw IllegalStateException("Could not obtain sun.misc.Unsafe instance for memory access", error)
+    }
+
     override val systemBitness: Long = System.getProperty("sun.arch.data.model").toLong()
     override val pointerSize: Long = systemBitness shr 3
 
-    private fun Long.asGlobalSegment(size: Long): MemorySegment {
-        return MemoryAddress.ofLong(this).asSegment(size, ResourceScope.globalScope())
-    }
-
-    override fun getPointer(address: Long): Long {
-        return MemoryAccess.getAddress(address.asGlobalSegment(pointerSize)).toRawLongValue()
-    }
-
-    override fun getByte(address: Long): Byte {
-        return MemoryAccess.getByte(address.asGlobalSegment(Byte.SIZE_BYTES.toLong()))
-    }
-
-    override fun getInt(address: Long): Int {
-        return MemoryAccess.getInt(address.asGlobalSegment(Int.SIZE_BYTES.toLong()))
-    }
+    override fun getPointer(address: Long): Long = unsafe.getAddress(address)
+    override fun getByte(address: Long): Byte = unsafe.getByte(address)
+    override fun getInt(address: Long): Int = unsafe.getInt(address)
 }
