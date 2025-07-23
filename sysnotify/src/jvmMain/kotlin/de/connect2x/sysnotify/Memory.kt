@@ -13,15 +13,16 @@
  * limitations under the License.
  */
 
+@file:Suppress("DiscouragedPrivateApi")
+
 package de.connect2x.sysnotify
 
-import java.lang.foreign.MemorySegment
-import java.lang.foreign.ValueLayout
+import sun.misc.Unsafe
+
+private val memoryInstance: Memory by lazy { UnsafeMemory() }
 
 internal interface Memory {
-    companion object {
-        val instance: Memory by lazy { ForeignMemory() }
-    }
+    companion object : Memory by memoryInstance
 
     val systemBitness: Long
     val pointerSize: Long
@@ -55,20 +56,23 @@ internal interface Memory {
     }
 }
 
-internal class ForeignMemory : Memory {
+internal class UnsafeMemory : Memory {
+    private val unsafe: Unsafe = try {
+        val field = Unsafe::class.java.getDeclaredField("theUnsafe")
+        field.isAccessible = true
+        try {
+            field.get(null) as Unsafe
+        } finally {
+            field.isAccessible = false
+        }
+    } catch (error: Throwable) {
+        throw IllegalStateException("Could not obtain sun.misc.Unsafe instance for memory access", error)
+    }
+
     override val systemBitness: Long = System.getProperty("sun.arch.data.model").toLong()
     override val pointerSize: Long = systemBitness shr 3
 
-    override fun getPointer(address: Long): Long {
-        return MemorySegment.ofAddress(address).reinterpret(pointerSize).get(ValueLayout.ADDRESS_UNALIGNED, 0L).address()
-    }
-
-    override fun getByte(address: Long): Byte {
-        return MemorySegment.ofAddress(address).reinterpret(Byte.SIZE_BYTES.toLong()).get(ValueLayout.JAVA_BYTE, 0L)
-    }
-
-    override fun getInt(address: Long): Int {
-        return MemorySegment.ofAddress(address).reinterpret(Int.SIZE_BYTES.toLong())
-            .get(ValueLayout.JAVA_INT_UNALIGNED, 0L)
-    }
+    override fun getPointer(address: Long): Long = unsafe.getAddress(address)
+    override fun getByte(address: Long): Byte = unsafe.getByte(address)
+    override fun getInt(address: Long): Int = unsafe.getInt(address)
 }
