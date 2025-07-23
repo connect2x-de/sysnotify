@@ -15,13 +15,15 @@
 
 package de.connect2x.sysnotify
 
-import java.lang.foreign.MemorySegment
-import java.lang.foreign.ValueLayout
+import jdk.incubator.foreign.MemoryAccess
+import jdk.incubator.foreign.MemoryAddress
+import jdk.incubator.foreign.MemorySegment
+import jdk.incubator.foreign.ResourceScope
+
+private val memoryInstance: Memory by lazy { ForeignMemory() }
 
 internal interface Memory {
-    companion object {
-        val instance: Memory by lazy { ForeignMemory() }
-    }
+    companion object : Memory by memoryInstance
 
     val systemBitness: Long
     val pointerSize: Long
@@ -59,16 +61,19 @@ internal class ForeignMemory : Memory {
     override val systemBitness: Long = System.getProperty("sun.arch.data.model").toLong()
     override val pointerSize: Long = systemBitness shr 3
 
+    private fun Long.asGlobalSegment(size: Long): MemorySegment {
+        return MemoryAddress.ofLong(this).asSegment(size, ResourceScope.globalScope())
+    }
+
     override fun getPointer(address: Long): Long {
-        return MemorySegment.ofAddress(address).reinterpret(pointerSize).get(ValueLayout.ADDRESS_UNALIGNED, 0L).address()
+        return MemoryAccess.getAddress(address.asGlobalSegment(pointerSize)).toRawLongValue()
     }
 
     override fun getByte(address: Long): Byte {
-        return MemorySegment.ofAddress(address).reinterpret(Byte.SIZE_BYTES.toLong()).get(ValueLayout.JAVA_BYTE, 0L)
+        return MemoryAccess.getByte(address.asGlobalSegment(Byte.SIZE_BYTES.toLong()))
     }
 
     override fun getInt(address: Long): Int {
-        return MemorySegment.ofAddress(address).reinterpret(Int.SIZE_BYTES.toLong())
-            .get(ValueLayout.JAVA_INT_UNALIGNED, 0L)
+        return MemoryAccess.getInt(address.asGlobalSegment(Int.SIZE_BYTES.toLong()))
     }
 }

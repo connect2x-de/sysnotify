@@ -20,27 +20,27 @@ interface NativeActivationCallback {
         fun create(closure: (Notification) -> Unit): NativeActivationCallback =
             object : NativeActivationCallback {
                 // TODO: this is a horribly unreadable mess, find some nicer way for this eventually
-                override fun invoke(notification: Long) = with(Memory.instance) {
-                    val iconWidth = getInt(notification + pointerSize * 3)
-                    val iconHeight = getInt(notification + pointerSize * 3 + 4)
+                override fun invoke(notification: Long) {
+                    val iconWidth = Memory.getInt(notification + Memory.pointerSize * 3)
+                    val iconHeight = Memory.getInt(notification + Memory.pointerSize * 3 + 4)
                     closure(
                         Notification(
-                            title = getString(getPointer(notification)),
-                            description = getString(getPointer(notification + pointerSize)),
+                            title = Memory.getString(Memory.getPointer(notification)),
+                            description = Memory.getString(Memory.getPointer(notification + Memory.pointerSize)),
                             icon = NotificationIcon(
-                                data = getByteArray(
-                                    getPointer(notification + pointerSize * 2),
+                                data = Memory.getByteArray(
+                                    Memory.getPointer(notification + Memory.pointerSize * 2),
                                     (iconWidth * iconHeight) shl 2
                                 ),
                                 width = iconWidth,
                                 height = iconHeight
                             ),
-                            callbackData = getString(getPointer(notification + pointerSize * 3 + 8)),
-                            dismissible = getBoolean(notification + pointerSize * 4 + 8),
-                            priority = NotificationPriority.entries[getInt(notification + pointerSize * 4 + 12)],
-                            playSound = getBoolean(notification + pointerSize * 4 + 16),
-                            soundPath = getString(getPointer(notification + pointerSize * 4 + 20)),
-                            group = getString(getPointer(notification + pointerSize * 5 + 20))
+                            callbackData = Memory.getString(Memory.getPointer(notification + Memory.pointerSize * 3 + 8)),
+                            dismissible = Memory.getBoolean(notification + Memory.pointerSize * 4 + 8),
+                            priority = NotificationPriority.entries[Memory.getInt(notification + Memory.pointerSize * 4 + 12)],
+                            playSound = Memory.getBoolean(notification + Memory.pointerSize * 4 + 16),
+                            soundPath = Memory.getString(Memory.getPointer(notification + Memory.pointerSize * 4 + 20)),
+                            group = Memory.getString(Memory.getPointer(notification + Memory.pointerSize * 5 + 20))
                         )
                     )
                 }
