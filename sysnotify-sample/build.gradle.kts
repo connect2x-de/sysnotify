@@ -124,8 +124,8 @@ android {
     }
 }
 
-val jdk24Launcher = javaToolchains.launcherFor {
-    languageVersion = JavaLanguageVersion.of(24)
+val jdkLauncher = javaToolchains.launcherFor {
+    languageVersion = JavaLanguageVersion.of(sharedLibs.versions.distributionJvm.get().toInt())
     vendor = JvmVendorSpec.ADOPTIUM
 }
 
@@ -134,7 +134,7 @@ compose {
         application {
             mainClass = "${rootProject.group}.${rootProject.name}.sample.MainKt"
             buildTypes.release.proguard { isEnabled = false }
-            javaHome = jdk24Launcher.get().metadata.installationPath.asFile.absolutePath
+            javaHome = jdkLauncher.get().metadata.installationPath.asFile.absolutePath
             nativeDistributions {
                 modules("java.net.http", "java.sql", "java.naming")
                 targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)

@@ -16,7 +16,7 @@ variables:
   GRADLE_OPTS: -Dorg.gradle.daemon=false
   GRADLE_USER_HOME: $CI_PROJECT_DIR/.gradle
   KONAN_DATA_DIR: $CI_PROJECT_DIR/.konan
-  BUILD_LINUX_IMAGE_NAME: registry.gitlab.com/trixnity/trixnity/trixnity-build-linux:latest
+  BUILD_LINUX_IMAGE_NAME: registry.gitlab.com/trixnity/kmp-dockerfiles/kmp-dockerfiles-base:latest
   LINUX_DEPENDENCIES: >
     libglib2.0-0 libgdk-pixbuf-2.0-0 libnotify4 libnotify-bin libx11-6
   SYSNOTIFY_DEBUG: 1
