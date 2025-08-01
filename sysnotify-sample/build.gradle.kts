@@ -13,14 +13,17 @@
  * limitations under the License.
  */
 
+import de.connect2x.conventions.configureJava
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 
 plugins {
-    alias(libs.plugins.kotlin.multiplatform)
-    alias(libs.plugins.android.application)
-    alias(libs.plugins.compose)
-    alias(libs.plugins.compose.compiler)
+    alias(sharedLibs.plugins.kotlin.multiplatform)
+    alias(sharedLibs.plugins.android.application)
+    alias(sharedLibs.plugins.compose.multiplatform)
+    alias(sharedLibs.plugins.compose.compiler)
 }
+
+configureJava(sharedLibs.versions.targetJvm)
 
 kotlin {
     androidTarget()
@@ -59,8 +62,7 @@ kotlin {
     sourceSets {
         androidMain {
             dependencies {
-                implementation(libs.androidx.compose.ui.tooling.preview)
-                implementation(libs.androidx.activity.compose)
+                implementation(sharedLibs.androidx.activity.compose)
             }
         }
         val commonMain by getting {
@@ -91,7 +93,7 @@ kotlin {
 
 android {
     namespace = "${rootProject.group}.${rootProject.name}.sample"
-    compileSdk = libs.versions.androidCompileSDK.get().toInt()
+    compileSdk = sharedLibs.versions.androidCompileSDK.get().toInt()
 
     sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
     sourceSets["main"].res.srcDirs("src/androidMain/res")
@@ -99,7 +101,7 @@ android {
 
     defaultConfig {
         applicationId = "${rootProject.group}.${rootProject.name}.sample"
-        minSdk = libs.versions.androidMinimalSDK.get().toInt()
+        minSdk = sharedLibs.versions.androidMinimalSDK.get().toInt()
         versionCode = 1
         versionName = libs.versions.sysnotify.get()
     }
@@ -120,9 +122,11 @@ android {
     buildFeatures {
         compose = true
     }
-    dependencies {
-        debugImplementation(libs.androidx.compose.ui.tooling)
-    }
+}
+
+val jdk24Launcher = javaToolchains.launcherFor {
+    languageVersion = JavaLanguageVersion.of(24)
+    vendor = JvmVendorSpec.ADOPTIUM
 }
 
 compose {
@@ -130,6 +134,7 @@ compose {
         application {
             mainClass = "${rootProject.group}.${rootProject.name}.sample.MainKt"
             buildTypes.release.proguard { isEnabled = false }
+            javaHome = jdk24Launcher.get().metadata.installationPath.asFile.absolutePath
             nativeDistributions {
                 modules("java.net.http", "java.sql", "java.naming")
                 targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
