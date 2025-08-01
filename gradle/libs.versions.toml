@@ -1,9 +1,9 @@
 [versions]
 
-c2xConventions = "0.0.0"
+c2xConventions = "49969555"
 sysnotify = "2.0.1"
 kmpJni = "1.0.1" # https://gitlab.com/connect2x/kmp-jni/-/packages
-sysnotifyBinaries = "DEV-0d93a392" # https://gitlab.com/connect2x/sysnotify-platform-binaries/-/packages/
+sysnotifyBinaries = "v1.3.0" # https://gitlab.com/connect2x/sysnotify-platform-binaries/-/packages/
 
 [libraries]
 
