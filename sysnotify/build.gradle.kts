@@ -13,8 +13,11 @@
  * limitations under the License.
  */
 
+import de.connect2x.conventions.GitLabPackage
 import de.connect2x.conventions.authenticatedPackageRegistry
 import de.connect2x.conventions.c2xOrganization
+import de.connect2x.conventions.configureJava
+import de.connect2x.conventions.gitlab
 import org.gradle.internal.extensions.stdlib.capitalized
 import org.jetbrains.kotlin.gradle.plugin.mpp.DefaultCInteropSettings
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
@@ -24,10 +27,12 @@ import kotlin.io.path.Path
 import kotlin.io.path.div
 
 plugins {
-    alias(libs.plugins.kotlin.multiplatform)
-    alias(libs.plugins.android.library)
+    alias(sharedLibs.plugins.kotlin.multiplatform)
+    alias(sharedLibs.plugins.android.library)
     `maven-publish`
 }
+
+configureJava(sharedLibs.versions.targetJvm)
 
 val KonanTarget.familyName: String
     get() = when (family) {
@@ -127,20 +132,20 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                api(libs.kotlinx.coroutines)
-                implementation(libs.stately.common)
-                implementation(libs.stately.collections)
+                api(sharedLibs.kotlinx.coroutines.core)
+                implementation(sharedLibs.stately.common)
+                implementation(sharedLibs.stately.collections)
             }
         }
         val commonTest by getting {
             dependencies {
-                implementation(libs.kotlin.test)
+                implementation(sharedLibs.kotlin.test)
             }
         }
         androidMain {
             dependencies {
-                implementation(libs.androidx.core)
-                implementation(libs.androidx.activity.ktx)
+                implementation(sharedLibs.androidx.core)
+                implementation(sharedLibs.androidx.activity.ktx)
             }
         }
         jvmMain {
@@ -180,9 +185,9 @@ kotlin {
 
 android {
     namespace = "${rootProject.group}.${rootProject.name}"
-    compileSdk = libs.versions.androidCompileSDK.get().toInt()
+    compileSdk = sharedLibs.versions.androidCompileSDK.get().toInt()
     defaultConfig {
-        minSdk = libs.versions.androidMinimalSDK.get().toInt()
+        minSdk = sharedLibs.versions.androidMinimalSDK.get().toInt()
     }
     buildTypes {
         debug {

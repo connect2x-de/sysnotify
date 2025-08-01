@@ -13,27 +13,18 @@
  * limitations under the License.
  */
 
-import de.connect2x.conventions.configureJava
 import de.connect2x.conventions.withVersionSuffix
 
 plugins {
-    alias(libs.plugins.android.library) apply false
-    alias(libs.plugins.android.application) apply false
-    alias(libs.plugins.kotlin.multiplatform) apply false
-    alias(libs.plugins.compose) apply false
-    alias(libs.plugins.compose.compiler) apply false
+    alias(sharedLibs.plugins.android.library) apply false
+    alias(sharedLibs.plugins.android.application) apply false
+    alias(sharedLibs.plugins.kotlin.multiplatform) apply false
+    alias(sharedLibs.plugins.compose.multiplatform) apply false
+    alias(sharedLibs.plugins.compose.compiler) apply false
     alias(libs.plugins.c2xConventions)
 }
 
 allprojects {
     group = "de.connect2x"
     version = withVersionSuffix(rootProject.libs.versions.sysnotify)
-    configureJava(rootProject.libs.versions.jvmTarget)
-
-    if (System.getenv("WITH_LOCK")?.toBoolean() == true) {
-        dependencyLocking {
-            lockAllConfigurations()
-        }
-        val dependenciesForAll by tasks.registering(DependencyReportTask::class)
-    }
 }

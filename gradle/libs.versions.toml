@@ -1,48 +1,14 @@
 [versions]
-jvmTarget = "17"
-c2xConventions = "43109500"
 
-androidGradle = "8.9.3" # https://developer.android.com/build/releases/gradle-plugin
-androidCompileSDK = "35"
-androidMinimalSDK = "28"
-androidxCore = "1.16.0" # https://developer.android.com/jetpack/androidx/releases/core
-androidxActivityKtx = "1.10.1" # https://mvnrepository.com/artifact/androidx.activity/activity-ktx
-
-sysnotify = "2.0.0"
-kotlin = "2.1.21" # https://github.com/JetBrains/kotlin/releases
-kotlinx-coroutines = "1.10.2" # https://github.com/Kotlin/kotlinx.coroutines/releases
-stately = "2.1.0" # https://github.com/touchlab/Stately/releases
-
-# For sample
-compose = "1.7.3" # https://github.com/JetBrains/compose-multiplatform/releases
-androidx-activityCompose = "1.10.1" # https://developer.android.com/jetpack/androidx/releases/activity
-androidx-ui-tooling = "1.7.8" # https://developer.android.com/jetpack/androidx/releases/compose-ui
-
+c2xConventions = "49969555"
+sysnotify = "2.0.1"
 kmpJni = "1.0.1" # https://gitlab.com/connect2x/kmp-jni/-/packages
-sysnotifyBinaries = "v1.2.2" # https://gitlab.com/connect2x/sysnotify-platform-binaries/-/packages/
+sysnotifyBinaries = "v1.3.0" # https://gitlab.com/connect2x/sysnotify-platform-binaries/-/packages/
 
 [libraries]
-kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
-kotlinx-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
-
-androidx-core = { module = "androidx.core:core", version.ref = "androidxCore" }
-androidx-activity-ktx = { module = "androidx.activity:activity-ktx", version.ref = "androidxActivityKtx" }
-androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activityCompose" }
-androidx-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling", version.ref = "androidx-ui-tooling" }
-androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview", version.ref = "androidx-ui-tooling" }
-
-stately-common = { module = "co.touchlab:stately-common", version.ref = "stately" }
-stately-collections = { module = "co.touchlab:stately-collections", version.ref = "stately" }
 
 kmpJni = { module = "de.connect2x:kmp-jni", version.ref = "kmpJni" }
 
 [plugins]
+
 c2xConventions = { id = "de.connect2x.conventions.c2x-conventions", version.ref = "c2xConventions" }
-
-kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
-
-compose = { id = "org.jetbrains.compose", version.ref = "compose" }
-compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-
-android-library = { id = "com.android.library", version.ref = "androidGradle" }
-android-application = { id = "com.android.application", version.ref = "androidGradle" }
