@@ -1,14 +1,9 @@
 [versions]
 
-c2xConventions = "49969555"
-sysnotify = "2.0.1"
+sysnotify = "2.0.2"
 kmpJni = "1.0.1" # https://gitlab.com/connect2x/kmp-jni/-/packages
 sysnotifyBinaries = "v1.3.0" # https://gitlab.com/connect2x/sysnotify-platform-binaries/-/packages/
 
 [libraries]
 
 kmpJni = { module = "de.connect2x:kmp-jni", version.ref = "kmpJni" }
-
-[plugins]
-
-c2xConventions = { id = "de.connect2x.conventions.c2x-conventions", version.ref = "c2xConventions" }

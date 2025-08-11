@@ -18,7 +18,9 @@ package de.connect2x.sysnotify
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.Path
+import kotlin.io.path.deleteRecursively
 import kotlin.io.path.div
 import kotlin.io.path.pathString
 
@@ -59,10 +61,11 @@ internal object NativeLoader {
 
     private val isLoaded: AtomicBoolean = AtomicBoolean(false)
 
+    @OptIn(ExperimentalPathApi::class)
     @Suppress("UnsafeDynamicallyLoadedCode")
     private fun unpackAndLoad(name: String, ext: String = libExtension) {
+        val targetDirectory = Files.createTempDirectory("sysnotify")
         val filePath = Path("natives") / "$os-$architecture" / "$libPrefix$name.$ext"
-        val targetDirectory = Path(System.getProperty("user.home")) / ".sysnotify"
         val targetPath = targetDirectory / filePath
         Files.createDirectories(targetPath.parent)
         this::class.java.getResourceAsStream("/${filePath.joinToString("/")}").use {
@@ -76,6 +79,9 @@ internal object NativeLoader {
             println("Loading native library from ${targetPath.pathString}")
         }
         System.load(targetPath.pathString)
+        Runtime.getRuntime().addShutdownHook(Thread {
+            targetDirectory.deleteRecursively()
+        })
     }
 
     fun ensureLoaded() {
