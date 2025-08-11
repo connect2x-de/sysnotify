@@ -79,9 +79,7 @@ internal object NativeLoader {
             println("Loading native library from ${targetPath.pathString}")
         }
         System.load(targetPath.pathString)
-        Runtime.getRuntime().addShutdownHook(Thread {
-            targetDirectory.deleteRecursively()
-        })
+        targetPath.toFile().deleteOnExit() // Prevent file lock issues on Windows
     }
 
     fun ensureLoaded() {
