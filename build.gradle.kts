@@ -21,7 +21,7 @@ plugins {
     alias(sharedLibs.plugins.kotlin.multiplatform) apply false
     alias(sharedLibs.plugins.compose.multiplatform) apply false
     alias(sharedLibs.plugins.compose.compiler) apply false
-    alias(libs.plugins.c2xConventions)
+    alias(sharedLibs.plugins.c2xConventions)
 }
 
 allprojects {

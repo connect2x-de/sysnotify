@@ -111,7 +111,11 @@ kotlin {
                 }
             }
             binaries {
-                sharedLib()
+                sharedLib {
+                    // Fix for libcrypt.so.1 not-found error on distroless
+                    linkerOpts("--as-needed")
+                    freeCompilerArgs += "-Xoverride-konan-properties=linkerGccFlags.linux=-lgcc -lgcc_eh -lc -ldl"
+                }
             }
         }
     }
