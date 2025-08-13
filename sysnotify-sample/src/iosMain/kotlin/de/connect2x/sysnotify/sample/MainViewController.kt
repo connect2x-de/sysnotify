@@ -18,13 +18,27 @@ package de.connect2x.sysnotify.sample
 import androidx.compose.ui.window.ComposeUIViewController
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.staticCFunction
+import platform.UIKit.UIViewController
+import platform.UserNotifications.*
+import platform.darwin.NSObject
 import platform.posix.atexit
 
 @OptIn(ExperimentalForeignApi::class)
-fun MainViewController() {
+fun MainViewController(): UIViewController {
+    val notificationDelegate = object : NSObject(), UNUserNotificationCenterDelegateProtocol {
+        override fun userNotificationCenter(
+            center: UNUserNotificationCenter,
+            willPresentNotification: UNNotification,
+            withCompletionHandler: (UNNotificationPresentationOptions) -> Unit
+        ) {
+            withCompletionHandler(UNNotificationPresentationOptionBanner or UNNotificationPresentationOptionSound)
+        }
+    }
+    UNUserNotificationCenter.currentNotificationCenter().setDelegate(notificationDelegate)
+
     onAppInit()
     atexit(staticCFunction(::onAppExit))
-    ComposeUIViewController {
+    return ComposeUIViewController {
         App()
     }
 }
