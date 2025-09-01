@@ -20,7 +20,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import de.connect2x.sysnotify.getLaunchNotification
 import de.connect2x.sysnotify.getNotificationIcon
-import de.connect2x.sysnotify.handlePermissionRequest
 import de.connect2x.sysnotify.withActivity
 
 class MainActivity : ComponentActivity() {
@@ -33,12 +32,6 @@ class MainActivity : ComponentActivity() {
                 icon = { resources.getNotificationIcon(R.drawable.ic_android) }
             )
         }
-    }
-
-    @Deprecated("For direct handling of permission results, use permission result callbacks")
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        notificationHandler.handlePermissionRequest(requestCode, grantResults)
     }
 
     override fun onDestroy() {

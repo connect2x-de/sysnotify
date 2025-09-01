@@ -30,7 +30,7 @@ import kotlin.uuid.Uuid
  * @param handler The notification handler that requested the permission
  * @param granted Boolean indicating whether permission was granted (true) or denied (false)
  */
-typealias PermissionCallback = (handler: NotificationHandler, granted: Boolean) -> Unit
+typealias PermissionCallback = (granted: Boolean) -> Unit
 
 /**
  * A callback function that is invoked when a user interacts with (clicks/activates) a notification.
@@ -113,7 +113,7 @@ interface NotificationHandler : AutoCloseable {
      * Requests the permissions to show notifications from the underlying platform
      * when possible. Otherwise, this function returns without any side effects.
      */
-    suspend fun requestPermissions(callback: PermissionCallback = { _, _ -> }) {}
+    suspend fun requestPermissions(callback: PermissionCallback = { _ -> }) {}
 
     /**
      * Clears all notifications that were created by this notification handler instance.
