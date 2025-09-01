@@ -203,7 +203,11 @@ internal inline fun <reified H : NotificationHandler> NotificationHandler.check(
 }
 
 /**
- * Create a NotificationHandler.
+ * Create a `NotificationHandler`.
+ *
+ * **NOTE: In order to use this `NotificationHandler` instance on Android,
+ * a `Context` or `Activity` needs to be attached in platform code using either
+ * `NotificationHandler.withContext` or `NotificationHandler.withActivity` respectively.**
  *
  * @param name The display name of the notification handler.
  * @param id The internal ID of the notification handler.

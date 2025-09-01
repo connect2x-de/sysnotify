@@ -2,8 +2,6 @@
 
 Cross-platform system notifications for Kotlin Multiplatform.
 
-![](doc/sysnotify-arch.png)
-
 ## Supported features
 
 The support matrix below indicates which specific features are available on which platforms.
@@ -33,20 +31,28 @@ The JVM supports all native targets mentioned below for every architecture suppo
 ### Android
 
 Android is supported starting with **API level 28**.  
+
+> **IMPORTANT NOTE**  
 On Android you need to declare the `android.permission.POST_NOTIFICATIONS` permission in your app
 manifest starting with **API level 33**.
 See [here](https://developer.android.com/develop/ui/views/notifications/build-notification?hl=en).
+
+> **IMPORTANT NOTE**  
+In order for the `NotificationHandler` to work properly, a `Context` or `Activity` needs to be
+attached in platform code using `NotificationHandler.withContext` or `NotificationHandler.withActivity`
+respectively.
+
+> **NOTE**  
+Notification activations may be handled using `NotificationHandler.withActivationFactory`.
 
 ### macOS/iOS
 
 macOS and iOS are supported starting with versions **10.14** and **10.0** respectively.
 
-#### Note on debugging
-
+> **IMPORTANT NOTE**  
 Since macOS and iOS internally use [bundleProxyForCurrentProcess](https://notprivateapis.com/documentation/notprivateapis/bundleproxyforcurrentprocess/),
 which presumably is declared as `nonnull`, builds of the sample application or the application consuming SysNotify will
-crash when not started with a valid bundle.
-
+crash when not started with a valid bundle.  
 This means that using `:sysnotify-sample:run` or `:sysnotify-sample:run_Executable_` will not work. Instead you need to
 launch the **.app** file produced by the `:sysnotify-sample:packageDmg` task or install the **.dmg** that's also built in the process.
 
@@ -58,7 +64,10 @@ Windows is supported starting with Windows 10.
 
 Linux is supported if your distribution/desktop environment supports [libnotify](https://github.com/GNOME/libnotify).  
 This includes desktop environments which use Qt or GTK like [GNOME](https://www.gnome.org) or [KDE](https://kde.org).  
-Note that you need to have `glib-2.0` and `gdk-pixbuf-2.0` installed on a GNOME system.
+
+> **IMPORTANT NOTE**  
+You need to have `glib-2.0`, `gdk-pixbuf-2.0` and `libnotify` installed via your
+distribution package manager in order for notifications to show up.
 
 ## Example
 
@@ -113,3 +122,7 @@ class MyApplication : ComponentActivity() {
     }
 }
 ```
+
+## Architecture
+
+![](doc/sysnotify-arch.png)
