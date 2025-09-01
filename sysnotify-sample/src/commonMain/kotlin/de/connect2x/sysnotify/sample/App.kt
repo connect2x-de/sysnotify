@@ -15,6 +15,7 @@
 
 package de.connect2x.sysnotify.sample
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -33,6 +34,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import de.connect2x.sysnotify.Notification
 import de.connect2x.sysnotify.NotificationHandler
@@ -74,94 +76,96 @@ fun App(
     var description by remember { mutableStateOf("World!") }
     var callbackData by remember { mutableStateOf("This is some user data to attach to the notification") }
 
-    Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Column {
-            Text(
-                text = "Sysnotify Sample",
-                style = MaterialTheme.typography.h4,
-                modifier = Modifier.padding(vertical = 10.dp)
-            )
-            Text(
-                text = "This sample application allows testing the Sysnotify library by pushing a custom notification with the given properties.",
-                modifier = Modifier.padding(vertical = 5.dp)
-            )
-            // Title
-            Text(
-                text = "Title",
-                modifier = Modifier.padding(vertical = 5.dp),
-                style = MaterialTheme.typography.h5,
-            )
-            Row {
-                TextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    modifier = Modifier.weight(1F).padding(vertical = 10.dp)
-                )
-            }
-            // Description
-            Text(
-                text = "Description",
-                modifier = Modifier.padding(vertical = 5.dp),
-                style = MaterialTheme.typography.h5,
-            )
-            Row {
-                TextField(
-                    value = description,
-                    onValueChange = { description = it },
-                    modifier = Modifier.weight(1F).padding(vertical = 10.dp)
-                )
-            }
-            // User Data
-            Text(
-                text = "User Data",
-                modifier = Modifier.padding(vertical = 5.dp),
-                style = MaterialTheme.typography.h5,
-            )
-            Row {
-                TextField(
-                    value = callbackData,
-                    onValueChange = { callbackData = it },
-                    modifier = Modifier.weight(1F).padding(vertical = 10.dp)
-                )
-            }
-            // Launch Notification
-            notificationHandler.launchUserData()?.let {
+    Box(modifier = Modifier.fillMaxSize().background(Color.White)) {
+        Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+            Column {
                 Text(
-                    text = "Launch Notification",
+                    text = "Sysnotify Sample",
+                    style = MaterialTheme.typography.h4,
+                    modifier = Modifier.padding(vertical = 10.dp)
+                )
+                Text(
+                    text = "This sample application allows testing the Sysnotify library by pushing a custom notification with the given properties.",
+                    modifier = Modifier.padding(vertical = 5.dp)
+                )
+                // Title
+                Text(
+                    text = "Title",
                     modifier = Modifier.padding(vertical = 5.dp),
                     style = MaterialTheme.typography.h5,
                 )
+                Row {
+                    TextField(
+                        value = title,
+                        onValueChange = { title = it },
+                        modifier = Modifier.weight(1F).padding(vertical = 10.dp)
+                    )
+                }
+                // Description
                 Text(
+                    text = "Description",
                     modifier = Modifier.padding(vertical = 5.dp),
-                    text = "User Data: $launchUserData"
+                    style = MaterialTheme.typography.h5,
                 )
-            }
+                Row {
+                    TextField(
+                        value = description,
+                        onValueChange = { description = it },
+                        modifier = Modifier.weight(1F).padding(vertical = 10.dp)
+                    )
+                }
+                // User Data
+                Text(
+                    text = "User Data",
+                    modifier = Modifier.padding(vertical = 5.dp),
+                    style = MaterialTheme.typography.h5,
+                )
+                Row {
+                    TextField(
+                        value = callbackData,
+                        onValueChange = { callbackData = it },
+                        modifier = Modifier.weight(1F).padding(vertical = 10.dp)
+                    )
+                }
+                // Launch Notification
+                notificationHandler.launchUserData()?.let {
+                    Text(
+                        text = "Launch Notification",
+                        modifier = Modifier.padding(vertical = 5.dp),
+                        style = MaterialTheme.typography.h5,
+                    )
+                    Text(
+                        modifier = Modifier.padding(vertical = 5.dp),
+                        text = "User Data: $launchUserData"
+                    )
+                }
 
-            Row {
-                Button(
-                    onClick = {
-                        coroutineScope.launch {
-                            notificationHandler.push(
-                                Notification(
-                                    title = title,
-                                    description = description,
-                                    icon = notificationHandler.icon(),
-                                    callbackData = callbackData
+                Row {
+                    Button(
+                        onClick = {
+                            coroutineScope.launch {
+                                notificationHandler.push(
+                                    Notification(
+                                        title = title,
+                                        description = description,
+                                        icon = notificationHandler.icon(),
+                                        callbackData = callbackData
+                                    )
                                 )
-                            )
-                        }
-                    },
-                    modifier = Modifier.weight(0.5F)
-                ) { Text("Test") }
-                Spacer(Modifier.width(8.dp))
-                Button(
-                    onClick = {
-                        coroutineScope.launch {
-                            notificationHandler.clearAll()
-                        }
-                    },
-                    modifier = Modifier.weight(0.5F)
-                ) { Text("Clear") }
+                            }
+                        },
+                        modifier = Modifier.weight(0.5F)
+                    ) { Text("Test") }
+                    Spacer(Modifier.width(8.dp))
+                    Button(
+                        onClick = {
+                            coroutineScope.launch {
+                                notificationHandler.clearAll()
+                            }
+                        },
+                        modifier = Modifier.weight(0.5F)
+                    ) { Text("Clear") }
+                }
             }
         }
     }
