@@ -46,7 +46,7 @@ import kotlinx.coroutines.launch
 
 private val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.Default)
 
-private lateinit var notificationHandler: NotificationHandler
+internal lateinit var notificationHandler: NotificationHandler
 
 fun onAppInit(initCallback: NotificationHandler.() -> Unit = {}) {
     notificationHandler = NotificationHandler(

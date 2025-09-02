@@ -106,7 +106,7 @@ internal class AppleNotificationHandler(
         coroutineScope {
             launch {
                 barrier.await()
-                callback(this@AppleNotificationHandler, _hasPermissions.load())
+                callback(_hasPermissions.load())
             }
         }
     }
