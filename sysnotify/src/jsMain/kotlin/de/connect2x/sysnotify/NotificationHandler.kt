@@ -73,13 +73,13 @@ private class WebNotificationHandler(
 
     override suspend fun requestPermissions(callback: PermissionCallback) {
         if (_hasPermissions.load()) {
-            callback(this, true)
+            callback(true)
             return
         }
         // https://developer.mozilla.org/en-US/docs/Web/API/Notification/requestPermission_static
         val perms = JsNotification.requestPermission().await()
         _hasPermissions.store(perms === JsNotificationPermission.GRANTED)
-        callback(this, hasPermissions)
+        callback(hasPermissions)
     }
 
     private fun encodeIcon(notification: Notification): String? {
