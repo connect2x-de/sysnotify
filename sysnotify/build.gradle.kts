@@ -138,8 +138,6 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 api(sharedLibs.kotlinx.coroutines.core)
-                implementation(sharedLibs.stately.common)
-                implementation(sharedLibs.stately.collections)
             }
         }
         val commonTest by getting {

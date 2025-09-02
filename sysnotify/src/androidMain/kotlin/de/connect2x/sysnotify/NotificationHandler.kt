@@ -22,15 +22,14 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.graphics.drawable.IconCompat
 import androidx.core.net.toUri
-import co.touchlab.stately.collections.SharedLinkedList
 import kotlinx.coroutines.runBlocking
+import java.util.concurrent.ConcurrentLinkedDeque
 import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.uuid.ExperimentalUuidApi
@@ -77,7 +76,7 @@ internal class AndroidNotificationHandler( // @formatter:off
 
     override val platform: NotificationPlatform = NotificationPlatform.ANDROID
     override val capabilities: NotificationCapabilities = NotificationCapabilities(NotificationCapabilities.ALL)
-    internal val permissionRequests: SharedLinkedList<PermissionCallback> = SharedLinkedList()
+    internal val permissionRequests: ConcurrentLinkedDeque<PermissionCallback> = ConcurrentLinkedDeque()
 
     internal val manager: NotificationManagerCompat
         get() = NotificationManagerCompat.from(context)
