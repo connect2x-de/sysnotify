@@ -15,7 +15,6 @@
 
 package de.connect2x.sysnotify
 
-import co.touchlab.stately.collections.SharedHashMap
 import kotlinx.browser.document
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
@@ -45,7 +44,7 @@ private class WebNotificationHandler(
     override val id: String,
     override val priority: NotificationPriority
 ) : NotificationHandler {
-    private val notifications: SharedHashMap<String, JsNotification> = SharedHashMap()
+    private val notifications: HashMap<String, JsNotification> = HashMap()
 
     override val platform: NotificationPlatform = NotificationPlatform.WEB
     private val _hasPermissions: AtomicBoolean = AtomicBoolean(false)
@@ -74,13 +73,13 @@ private class WebNotificationHandler(
 
     override suspend fun requestPermissions(callback: PermissionCallback) {
         if (_hasPermissions.load()) {
-            callback(this, true)
+            callback(true)
             return
         }
         // https://developer.mozilla.org/en-US/docs/Web/API/Notification/requestPermission_static
         val perms = JsNotification.requestPermission().await()
         _hasPermissions.store(perms === JsNotificationPermission.GRANTED)
-        callback(this, hasPermissions)
+        callback(hasPermissions)
     }
 
     private fun encodeIcon(notification: Notification): String? {
@@ -116,7 +115,7 @@ private class WebNotificationHandler(
                 // https://developer.mozilla.org/en-US/docs/Web/API/Notification/click_event
                 addEventListener(
                     type = "click",
-                    callback = { event ->
+                    callback = {
                         activationHandler.load()(notification)
                         iconUrl?.let(URL::revokeObjectURL)
                         notifications -= tag
@@ -125,7 +124,7 @@ private class WebNotificationHandler(
                 // https://developer.mozilla.org/en-US/docs/Web/API/Notification/close_event
                 addEventListener(
                     type = "close",
-                    callback = { event ->
+                    callback = {
                         iconUrl?.let(URL::revokeObjectURL)
                         notifications -= tag
                     }

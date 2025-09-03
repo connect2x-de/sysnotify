@@ -15,12 +15,20 @@
 
 package de.connect2x.sysnotify
 
-import kotlinx.atomicfu.atomic
+import kotlin.concurrent.atomics.AtomicBoolean
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
+@OptIn(ExperimentalAtomicApi::class)
 internal class NotificationActivationState(
     val handler: LinuxNotificationHandler,
     val tag: String,
     val notification: Notification
 ) {
-    var activated: Boolean by atomic(false)
+    private val _activated: AtomicBoolean = AtomicBoolean(false)
+
+    var activated: Boolean
+        get() = _activated.load()
+        set(value) {
+            _activated.store(value)
+        }
 }

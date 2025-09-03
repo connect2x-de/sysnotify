@@ -15,13 +15,13 @@
 
 package de.connect2x.sysnotify
 
-import co.touchlab.stately.collections.SharedHashMap
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.yield
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import platform.UserNotifications.UNAuthorizationOptionAlert
 import platform.UserNotifications.UNAuthorizationOptionBadge
 import platform.UserNotifications.UNAuthorizationOptionSound
@@ -65,22 +65,25 @@ internal class AppleNotificationHandler(
         isGroupingSupported = true
     )
 
-    private val notificationCategories: SharedHashMap<String, UNNotificationCategory> = SharedHashMap()
+    private val notificationCategories: HashMap<String, UNNotificationCategory> = HashMap()
+    private val notificationCategoriesLock: Mutex = Mutex()
 
     private val notificationCenter: UNUserNotificationCenter? =
         if (isDebugEnabled) null else UNUserNotificationCenter.currentNotificationCenter()
 
-    private fun ensureCategoryExists(key: String) {
-        if (key in notificationCategories) return
+    private suspend fun ensureCategoryExists(key: String) {
+        if (notificationCategoriesLock.withLock { key in notificationCategories }) return
         val category = UNNotificationCategory.categoryWithIdentifier(
             identifier = key,
             actions = emptyList<UNNotificationAction>(),
             intentIdentifiers = emptyList<String>(),
             options = UNNotificationCategoryOptionNone
         )
-        notificationCategories[key] = category
-        // We have to update ALL the categories every time we add a new one
-        notificationCenter?.setNotificationCategories(notificationCategories.values.toSet())
+        notificationCategoriesLock.withLock {
+            notificationCategories[key] = category
+            // We have to update ALL the categories every time we add a new one
+            notificationCenter?.setNotificationCategories(notificationCategories.values.toSet())
+        }
     }
 
     override fun getHandle(tag: String): NotificationHandle {
@@ -103,7 +106,7 @@ internal class AppleNotificationHandler(
         coroutineScope {
             launch {
                 barrier.await()
-                callback(this@AppleNotificationHandler, _hasPermissions.load())
+                callback(_hasPermissions.load())
             }
         }
     }
@@ -176,8 +179,10 @@ internal class AppleNotificationHandler(
     override fun close() {
         if (!_hasPermissions.load()) return
         closeCallback()
-        runBlocking { clearAll() }
-        notificationCategories.clear()
+        runBlocking {
+            clearAll()
+            notificationCategoriesLock.withLock { notificationCategories.clear() }
+        }
     }
 }
 

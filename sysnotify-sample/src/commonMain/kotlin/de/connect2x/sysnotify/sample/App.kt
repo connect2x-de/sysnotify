@@ -46,7 +46,6 @@ import kotlinx.coroutines.launch
 
 private val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.Default)
 
-// Internal because in Android we need to access it from onRequestPermissionsResult still, TODO: fix this
 internal lateinit var notificationHandler: NotificationHandler
 
 fun onAppInit(initCallback: NotificationHandler.() -> Unit = {}) {
@@ -67,9 +66,15 @@ fun App(
     icon: NotificationHandler.() -> NotificationIcon? = { null },
     launchUserData: NotificationHandler.() -> String? = { null },
 ) {
-    // TODO: Add wait-state to show "waiting for perms" modal
+    var permissionsGranted by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
-        notificationHandler.requestPermissions()
+        if (notificationHandler.hasPermissions) {
+            permissionsGranted = true
+        } else {
+            notificationHandler.requestPermissions {
+                permissionsGranted = it
+            }
+        }
     }
 
     var title by remember { mutableStateOf("Hello") }
@@ -86,6 +91,10 @@ fun App(
                 )
                 Text(
                     text = "This sample application allows testing the Sysnotify library by pushing a custom notification with the given properties.",
+                    modifier = Modifier.padding(vertical = 5.dp)
+                )
+                Text(
+                    text = "permissions: $permissionsGranted",
                     modifier = Modifier.padding(vertical = 5.dp)
                 )
                 // Title
