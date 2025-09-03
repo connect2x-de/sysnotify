@@ -97,6 +97,10 @@ internal class AndroidNotificationHandler( // @formatter:off
     override suspend fun requestPermissions(callback: PermissionCallback) {
         // If we are API level T or above, request permission to push notifications
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (hasPermissions) {
+                callback(true)
+                return
+            }
             val currentActivity =
                 requireNotNull(activity) { "No current activity with set context, use withActivity() to set it" }
 
