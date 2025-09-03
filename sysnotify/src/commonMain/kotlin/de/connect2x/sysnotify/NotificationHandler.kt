@@ -113,7 +113,9 @@ interface NotificationHandler : AutoCloseable {
      * Requests the permissions to show notifications from the underlying platform
      * when possible. Otherwise, this function returns without any side effects.
      */
-    suspend fun requestPermissions(callback: PermissionCallback = { _ -> }) {}
+    suspend fun requestPermissions(callback: PermissionCallback = { _ -> }) {
+        callback(true) // Default behaviour for platforms without permissions
+    }
 
     /**
      * Clears all notifications that were created by this notification handler instance.
