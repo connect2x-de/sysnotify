@@ -102,6 +102,7 @@ android {
     defaultConfig {
         applicationId = "${rootProject.group}.${rootProject.name}.sample"
         minSdk = sharedLibs.versions.androidMinimalSDK.get().toInt()
+        targetSdk = sharedLibs.versions.androidCompileSDK.get().toInt()
         versionCode = 1
         versionName = libs.versions.sysnotify.get()
     }

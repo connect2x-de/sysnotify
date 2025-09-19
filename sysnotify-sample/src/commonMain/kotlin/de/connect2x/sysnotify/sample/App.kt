@@ -70,10 +70,6 @@ fun App(
     LaunchedEffect(Unit) {
         if (notificationHandler.hasPermissions) {
             permissionsGranted = true
-        } else {
-            notificationHandler.requestPermissions {
-                permissionsGranted = it
-            }
         }
     }
 
@@ -94,9 +90,19 @@ fun App(
                     modifier = Modifier.padding(vertical = 5.dp)
                 )
                 Text(
-                    text = "permissions: $permissionsGranted",
+                    text = "Has permissions: $permissionsGranted",
                     modifier = Modifier.padding(vertical = 5.dp)
                 )
+                Button(
+                    onClick = {
+                        coroutineScope.launch {
+                            notificationHandler.requestPermissions {
+                                permissionsGranted = it
+                            }
+                        }
+                    },
+                    enabled = !permissionsGranted
+                ) { Text("Request Permissions") }
                 // Title
                 Text(
                     text = "Title",
@@ -163,7 +169,8 @@ fun App(
                                 )
                             }
                         },
-                        modifier = Modifier.weight(0.5F)
+                        modifier = Modifier.weight(0.5F),
+                        enabled = permissionsGranted,
                     ) { Text("Test") }
                     Spacer(Modifier.width(8.dp))
                     Button(
@@ -172,7 +179,8 @@ fun App(
                                 notificationHandler.clearAll()
                             }
                         },
-                        modifier = Modifier.weight(0.5F)
+                        modifier = Modifier.weight(0.5F),
+                        enabled = permissionsGranted,
                     ) { Text("Clear") }
                 }
             }
