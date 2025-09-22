@@ -277,6 +277,11 @@ internal class LinuxNotificationHandler(
     private var lastNotification: AtomicReference<Notification?> = AtomicReference(null)
     internal var activationHandler: AtomicReference<ActivationHandler?> = AtomicReference(null)
 
+    override fun getHandle(tag: String): NotificationHandle {
+        require(tag.isNotEmpty()) { "Handle tag may not be empty" }
+        return LinuxNotificationHandle(tag, this)
+    }
+
     override suspend fun push(notification: Notification, tag: String): NotificationHandle {
         // If this notification is already pending or active, return early
         if (notificationsLock.withLock { tag in notifications }
