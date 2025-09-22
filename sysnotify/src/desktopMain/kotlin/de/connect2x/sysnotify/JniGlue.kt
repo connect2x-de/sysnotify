@@ -101,6 +101,11 @@ internal fun registerNatives(env: JNIEnvVar) {
             typeString named "callbackData"
             returns(JvmBuiltinType.LONG)
         }
+        registerNativeFunction(env, "getHandle", staticCFunction(::getHandle)) {
+            JvmBuiltinType.LONG named "handler"
+            typeString named "tag"
+            returns(JvmBuiltinType.LONG)
+        }
         registerNativeFunction(env, "update", staticCFunction(::update)) {
             JvmBuiltinType.LONG named "handler"
             JvmBuiltinType.LONG named "notification"
@@ -250,6 +255,20 @@ private fun push(
             ), tag.toKString(env)
         )
 }.let { StableRef.create(it).asCPointer().rawValue.toLong() }
+
+private fun getHandle(
+    env: JNIEnvVar,
+    clazz: jclass,
+    handler: jlong,
+    tag: jstring,
+): jlong {
+    val handle = requireNotNull(handler.toCPointer<CPointed>())
+        .asStableRef<NotificationHandler>()
+        .get()
+        .getHandle(tag.toKString(env))
+
+    return StableRef.create(handle).asCPointer().rawValue.toLong()
+}
 
 private fun update(
     env: JNIEnvVar,

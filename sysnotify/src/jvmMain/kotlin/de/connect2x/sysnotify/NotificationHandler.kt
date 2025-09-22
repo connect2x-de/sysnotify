@@ -60,7 +60,7 @@ private class JvmNotificationHandler(
 
     override fun getHandle(tag: String): NotificationHandle {
         require(tag.isNotEmpty()) { "Handle tag may not be empty" }
-        return JvmNotificationHandle(tag)
+        return JvmNotificationHandle(tag, NativeNotificationHandler.getHandle(address, tag))
     }
 
     override suspend fun requestPermissions(callback: PermissionCallback) {
