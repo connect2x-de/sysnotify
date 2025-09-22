@@ -299,9 +299,10 @@ internal class LinuxNotificationHandler(
         handle.check<LinuxNotificationHandle>()
         val tag = handle.tag
         // If the notification is already active, just update it immediately
-        if (notificationsLock.withLock { tag in notifications }) {
+        val actualHandle = notificationsLock.withLock { notifications[tag] }
+        if (actualHandle != null) {
             val notificationAddress =
-                requireNotNull(handle.address) { "Handle does not contain a valid address" }
+                requireNotNull(actualHandle.address) { "Handle does not contain a valid address" }
             LibNotify.notify_notification_update(
                 notification = notificationAddress,
                 summary = notification.title,
@@ -330,8 +331,10 @@ internal class LinuxNotificationHandler(
         handle.check<LinuxNotificationHandle>()
         val tag = handle.tag
         // If the notification is already active, close it
-        if (notificationsLock.withLock { tag in notifications }) {
-            val address = handle.address
+        val actualHandle = notificationsLock.withLock { notifications[tag] }
+        if (actualHandle != null) {
+            val address =
+                requireNotNull(actualHandle.address) { "Handle does not contain a valid address" }
             memScoped {
                 val errorAddress = allocPointerTo<GError>()
                 if (LibNotify.notify_notification_close(address, errorAddress.ptr) == 0) {
@@ -339,7 +342,7 @@ internal class LinuxNotificationHandler(
                     return
                 }
             }
-            LibGObject.g_object_unref(address?.reinterpret())
+            LibGObject.g_object_unref(address.reinterpret())
             notificationsLock.withLock {
                 notifications -= tag
             }
