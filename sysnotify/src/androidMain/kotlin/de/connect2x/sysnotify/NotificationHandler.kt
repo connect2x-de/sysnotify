@@ -18,6 +18,7 @@ package de.connect2x.sysnotify
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
@@ -88,11 +89,19 @@ internal class AndroidNotificationHandler( // @formatter:off
         return new
     }
 
+    // TODO: expose this in public API in 2.2
+    private fun getActiveNotifications(): Set<String> {
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        return manager.activeNotifications
+            .filter { notification -> notification.notification.channelId == id }
+            .map { notification -> notification.tag }
+            .toSet()
+    }
+
     override fun getHandle(tag: String): NotificationHandle {
         require(tag.isNotEmpty()) { "Handle tag may not be empty" }
         return AndroidNotificationHandle(tag)
     }
-
 
     override suspend fun requestPermissions(callback: PermissionCallback) {
         // If we are API level T or above, request permission to push notifications
@@ -183,6 +192,8 @@ internal class AndroidNotificationHandler( // @formatter:off
     ): NotificationHandle {
         if (!hasPermissions) return NotificationHandle.INVALID
         handle.check<AndroidNotificationHandle>()
+        // If the notification is not active anymore, we ignore the update
+        if(handle.tag in getActiveNotifications()) return NotificationHandle.INVALID
         return createImpl(notification, handle).apply {
             manager.notify(tag, 0, requireNotNull(value) { "Invalid notification handle" })
         }
