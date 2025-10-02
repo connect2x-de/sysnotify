@@ -35,7 +35,7 @@ import kotlinx.coroutines.sync.withLock
 import libnotify.GError
 import libnotify.GdkColorspace
 import libnotify.NotifyNotification
-import libnotify.gpointer // DON'T REMOVE THIS
+import libnotify.gpointer // This needs to stay!
 import platform.posix.atexit
 import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.AtomicReference

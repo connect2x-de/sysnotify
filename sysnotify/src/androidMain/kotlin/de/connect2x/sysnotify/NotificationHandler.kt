@@ -216,10 +216,9 @@ internal class AndroidNotificationHandler( // @formatter:off
 val NotificationHandler.context: Context
     get() {
         check<AndroidNotificationHandler>()
-        return activityGetter.load()?.invoke()
-            ?: requireNotNull(contextGetter.load()?.invoke()) {
-                "No context associated with NotificationHandler, use withContext() to set it"
-            }
+        return requireNotNull(contextGetter.load()?.invoke()) {
+            "No context associated with NotificationHandler, use withContext() to set it"
+        }
     }
 
 /**

@@ -20,7 +20,6 @@ import java.nio.file.StandardCopyOption
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.Path
-import kotlin.io.path.deleteRecursively
 import kotlin.io.path.div
 import kotlin.io.path.pathString
 
