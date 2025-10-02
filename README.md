@@ -66,7 +66,7 @@ Linux is supported if your distribution/desktop environment supports [libnotify]
 This includes desktop environments which use Qt or GTK like [GNOME](https://www.gnome.org) or [KDE](https://kde.org).  
 
 > **IMPORTANT NOTE**  
-You need to have `glib-2.0`, `gdk-pixbuf-2.0` and `libnotify` installed via your
+You need to have `libglib-2.0`, `libgdk-pixbuf-2.0` and `libnotify` installed via your
 distribution package manager in order for notifications to show up.
 
 ## Example
@@ -86,7 +86,7 @@ class MyApplication : ComponentActivity() {
 
     override fun onCreate(savedInstance: Bundle?) {
         super.onCreate(savedInstance)
-        notificationHandler = NotificationHandler.create(
+        notificationHandler = NotificationHandler(
             name = "MyApp",
             id = "com.example.MyApp",
             // Specifying an activity for the context will automatically provide an activityGetter for you
@@ -101,11 +101,6 @@ class MyApplication : ComponentActivity() {
         super.onDestroy()
         notificationHandler.close()
         // ...
-    }
-
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        notificationHandler.handlePermissionRequest(requestCode, grantResults)
     }
 
     internal fun onMessageReceived(message: Message) {
