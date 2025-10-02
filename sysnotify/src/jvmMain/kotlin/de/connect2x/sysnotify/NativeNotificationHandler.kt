@@ -46,6 +46,12 @@ object NativeNotificationHandler {
     ) // @formatter:on
 
     @JvmStatic
+    external fun getHandle(
+        handler: Long,
+        tag: String,
+    ): Long
+
+    @JvmStatic
     external fun push(
         handler: Long,
         tag: String,
