@@ -18,10 +18,28 @@ package de.connect2x.sysnotify.sample
 import androidx.compose.ui.window.Window
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.staticCFunction
+import platform.UserNotifications.UNNotification
+import platform.UserNotifications.UNNotificationPresentationOptionBanner
+import platform.UserNotifications.UNNotificationPresentationOptionSound
+import platform.UserNotifications.UNNotificationPresentationOptions
+import platform.UserNotifications.UNUserNotificationCenter
+import platform.UserNotifications.UNUserNotificationCenterDelegateProtocol
+import platform.darwin.NSObject
 import platform.posix.atexit
 
 @OptIn(ExperimentalForeignApi::class)
 fun main() {
+    val notificationDelegate = object : NSObject(), UNUserNotificationCenterDelegateProtocol {
+        override fun userNotificationCenter(
+            center: UNUserNotificationCenter,
+            willPresentNotification: UNNotification,
+            withCompletionHandler: (UNNotificationPresentationOptions) -> Unit
+        ) {
+            withCompletionHandler(UNNotificationPresentationOptionBanner or UNNotificationPresentationOptionSound)
+        }
+    }
+    UNUserNotificationCenter.currentNotificationCenter().setDelegate(notificationDelegate)
+
     onAppInit()
     atexit(staticCFunction(::onAppExit))
     Window("Sysnotify Sample") {
