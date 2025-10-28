@@ -16,6 +16,7 @@
 package de.connect2x.sysnotify
 
 import kotlinx.browser.document
+import kotlinx.browser.window
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.await
@@ -45,7 +46,7 @@ private class WebNotificationHandler(
     override val priority: NotificationPriority
 ) : NotificationHandler {
     // TODO this does not survive a restart
-    private val notifications: HashMap<String, JsNotification> = HashMap()
+    private val notifications: MutableMap<String, JsNotification> = mutableMapOf()
 
     override val platform: NotificationPlatform = NotificationPlatform.WEB
     private val _hasPermissions: AtomicBoolean = AtomicBoolean(false)
@@ -111,6 +112,7 @@ private class WebNotificationHandler(
                     icon = iconUrl,
                     silent = !notification.playSound,
                     sound = notification.soundPath,
+                    tag = tag,
                 )
             ).apply {
                 // https://developer.mozilla.org/en-US/docs/Web/API/Notification/click_event
