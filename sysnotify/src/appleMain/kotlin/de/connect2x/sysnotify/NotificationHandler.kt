@@ -19,7 +19,7 @@ import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import platform.UserNotifications.UNAuthorizationOptionAlert
@@ -133,7 +133,9 @@ internal class AppleNotificationHandler(
 
         notificationCenter?.addNotificationRequest(
             UNNotificationRequest.requestWithIdentifier(
-                handle.tag, content, null
+                identifier = handle.tag,
+                content = content,
+                trigger = null
             )
         ) { error ->
             error?.localizedDescription?.let {
@@ -150,25 +152,55 @@ internal class AppleNotificationHandler(
         handle.check<AppleNotificationHandle>()
 
         val identifier = handle.tag
-        var found = false
+
         // First try to remove it from the pending notifications
-        notificationCenter?.getPendingNotificationRequestsWithCompletionHandler {
-            for (request in it as List<UNNotificationRequest>) {
+        notificationCenter?.getPendingNotificationRequestsWithCompletionHandler { requests ->
+            for (request in requests as List<UNNotificationRequest>) {
                 if (request.identifier != identifier) continue
                 notificationCenter.removePendingNotificationRequestsWithIdentifiers(listOf(identifier))
-                found = true
-                break
+                return@getPendingNotificationRequestsWithCompletionHandler
+            }
+
+            // If the for loop doesn't return, we should enumerate the delivered notifications for deletion.
+            notificationCenter.getDeliveredNotificationsWithCompletionHandler { notifications ->
+                for (notification in notifications as List<UNNotification>) {
+                    if (notification.request.identifier != identifier) continue
+                    notificationCenter.removeDeliveredNotificationsWithIdentifiers(listOf(identifier))
+                    return@getDeliveredNotificationsWithCompletionHandler
+                }
             }
         }
-        if (found) return
-        // Otherwise it was already delivered
-        notificationCenter?.getDeliveredNotificationsWithCompletionHandler {
-            for (notification in it as List<UNNotification>) {
-                if (notification.request.identifier != identifier) continue
-                notificationCenter.removeDeliveredNotificationsWithIdentifiers(listOf(identifier))
-                break
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    override suspend fun update(handle: NotificationHandle, notification: Notification): NotificationHandle {
+        if (!hasPermissions || !handle.isValid) return NotificationHandle.INVALID
+
+        // This is done like this because, following to the Apple documentation, the API can choose the run the handler
+        // closure in a separate background thread.
+        val found = suspendCancellableCoroutine { continuation ->
+            notificationCenter?.getPendingNotificationRequestsWithCompletionHandler { requests ->
+                for (request in requests as List<UNNotificationRequest>) {
+                    if (request.identifier != handle.tag) continue
+                    continuation.resume(true) { _, _, _ -> }
+                    return@getPendingNotificationRequestsWithCompletionHandler
+                }
+
+                notificationCenter.getDeliveredNotificationsWithCompletionHandler { notifications ->
+                    val foundDelivered = (notifications as List<UNNotification>)
+                        .any { it.request.identifier == handle.tag }
+                    continuation.resume(foundDelivered) { _, _, _ -> }
+                }
             }
+
+
         }
+
+        if (!found) {
+            return NotificationHandle.INVALID
+        }
+
+        return push(notification, tag = handle.tag)
     }
 
     override suspend fun clearAll() {

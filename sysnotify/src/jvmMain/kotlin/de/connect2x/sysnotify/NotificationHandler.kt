@@ -46,9 +46,8 @@ private class JvmNotificationHandler(
         NotificationPlatform.entries[NativeNotificationHandler.getPlatform(address)]
     }
 
-    override val hasPermissions: Boolean by lazy {
-        NativeNotificationHandler.hasPermissions(address)
-    }
+    override val hasPermissions: Boolean
+        get() = NativeNotificationHandler.hasPermissions(address)
 
     override val capabilities: NotificationCapabilities by lazy {
         NotificationCapabilities(NativeNotificationHandler.getCapabilities(address).toUInt())
@@ -61,6 +60,7 @@ private class JvmNotificationHandler(
 
     override suspend fun requestPermissions(callback: PermissionCallback) {
         NativeNotificationHandler.requestPermissions(address, NativePermissionCallback.create {
+
             callback(it)
         })
     }
