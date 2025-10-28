@@ -193,7 +193,7 @@ internal class AndroidNotificationHandler( // @formatter:off
         if (!hasPermissions) return NotificationHandle.INVALID
         handle.check<AndroidNotificationHandle>()
         // If the notification is not active anymore, we ignore the update
-        if(handle.tag !in getActiveNotifications()) return NotificationHandle.INVALID
+        if (handle.tag !in getActiveNotifications()) return NotificationHandle.INVALID
         return createImpl(notification, handle).apply {
             manager.notify(tag, 0, requireNotNull(value) { "Invalid notification handle" })
         }
@@ -210,10 +210,14 @@ internal class AndroidNotificationHandler( // @formatter:off
         manager.cancelAll()
     }
 
-    override fun close() {
+    override suspend fun unregister() {
+        if (!hasPermissions) return
+        clearAll()
         manager.deleteNotificationChannel(id)
-        runBlocking { clearAll() }
+        close()
     }
+
+    override fun close() {}
 }
 
 /**

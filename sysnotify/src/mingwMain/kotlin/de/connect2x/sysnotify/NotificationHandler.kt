@@ -73,13 +73,6 @@ internal class WindowsNotificationHandler(
 
     internal var activationHandler: AtomicReference<ActivationHandler?> = AtomicReference(null)
 
-    override fun close() {
-        runBlocking {
-            sysnotify_handler_destroy(address).check()
-        }
-        closeCallback()
-    }
-
     override fun getHandle(tag: String): NotificationHandle {
         require(tag.isNotEmpty()) { "Handle tag may not be empty" }
         return WindowsNotificationHandle(tag)
@@ -132,6 +125,16 @@ internal class WindowsNotificationHandler(
 
     override suspend fun clearAll() {
         sysnotify_handler_clear(address)
+    }
+
+    override suspend fun unregister() {
+        clearAll()
+        close()
+    }
+
+    override fun close() {
+        sysnotify_handler_destroy(address).check()
+        closeCallback()
     }
 }
 

@@ -118,11 +118,6 @@ interface NotificationHandler : AutoCloseable {
     }
 
     /**
-     * Clears all notifications that were created by this notification handler instance.
-     */
-    suspend fun clearAll() {}
-
-    /**
      * Creates a new notification with the given content and pushes it to
      * be displayed by the underlying platform.
      *
@@ -182,11 +177,25 @@ interface NotificationHandler : AutoCloseable {
     ): NotificationHandle = update(getHandle(tag), notification)
 
     /**
-     * Frees all underlying resources allocated by this notification handler if any
+     * Clears all notifications created by this notification handler instance.
+     */
+    suspend fun clearAll()
+
+    /**
+     * Unregisters this notification handler from the underlying platform.
+     *
+     * On platforms supporting persistent notification groupings (e.g., channels, categories),
+     * this removes the corresponding entity and all its metadata. On other platforms,
+     * this performs a best-effort cleanup of related notifications and resources.
+     */
+    suspend fun unregister()
+
+    /**
+     * Frees all underlying resources allocated by this notification handler, if any,
      * and returns them to the underlying operating system.
      * **Always call this when you're done using the notification handler!**
      */
-    override fun close() {}
+    override fun close()
 }
 
 /**
@@ -257,4 +266,8 @@ object NoopNotificationHandler : NotificationHandler {
     ): NotificationHandle = NotificationHandle.INVALID
 
     override suspend fun pop(handle: NotificationHandle) {}
+
+    override suspend fun clearAll() {}
+    override suspend fun unregister() {}
+    override fun close() {}
 }

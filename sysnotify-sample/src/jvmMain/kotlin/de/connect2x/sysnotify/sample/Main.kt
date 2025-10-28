@@ -26,22 +26,21 @@ import java.awt.Frame
 import javax.imageio.ImageIO
 
 fun main() {
-    onAppInit()
     application {
         val icon = this::class.java.getResourceAsStream("/assets/icons/app_icon.png").use { ImageIO.read(it) }
         Window(
             title = "SysNotify Sample",
             icon = BitmapPainter(icon.toComposeImageBitmap()),
             onCloseRequest = {
-                onAppExit()
                 exitApplication()
             }) {
             // On Desktop platforms, we manually need to handle bringing up the application window
-            notificationHandler.withActivationHandler {
-                window.state = Frame.NORMAL
-                window.requestFocus()
+            App(getIcon = { NotificationIcon.fromBufferedImage(icon) }) {
+                withActivationHandler {
+                    window.state = Frame.NORMAL
+                    window.requestFocus()
+                }
             }
-            App(icon = { NotificationIcon.fromBufferedImage(icon) })
         }
     }
 }

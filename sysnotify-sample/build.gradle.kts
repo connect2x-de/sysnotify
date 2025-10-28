@@ -31,10 +31,10 @@ kotlin {
     js {
         browser {
             runTask {
-                mainOutputFileName = "Sample.js"
+                mainOutputFileName = "sample.js"
             }
             webpackTask {
-                mainOutputFileName = "Sample.js"
+                mainOutputFileName = "sample.js"
             }
         }
         binaries.executable()
@@ -71,6 +71,7 @@ kotlin {
                 implementation(compose.foundation)
                 implementation(compose.material)
                 implementation(compose.ui)
+                implementation(compose.materialIconsExtended)
                 implementation(compose.components.resources)
                 implementation(compose.components.uiToolingPreview)
                 implementation(project(":sysnotify"))

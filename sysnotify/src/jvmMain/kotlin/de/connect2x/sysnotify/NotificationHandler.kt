@@ -53,10 +53,6 @@ private class JvmNotificationHandler(
         NotificationCapabilities(NativeNotificationHandler.getCapabilities(address).toUInt())
     }
 
-    override fun close() {
-        NativeNotificationHandler.destroy(address)
-    }
-
     override fun getHandle(tag: String): NotificationHandle {
         require(tag.isNotEmpty()) { "Handle tag may not be empty" }
         return JvmNotificationHandle(tag, NativeNotificationHandler.getHandle(address, tag))
@@ -118,6 +114,15 @@ private class JvmNotificationHandler(
     override suspend fun clearAll() {
         if (!hasPermissions) return
         NativeNotificationHandler.clearAll(address)
+    }
+
+    override suspend fun unregister() {
+        if (!hasPermissions) return
+        NativeNotificationHandler.unregister(address)
+    }
+
+    override fun close() {
+        NativeNotificationHandler.close(address)
     }
 }
 

@@ -19,7 +19,6 @@ import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -33,8 +32,6 @@ import platform.UserNotifications.UNNotificationCategory
 import platform.UserNotifications.UNNotificationCategoryOptionNone
 import platform.UserNotifications.UNNotificationRequest
 import platform.UserNotifications.UNNotificationSound
-import platform.UserNotifications.UNNotificationTrigger
-import platform.UserNotifications.UNTimeIntervalNotificationTrigger
 import platform.UserNotifications.UNUserNotificationCenter
 import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
@@ -68,6 +65,7 @@ internal class AppleNotificationHandler(
         isGroupingSupported = true
     )
 
+    // TODO this does not survive a restart
     private val notificationCategories: HashMap<String, UNNotificationCategory> = HashMap()
     private val notificationCategoriesLock: Mutex = Mutex()
 
@@ -189,7 +187,7 @@ internal class AppleNotificationHandler(
                 }
 
                 notificationCenter.getDeliveredNotificationsWithCompletionHandler { notifications ->
-                    val foundDelivered =  (notifications as List<UNNotification>)
+                    val foundDelivered = (notifications as List<UNNotification>)
                         .any { it.request.identifier == handle.tag }
                     continuation.resume(foundDelivered) { _, _, _ -> }
                 }
@@ -211,13 +209,15 @@ internal class AppleNotificationHandler(
         notificationCenter?.removeAllDeliveredNotifications()
     }
 
-    override fun close() {
+    override suspend fun unregister() {
         if (!_hasPermissions.load()) return
+        clearAll()
+        notificationCategoriesLock.withLock { notificationCategories.clear() }
+        close()
+    }
+
+    override fun close() {
         closeCallback()
-        runBlocking {
-            clearAll()
-            notificationCategoriesLock.withLock { notificationCategories.clear() }
-        }
     }
 }
 

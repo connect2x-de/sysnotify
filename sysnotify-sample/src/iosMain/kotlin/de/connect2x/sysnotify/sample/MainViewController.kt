@@ -35,9 +35,7 @@ fun MainViewController(): UIViewController {
         }
     }
     UNUserNotificationCenter.currentNotificationCenter().setDelegate(notificationDelegate)
-
-    onAppInit()
-    atexit(staticCFunction(::onAppExit))
+    
     return ComposeUIViewController {
         App()
     }

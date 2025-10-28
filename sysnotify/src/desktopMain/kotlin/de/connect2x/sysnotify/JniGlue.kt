@@ -18,6 +18,7 @@
 
 package de.connect2x.sysnotify
 
+import de.connect2x.sysnotify.NoopNotificationHandler.unregister
 import de.connect2x.sysnotify.native.SNNotificationData
 import jni.JNIEnvVar
 import jni.jboolean
@@ -72,7 +73,7 @@ internal fun registerNatives(env: JNIEnvVar) {
             JvmBuiltinType.LONG named "handler"
             returns(JvmBuiltinType.BOOLEAN)
         }
-        registerNativeFunction(env, "destroy", staticCFunction(::destroy)) {
+        registerNativeFunction(env, "close", staticCFunction(::close)) {
             JvmBuiltinType.LONG named "handler"
         }
         registerNativeFunction(env, "getPlatform", staticCFunction(::getPlatform)) {
@@ -121,6 +122,9 @@ internal fun registerNatives(env: JNIEnvVar) {
         registerNativeFunction(env, "pop", staticCFunction(::pop)) {
             JvmBuiltinType.LONG named "handler"
             JvmBuiltinType.LONG named "notification"
+        }
+        registerNativeFunction(env, "unregister", staticCFunction(::unregister)) {
+            JvmBuiltinType.LONG named "handler"
         }
         registerNativeFunction(env, "clearAll", staticCFunction(::clearAll)) {
             JvmBuiltinType.LONG named "handler"
@@ -183,15 +187,6 @@ private fun hasPermissions(env: JNIEnvVar, clazz: jclass, handler: jlong): jbool
         .asStableRef<NotificationHandler>()
         .get()
         .hasPermissions.toJBoolean()
-}
-
-private fun destroy(env: JNIEnvVar, clazz: jclass, handler: jlong) {
-    requireNotNull(handler.toCPointer<CPointed>())
-        .asStableRef<NotificationHandler>()
-        .apply {
-            get().close()
-            dispose()
-        }
 }
 
 private fun getPlatform(env: JNIEnvVar, clazz: jclass, handler: jlong): jint {
@@ -331,4 +326,22 @@ private fun clearAll(
             .get()
             .clearAll()
     }
+}
+
+private fun unregister(env: JNIEnvVar, clazz: jclass, handler: jlong) {
+    runBlocking {
+        requireNotNull(handler.toCPointer<CPointed>())
+            .asStableRef<NotificationHandler>()
+            .get().unregister()
+    }
+}
+
+
+private fun close(env: JNIEnvVar, clazz: jclass, handler: jlong) {
+    requireNotNull(handler.toCPointer<CPointed>())
+        .asStableRef<NotificationHandler>()
+        .apply {
+            get().close()
+            dispose()
+        }
 }

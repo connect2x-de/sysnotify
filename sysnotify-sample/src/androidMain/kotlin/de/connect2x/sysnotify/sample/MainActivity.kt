@@ -21,21 +21,23 @@ import androidx.activity.compose.setContent
 import de.connect2x.sysnotify.getLaunchNotification
 import de.connect2x.sysnotify.getNotificationIcon
 import de.connect2x.sysnotify.withActivity
+import de.connect2x.sysnotify.withContext
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        onAppInit { withActivity { this@MainActivity } }
         setContent {
             App(
-                launchUserData = { getLaunchNotification()?.callbackData },
-                icon = { resources.getNotificationIcon(R.drawable.ic_android) }
-            )
+                getLaunchUserData = { getLaunchNotification()?.callbackData },
+                getIcon = { resources.getNotificationIcon(R.drawable.ic_android) }
+            ) {
+                withContext { this@MainActivity }
+                withActivity { this@MainActivity }
+            }
         }
     }
 
     override fun onDestroy() {
-        onAppExit()
         super.onDestroy()
     }
 }
