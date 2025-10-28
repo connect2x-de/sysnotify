@@ -32,6 +32,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -44,33 +45,30 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
-private val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.Default)
-
-internal lateinit var notificationHandler: NotificationHandler
-
-fun onAppInit(initCallback: NotificationHandler.() -> Unit = {}) {
-    notificationHandler = NotificationHandler(
-        name = "Sysnotify Sample",
-        id = "de.connect2x.sysnotify"
-    )
-    notificationHandler.initCallback()
-}
-
-fun onAppExit() {
-    coroutineScope.cancel()
-    notificationHandler.close()
-}
-
 @Composable
 fun App(
-    icon: NotificationHandler.() -> NotificationIcon? = { null },
-    launchUserData: NotificationHandler.() -> String? = { null },
+    getIcon: () -> NotificationIcon? = { null },
+    getLaunchUserData: NotificationHandler.() -> String? = { null },
+    configureNotificationHandler: NotificationHandler.() -> Unit = { },
 ) {
-    var permissionsGranted by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
+    var notificationHandler by remember { mutableStateOf<NotificationHandler?>(null) }
+    var permissionsGranted by remember { mutableStateOf<Boolean?>(null) }
+
+    fun createNotificationHandler(): NotificationHandler =
+        NotificationHandler(
+            name = "Sysnotify Sample",
+            id = "de.connect2x.sysnotify"
+        ).apply(configureNotificationHandler)
+
     LaunchedEffect(Unit) {
-        if (notificationHandler.hasPermissions) {
-            permissionsGranted = true
-        }
+        notificationHandler = createNotificationHandler()
+    }
+
+    LaunchedEffect(notificationHandler) {
+        if (notificationHandler == null) permissionsGranted = null
+        else if (notificationHandler?.hasPermissions == true) permissionsGranted = true
+
     }
 
     var title by remember { mutableStateOf("Hello") }
@@ -90,19 +88,42 @@ fun App(
                     modifier = Modifier.padding(vertical = 5.dp)
                 )
                 Text(
-                    text = "Has permissions: $permissionsGranted",
+                    text = "Has permissions: ${permissionsGranted ?: "unknown"}",
                     modifier = Modifier.padding(vertical = 5.dp)
                 )
-                Button(
-                    onClick = {
-                        coroutineScope.launch {
-                            notificationHandler.requestPermissions {
-                                permissionsGranted = it
+                Row {
+                    if (notificationHandler == null) {
+                        Button(
+                            onClick = {
+                                notificationHandler = createNotificationHandler()
+                            },
+                            modifier = Modifier.weight(0.5F),
+                        ) { Text("Create") }
+                    } else {
+                        Button(
+                            onClick = {
+                                coroutineScope.launch {
+                                    notificationHandler?.unregister()
+                                    notificationHandler = null
+                                }
+                            },
+                            modifier = Modifier.weight(0.5F),
+                            enabled = permissionsGranted == true
+                        ) { Text("Unregister") }
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Button(
+                        onClick = {
+                            coroutineScope.launch {
+                                notificationHandler?.requestPermissions {
+                                    permissionsGranted = it
+                                }
                             }
-                        }
-                    },
-                    enabled = !permissionsGranted
-                ) { Text("Request Permissions") }
+                        },
+                        modifier = Modifier.weight(0.5F),
+                        enabled = permissionsGranted == false
+                    ) { Text("Request Permissions") }
+                }
                 // Title
                 Text(
                     text = "Title",
@@ -143,7 +164,8 @@ fun App(
                     )
                 }
                 // Launch Notification
-                notificationHandler.launchUserData()?.let {
+                val launchUserData = remember(notificationHandler) { notificationHandler?.getLaunchUserData() }
+                launchUserData?.let {
                     Text(
                         text = "Launch Notification",
                         modifier = Modifier.padding(vertical = 5.dp),
@@ -159,28 +181,28 @@ fun App(
                     Button(
                         onClick = {
                             coroutineScope.launch {
-                                notificationHandler.push(
+                                notificationHandler?.push(
                                     Notification(
                                         title = title,
                                         description = description,
-                                        icon = notificationHandler.icon(),
+                                        icon = getIcon(),
                                         callbackData = callbackData
                                     )
                                 )
                             }
                         },
                         modifier = Modifier.weight(0.5F),
-                        enabled = permissionsGranted,
+                        enabled = permissionsGranted == true,
                     ) { Text("Test") }
                     Spacer(Modifier.width(8.dp))
                     Button(
                         onClick = {
                             coroutineScope.launch {
-                                notificationHandler.clearAll()
+                                notificationHandler?.clearAll()
                             }
                         },
                         modifier = Modifier.weight(0.5F),
-                        enabled = permissionsGranted,
+                        enabled = permissionsGranted == true,
                     ) { Text("Clear") }
                 }
             }

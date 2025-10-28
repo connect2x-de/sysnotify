@@ -18,6 +18,7 @@ package de.connect2x.sysnotify.sample
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.window.CanvasBasedWindow
+import androidx.compose.ui.window.ComposeViewport
 import de.connect2x.sysnotify.NotificationIcon
 import de.connect2x.sysnotify_sample.generated.resources.Res
 import kotlinx.browser.window
@@ -27,9 +28,6 @@ import org.jetbrains.skiko.wasm.onWasmReady
 
 @OptIn(ExperimentalComposeUiApi::class, ExperimentalResourceApi::class)
 suspend fun main() {
-    onAppInit()
-    window.onunload = { onAppExit() }
-
     val icon = Res.readBytes("files/app_icon.png").decodeToImageBitmap()
     val width = icon.width
     val height = icon.height
@@ -50,7 +48,7 @@ suspend fun main() {
 
     onWasmReady {
         CanvasBasedWindow("SysNotify Sample") {
-            App(icon = {
+            App(getIcon = {
                 NotificationIcon(iconData, width, height)
             })
         }

@@ -92,6 +92,8 @@ internal class LinuxNotificationHandler(
         private var shouldDispachNotifications: AtomicBoolean = AtomicBoolean(true)
         private val pendingNotifications: ArrayDeque<PendingNotification> = ArrayDeque()
         private val pendingNotificationsLock: Mutex = Mutex()
+
+        // TODO this does not survive a restart
         private val notifications: HashMap<String, LinuxNotificationHandle> = HashMap()
         private val notificationsLock: Mutex = Mutex()
         private val activationStates: HashMap<String, StableRef<NotificationActivationState>> = HashMap()
@@ -377,8 +379,12 @@ internal class LinuxNotificationHandler(
         }
     }
 
+    override suspend fun unregister() {
+        clearAll()
+        close()
+    }
+
     override fun close() {
-        runBlocking { clearAll() }
         LibNotify.notify_uninit()
         closeCallback()
     }

@@ -65,6 +65,7 @@ internal class AppleNotificationHandler(
         isGroupingSupported = true
     )
 
+    // TODO this does not survive a restart
     private val notificationCategories: HashMap<String, UNNotificationCategory> = HashMap()
     private val notificationCategoriesLock: Mutex = Mutex()
 
@@ -176,13 +177,15 @@ internal class AppleNotificationHandler(
         notificationCenter?.removeAllDeliveredNotifications()
     }
 
-    override fun close() {
+    override suspend fun unregister() {
         if (!_hasPermissions.load()) return
+        clearAll()
+        notificationCategoriesLock.withLock { notificationCategories.clear() }
+        close()
+    }
+
+    override fun close() {
         closeCallback()
-        runBlocking {
-            clearAll()
-            notificationCategoriesLock.withLock { notificationCategories.clear() }
-        }
     }
 }
 

@@ -44,6 +44,7 @@ private class WebNotificationHandler(
     override val id: String,
     override val priority: NotificationPriority
 ) : NotificationHandler {
+    // TODO this does not survive a restart
     private val notifications: HashMap<String, JsNotification> = HashMap()
 
     override val platform: NotificationPlatform = NotificationPlatform.WEB
@@ -150,10 +151,13 @@ private class WebNotificationHandler(
         notifications.clear()
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
-    override fun close() {
-        GlobalScope.launch { clearAll() }
+    override suspend fun unregister() {
+        if (!_hasPermissions.load()) return
+        clearAll()
+        close()
     }
+
+    override fun close() {}
 }
 
 @OptIn(ExperimentalAtomicApi::class)

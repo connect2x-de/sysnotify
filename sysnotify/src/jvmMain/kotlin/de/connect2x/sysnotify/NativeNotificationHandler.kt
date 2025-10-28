@@ -86,5 +86,8 @@ object NativeNotificationHandler {
     external fun clearAll(handler: Long)
 
     @JvmStatic
-    external fun destroy(handler: Long)
+    external fun unregister(handler: Long)
+
+    @JvmStatic
+    external fun close(handler: Long)
 }
