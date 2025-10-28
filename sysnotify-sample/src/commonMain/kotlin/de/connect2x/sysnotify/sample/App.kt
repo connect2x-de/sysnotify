@@ -37,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import de.connect2x.sysnotify.Notification
+import de.connect2x.sysnotify.NotificationHandle
 import de.connect2x.sysnotify.NotificationHandler
 import de.connect2x.sysnotify.NotificationIcon
 import kotlinx.coroutines.CoroutineScope
@@ -51,7 +52,8 @@ internal lateinit var notificationHandler: NotificationHandler
 fun onAppInit(initCallback: NotificationHandler.() -> Unit = {}) {
     notificationHandler = NotificationHandler(
         name = "Sysnotify Sample",
-        id = "de.connect2x.sysnotify"
+        id = "de.connect2x.sysnotify",
+        isDebugEnabled = false
     )
     notificationHandler.initCallback()
 }
@@ -67,6 +69,7 @@ fun App(
     launchUserData: NotificationHandler.() -> String? = { null },
 ) {
     var permissionsGranted by remember { mutableStateOf(false) }
+    var lastNotificationEmitted by remember { mutableStateOf<NotificationHandle?>(null) }
     LaunchedEffect(Unit) {
         if (notificationHandler.hasPermissions) {
             permissionsGranted = true
@@ -91,7 +94,11 @@ fun App(
                 )
                 Text(
                     text = "Has permissions: $permissionsGranted",
-                    modifier = Modifier.padding(vertical = 5.dp)
+                    modifier = Modifier.padding(top = 5.dp)
+                )
+                Text(
+                    text = "Has last notification: ${lastNotificationEmitted != null}",
+                    modifier = Modifier.padding(bottom = 5.dp)
                 )
                 Button(
                     onClick = {
@@ -159,7 +166,7 @@ fun App(
                     Button(
                         onClick = {
                             coroutineScope.launch {
-                                notificationHandler.push(
+                                lastNotificationEmitted = notificationHandler.push(
                                     Notification(
                                         title = title,
                                         description = description,
@@ -169,9 +176,27 @@ fun App(
                                 )
                             }
                         },
-                        modifier = Modifier.weight(0.5F),
+                        modifier = Modifier.weight(0.33F),
                         enabled = permissionsGranted,
-                    ) { Text("Test") }
+                    ) { Text("Send") }
+                    Spacer(Modifier.width(8.dp))
+                    Button(
+                        onClick = {
+                            coroutineScope.launch {
+                                notificationHandler.update(
+                                    requireNotNull(lastNotificationEmitted),
+                                    Notification(
+                                        title = title,
+                                        description = description,
+                                        icon = notificationHandler.icon(),
+                                        callbackData = callbackData
+                                    )
+                                )
+                            }
+                        },
+                        modifier = Modifier.weight(0.33F),
+                        enabled = permissionsGranted && lastNotificationEmitted != null,
+                    ) { Text("Update") }
                     Spacer(Modifier.width(8.dp))
                     Button(
                         onClick = {
@@ -179,7 +204,7 @@ fun App(
                                 notificationHandler.clearAll()
                             }
                         },
-                        modifier = Modifier.weight(0.5F),
+                        modifier = Modifier.weight(0.33F),
                         enabled = permissionsGranted,
                     ) { Text("Clear") }
                 }
