@@ -54,13 +54,6 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 @OptIn(ExperimentalUuidApi::class)
-private val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.Default)
-
-fun onAppExit() {
-    coroutineScope.cancel()
-}
-
-@OptIn(ExperimentalUuidApi::class)
 @Composable
 fun App(
     getIcon: suspend () -> NotificationIcon? = { null },
@@ -70,7 +63,6 @@ fun App(
     val coroutineScope = rememberCoroutineScope()
     var notificationHandler by remember { mutableStateOf<NotificationHandler?>(null) }
     var permissionsGranted by remember { mutableStateOf<Boolean?>(null) }
-    var lastNotificationEmitted by remember { mutableStateOf<NotificationHandle?>(null) }
 
     fun createNotificationHandler(): NotificationHandler =
         NotificationHandler(
@@ -106,10 +98,6 @@ fun App(
                 Text(
                     text = "Has permissions: $permissionsGranted",
                     modifier = Modifier.padding(top = 5.dp)
-                )
-                Text(
-                    text = "Has last notification: ${lastNotificationEmitted != null}",
-                    modifier = Modifier.padding(bottom = 5.dp)
                 )
                 Row {
                     if (notificationHandler == null) {
@@ -222,7 +210,7 @@ fun App(
                     Button(
                         onClick = {
                             coroutineScope.launch {
-                                lastNotificationEmitted = notificationHandler?.push(
+                                notificationHandler?.push(
                                     Notification(
                                         title = title,
                                         description = description,
@@ -242,7 +230,7 @@ fun App(
                         onClick = {
                             coroutineScope.launch {
                                 notificationHandler?.update(
-                                    requireNotNull(lastNotificationEmitted),
+                                    tag,
                                     Notification(
                                         title = title,
                                         description = description,
@@ -253,7 +241,7 @@ fun App(
                             }
                         },
                         modifier = Modifier.weight(0.33F),
-                        enabled = permissionsGranted == true && lastNotificationEmitted != null,
+                        enabled = permissionsGranted == true,
                     ) { Text("Update") }
                     Spacer(Modifier.width(8.dp))
                     Button(

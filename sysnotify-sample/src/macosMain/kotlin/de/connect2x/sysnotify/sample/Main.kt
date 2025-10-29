@@ -40,8 +40,6 @@ fun main() {
     }
     UNUserNotificationCenter.currentNotificationCenter().setDelegate(notificationDelegate)
 
-    onAppInit()
-    atexit(staticCFunction(::onAppExit))
     Window("Sysnotify Sample") {
         App()
     }
