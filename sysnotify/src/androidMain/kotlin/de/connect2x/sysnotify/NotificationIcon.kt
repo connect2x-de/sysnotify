@@ -35,16 +35,11 @@ fun NotificationIcon.Companion.fromBitmap(bitmap: Bitmap): NotificationIcon {
     for (y in 0..<height) {
         for (x in 0..<width) {
             val index = (y * width + x) shl 2
-            val color = PackedColor(bitmap.getPixel(x, y).toUInt()).swizzle(
-                ColorChannel.G,
-                ColorChannel.B,
-                ColorChannel.A,
-                ColorChannel.R
-            )
-            data[index] = color.r.toByte()
-            data[index + 1] = color.g.toByte()
-            data[index + 2] = color.b.toByte()
-            data[index + 3] = color.a.toByte()
+            val color = bitmap.getPixel(x, y).toUInt()
+            data[index + 0] = unpackRed(from = ColorFormat.ARGB, color).toByte()
+            data[index + 1] = unpackGreen(from = ColorFormat.ARGB, color).toByte()
+            data[index + 2] = unpackBlue(from = ColorFormat.ARGB, color).toByte()
+            data[index + 3] = unpackAlpha(from = ColorFormat.ARGB, color).toByte()
         }
     }
     return NotificationIcon(data, width, height)
@@ -86,18 +81,14 @@ fun NotificationIcon.toBitmap(): Bitmap {
         for (y in 0..<height) {
             for (x in 0..<width) {
                 val index = (y * width + x) shl 2
-                val pixel = PackedColor(
-                    data[index].toUByte(),
-                    data[index + 1].toUByte(),
-                    data[index + 2].toUByte(),
-                    data[index + 3].toUByte()
-                ).swizzle(
-                    ColorChannel.A,
-                    ColorChannel.R,
-                    ColorChannel.G,
-                    ColorChannel.B
+                val pixel = pack(
+                    to = ColorFormat.ARGB,
+                    red = data[index].toUByte(),
+                    green = data[index + 1].toUByte(),
+                    blue = data[index + 2].toUByte(),
+                    alpha = data[index + 3].toUByte()
                 )
-                setPixel(x, y, pixel.value.toInt())
+                setPixel(x, y, pixel.toInt())
             }
         }
     }
