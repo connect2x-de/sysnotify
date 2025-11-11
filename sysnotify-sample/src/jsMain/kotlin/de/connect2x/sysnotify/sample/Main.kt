@@ -26,27 +26,26 @@ import org.jetbrains.skiko.wasm.onWasmReady
 
 @OptIn(ExperimentalComposeUiApi::class, ExperimentalResourceApi::class)
 suspend fun main() {
-    val icon = Res.readBytes("files/app_icon.png").decodeToImageBitmap()
-    val width = icon.width
-    val height = icon.height
-    val pixelCount = width * height
-    val pixels = icon.toPixelMap(0, 0, width, height).buffer
-
-    val iconDataSize = pixelCount shl 2
-    val iconData = ByteArray(iconDataSize)
-    // We need to swizzle the color channels from ARGB to RGBA
-    for (i in pixels.indices) {
-        val pixel = pixels[i]
-        val componentIndex = i shl 2
-        iconData[componentIndex] = ((pixel shr 16) and 0xFF).toByte()
-        iconData[componentIndex + 1] = ((pixel shr 8) and 0xFF).toByte()
-        iconData[componentIndex + 2] = (pixel and 0xFF).toByte()
-        iconData[componentIndex + 3] = ((pixel shr 24) and 0xFF).toByte()
-    }
-
     onWasmReady {
         ComposeViewport {
             App(getIcon = {
+                val icon = Res.readBytes("files/app_icon.png").decodeToImageBitmap()
+                val width = icon.width
+                val height = icon.height
+                val pixelCount = width * height
+                val pixels = icon.toPixelMap(0, 0, width, height).buffer
+
+                val iconDataSize = pixelCount shl 2
+                val iconData = ByteArray(iconDataSize)
+                // We need to swizzle the color channels from ARGB to RGBA
+                for (i in pixels.indices) {
+                    val pixel = pixels[i]
+                    val componentIndex = i shl 2
+                    iconData[componentIndex] = ((pixel shr 16) and 0xFF).toByte()
+                    iconData[componentIndex + 1] = ((pixel shr 8) and 0xFF).toByte()
+                    iconData[componentIndex + 2] = (pixel and 0xFF).toByte()
+                    iconData[componentIndex + 3] = ((pixel shr 24) and 0xFF).toByte()
+                }
                 NotificationIcon(iconData, width, height)
             })
         }
