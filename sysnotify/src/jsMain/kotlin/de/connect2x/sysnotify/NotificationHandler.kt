@@ -105,7 +105,7 @@ private class WebNotificationHandler(
             instance = JsNotification(
                 title = notification.title ?: "",
                 options = NotificationOptions(
-                    body = notification.description,
+                    body = notification.description ?: "",
                     icon = iconUrl,
                     silent = !notification.playSound,
                     sound = notification.soundPath,

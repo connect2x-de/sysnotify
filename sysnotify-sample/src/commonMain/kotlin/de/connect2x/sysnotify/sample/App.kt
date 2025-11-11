@@ -212,8 +212,8 @@ fun App(
                             coroutineScope.launch {
                                 notificationHandler?.push(
                                     Notification(
-                                        title = title,
-                                        description = description,
+                                        title = title.takeIf { it.isNotEmpty() },
+                                        description = description.takeIf { it.isNotEmpty() },
                                         icon = getIcon(),
                                         callbackData = callbackData,
                                         playSound = true,
@@ -232,8 +232,8 @@ fun App(
                                 notificationHandler?.update(
                                     tag,
                                     Notification(
-                                        title = title,
-                                        description = description,
+                                        title = title.takeIf { it.isNotEmpty() },
+                                        description = description.takeIf { it.isNotEmpty() },
                                         icon = getIcon(),
                                         callbackData = callbackData
                                     )
