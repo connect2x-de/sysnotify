@@ -241,9 +241,9 @@ internal fun createAppleOrNoopNotificationHandler(
     closeCallback: () -> Unit,
     appId: String
 ): NotificationHandler {
-    if (NSBundle.mainBundle.bundleIdentifier == null) {
-        println("WARNING: No Bundle Identifier found")
-        println("WARNING: For notification on apple platforms a Bundle identifier is required")
+    if (NSBundle.mainBundle.infoDictionary?.get("CFBundlePackageType") != "APPL") {
+        println("WARNING: Not running as Application (CFBundlePackageType != APPL)")
+        println("WARNING: For notification on apple platforms running as application is required")
         println("WARNING: Registering NoopNotificationHandler instead for development")
 
         return NoopNotificationHandler
