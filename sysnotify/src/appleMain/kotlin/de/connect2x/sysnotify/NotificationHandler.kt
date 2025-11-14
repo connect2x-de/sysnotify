@@ -16,15 +16,17 @@
 package de.connect2x.sysnotify
 
 import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import platform.Foundation.NSError
 import platform.UserNotifications.UNAuthorizationOptionAlert
 import platform.UserNotifications.UNAuthorizationOptionBadge
 import platform.UserNotifications.UNAuthorizationOptionSound
+import platform.UserNotifications.UNAuthorizationStatusAuthorized
+import platform.UserNotifications.UNAuthorizationStatusEphemeral
+import platform.UserNotifications.UNAuthorizationStatusProvisional
 import platform.UserNotifications.UNMutableNotificationContent
 import platform.UserNotifications.UNNotification
 import platform.UserNotifications.UNNotificationAction
@@ -33,8 +35,8 @@ import platform.UserNotifications.UNNotificationCategoryOptionNone
 import platform.UserNotifications.UNNotificationRequest
 import platform.UserNotifications.UNNotificationSound
 import platform.UserNotifications.UNUserNotificationCenter
-import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
+import kotlin.coroutines.resume
 import kotlin.experimental.ExperimentalNativeApi
 
 @OptIn(ExperimentalNativeApi::class, ExperimentalAtomicApi::class)
@@ -49,10 +51,9 @@ internal class AppleNotificationHandler(
     @OptIn(ExperimentalForeignApi::class)
 
     override val platform: NotificationPlatform = NotificationPlatform.APPLE
-    val _hasPermissions: AtomicBoolean = AtomicBoolean(false)
 
     override val hasPermissions: Boolean
-        get() = _hasPermissions.load()
+        get() = runBlocking { notificationCenter.hasPermissions() }
 
     override val capabilities: NotificationCapabilities = NotificationCapabilities(
         isTitleSupported = true,
@@ -93,27 +94,18 @@ internal class AppleNotificationHandler(
     }
 
     override suspend fun requestPermissions(callback: PermissionCallback) {
-        if (_hasPermissions.load()) return
-        val barrier = CompletableDeferred<Unit>()
-        notificationCenter?.requestAuthorizationWithOptions(
-            UNAuthorizationOptionSound or UNAuthorizationOptionBadge or UNAuthorizationOptionAlert
-        ) { granted, error ->
-            _hasPermissions.store(granted)
-            barrier.complete(Unit)
-            error?.localizedDescription?.let {
-                println("Could not request permission: $it")
-            }
-        } ?: return
-        coroutineScope {
-            launch {
-                barrier.await()
-                callback(_hasPermissions.load())
-            }
+        if (notificationCenter.hasPermissions()) return
+        val (granted, error) = notificationCenter?.requestDefaultAuthorization() ?: return
+
+        error?.localizedDescription?.let {
+            println("Could not request permission: $it")
         }
+
+        callback(granted)
     }
 
     override suspend fun push(notification: Notification, tag: String): NotificationHandle {
-        if (!_hasPermissions.load()) return NotificationHandle.INVALID
+        if (!notificationCenter.hasPermissions()) return NotificationHandle.INVALID
         val handle = AppleNotificationHandle(tag)
 
         val content = UNMutableNotificationContent().apply {
@@ -148,7 +140,7 @@ internal class AppleNotificationHandler(
 
     @Suppress("UNCHECKED_CAST")
     override suspend fun pop(handle: NotificationHandle) {
-        if (!_hasPermissions.load()) return
+        if (!notificationCenter.hasPermissions()) return
         handle.check<AppleNotificationHandle>()
 
         val identifier = handle.tag
@@ -174,7 +166,7 @@ internal class AppleNotificationHandler(
 
     @Suppress("UNCHECKED_CAST")
     override suspend fun update(handle: NotificationHandle, notification: Notification): NotificationHandle {
-        if (!hasPermissions || !handle.isValid) return NotificationHandle.INVALID
+        if (!notificationCenter.hasPermissions() || !handle.isValid) return NotificationHandle.INVALID
 
         // This is done like this because, following to the Apple documentation, the API can choose the run the handler
         // closure in a separate background thread.
@@ -204,13 +196,13 @@ internal class AppleNotificationHandler(
     }
 
     override suspend fun clearAll() {
-        if (!_hasPermissions.load()) return
+        if (!notificationCenter.hasPermissions()) return
         notificationCenter?.removeAllPendingNotificationRequests()
         notificationCenter?.removeAllDeliveredNotifications()
     }
 
     override suspend fun unregister() {
-        if (!_hasPermissions.load()) return
+        if (!notificationCenter.hasPermissions()) return
         clearAll()
         notificationCategoriesLock.withLock { notificationCategories.clear() }
         close()
@@ -236,3 +228,22 @@ actual fun NotificationHandler( // @formatter:off
 ): NotificationHandler { // @formatter:on
     return AppleNotificationHandler(appId, name, id, priority, closeCallback = {}, isDebugEnabled)
 }
+
+private suspend fun UNUserNotificationCenter.requestDefaultAuthorization(): Pair<Boolean, NSError?> =
+    suspendCancellableCoroutine { continuation ->
+        requestAuthorizationWithOptions(
+            UNAuthorizationOptionSound or UNAuthorizationOptionBadge or UNAuthorizationOptionAlert
+        ) { granted, error -> continuation.resume(granted to error) }
+    }
+
+private suspend fun UNUserNotificationCenter.hasPermissions(): Boolean = suspendCancellableCoroutine { continuation ->
+    getNotificationSettingsWithCompletionHandler { notificationSettings ->
+        val hasPermission = when (notificationSettings?.authorizationStatus) {
+            UNAuthorizationStatusAuthorized, UNAuthorizationStatusEphemeral, UNAuthorizationStatusProvisional -> true
+            else -> false
+        }
+        continuation.resume(hasPermission)
+    }
+}
+
+private suspend fun UNUserNotificationCenter?.hasPermissions(): Boolean = this?.hasPermissions() == true
