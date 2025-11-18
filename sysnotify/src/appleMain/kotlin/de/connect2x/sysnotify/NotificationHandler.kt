@@ -222,7 +222,6 @@ actual fun NotificationHandler( // @formatter:off
     name: String,
     id: String,
     priority: NotificationPriority,
-    isDebugEnabled: Boolean,
     appId: String
 ): NotificationHandler { // @formatter:on
     return createAppleOrNoopNotificationHandler(
@@ -249,7 +248,13 @@ internal fun createAppleOrNoopNotificationHandler(
         return NoopNotificationHandler
     }
 
-    return AppleNotificationHandler(appId, name, id, priority, closeCallback)
+    return AppleNotificationHandler(
+        appId = appId,
+        name = name,
+        id = id,
+        priority = priority,
+        closeCallback = closeCallback
+    )
 }
 
 private suspend fun UNUserNotificationCenter.requestDefaultAuthorization(): Pair<Boolean, NSError?> =

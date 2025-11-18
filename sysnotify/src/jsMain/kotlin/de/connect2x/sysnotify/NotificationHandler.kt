@@ -174,8 +174,7 @@ actual fun NotificationHandler( // @formatter:off
     name: String,
     id: String,
     priority: NotificationPriority,
-    isDebugEnabled: Boolean,
     appId: String
 ): NotificationHandler { // @formatter:on
-    return WebNotificationHandler(appId, name, id, priority)
+    return WebNotificationHandler(appId = appId, name = name, id = id, priority = priority)
 }

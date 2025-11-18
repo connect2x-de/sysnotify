@@ -46,7 +46,6 @@ internal expect fun createNotificationHandler(
     priority: NotificationPriority,
     activationHandler: ActivationHandler,
     closeCallback: () -> Unit = {},
-    isDebugEnabled: Boolean = false,
     appId: String
 ): NotificationHandler
 
@@ -65,7 +64,6 @@ internal fun registerNatives(env: JNIEnvVar) {
             typeString named "id"
             JvmBuiltinType.INT named "priority"
             typeNativeActivationCallback named "activationCallback"
-            JvmBuiltinType.BOOLEAN named "isDebugEnabled"
             typeString named "appId"
             returns(JvmBuiltinType.LONG)
         }
@@ -139,7 +137,6 @@ private fun create(
     id: jstring,
     priority: jint,
     activationCallback: jobject,
-    isDebugEnabled: jboolean,
     appId: jstring
 ): jlong {
     val globalCallback = activationCallback.newGlobalRef(env)
@@ -176,7 +173,6 @@ private fun create(
                 globalCallback.deleteGlobalRef(this)
             }
         },
-        isDebugEnabled = isDebugEnabled.toKBoolean(),
         appId = appId.toKString(env)
     )
     return StableRef.create(handler).asCPointer().rawValue.toLong()
