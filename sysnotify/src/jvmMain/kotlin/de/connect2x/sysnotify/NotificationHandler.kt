@@ -26,20 +26,18 @@ private class JvmNotificationHandler(
     override val name: String,
     override val id: String,
     override val priority: NotificationPriority,
-    isDebugEnabled: Boolean,
 ) : NotificationHandler {
     var activationHandler: AtomicReference<ActivationHandler?> = AtomicReference(null)
 
     private val address: Long = NativeNotificationHandler.create(
-        name,
-        id,
-        priority.ordinal,
-        NativeActivationCallback.create {
+        name = name,
+        id = id,
+        priority = priority.ordinal,
+        activationCallback = NativeActivationCallback.create {
             // Wire activation through to instance activation handler
             activationHandler.load()?.invoke(it)
         },
-        isDebugEnabled,
-        appId
+        appId = appId
     )
 
     override val platform: NotificationPlatform by lazy {
@@ -137,8 +135,7 @@ actual fun NotificationHandler( // @formatter:off
     name: String,
     id: String,
     priority: NotificationPriority,
-    isDebugEnabled: Boolean,
     appId: String
 ): NotificationHandler { // @formatter:on
-    return JvmNotificationHandler(appId, name, id, priority, isDebugEnabled)
+    return JvmNotificationHandler(appId = appId, name = name, id = id, priority = priority)
 }

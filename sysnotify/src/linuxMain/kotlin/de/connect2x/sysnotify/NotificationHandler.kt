@@ -401,10 +401,9 @@ actual fun NotificationHandler(
     name: String,
     id: String,
     priority: NotificationPriority,
-    isDebugEnabled: Boolean,
     appId: String
 ): NotificationHandler = try {
-    LinuxNotificationHandler(appId, name, id, priority)
+    LinuxNotificationHandler(appId = appId, name = name, id = id, priority = priority)
 } catch (error: Throwable) {
     NoopNotificationHandler
 }

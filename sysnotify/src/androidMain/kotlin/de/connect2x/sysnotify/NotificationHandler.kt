@@ -434,8 +434,7 @@ actual fun NotificationHandler( // @formatter:off
     name: String,
     id: String,
     priority: NotificationPriority,
-    isDebugEnabled: Boolean,
     appId: String
 ): NotificationHandler { // @formatter:on
-    return AndroidNotificationHandler(appId, name, id, priority)
+    return AndroidNotificationHandler(appId = appId, name = name, id = id, priority = priority)
 }

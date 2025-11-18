@@ -149,6 +149,5 @@ actual fun NotificationHandler(
     name: String,
     id: String,
     priority: NotificationPriority,
-    isDebugEnabled: Boolean,
     appId: String
-): NotificationHandler = WindowsNotificationHandler(appId, name, id, priority)
+): NotificationHandler = WindowsNotificationHandler(appId = appId, name = name, id = id, priority = priority)
