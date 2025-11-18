@@ -20,6 +20,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import platform.Foundation.NSBundle
 import platform.Foundation.NSError
 import platform.UserNotifications.UNAuthorizationOptionAlert
 import platform.UserNotifications.UNAuthorizationOptionBadge
@@ -46,7 +47,6 @@ internal class AppleNotificationHandler(
     override val id: String,
     override val priority: NotificationPriority,
     private val closeCallback: () -> Unit = {},
-    isDebugEnabled: Boolean,
 ) : NotificationHandler {
     @OptIn(ExperimentalForeignApi::class)
 
@@ -70,8 +70,7 @@ internal class AppleNotificationHandler(
     private val notificationCategories: HashMap<String, UNNotificationCategory> = HashMap()
     private val notificationCategoriesLock: Mutex = Mutex()
 
-    private val notificationCenter: UNUserNotificationCenter? =
-        if (isDebugEnabled) null else UNUserNotificationCenter.currentNotificationCenter()
+    private val notificationCenter: UNUserNotificationCenter = UNUserNotificationCenter.currentNotificationCenter()
 
     private suspend fun ensureCategoryExists(key: String) {
         if (notificationCategoriesLock.withLock { key in notificationCategories }) return
@@ -84,7 +83,7 @@ internal class AppleNotificationHandler(
         notificationCategoriesLock.withLock {
             notificationCategories[key] = category
             // We have to update ALL the categories every time we add a new one
-            notificationCenter?.setNotificationCategories(notificationCategories.values.toSet())
+            notificationCenter.setNotificationCategories(notificationCategories.values.toSet())
         }
     }
 
@@ -95,7 +94,7 @@ internal class AppleNotificationHandler(
 
     override suspend fun requestPermissions(callback: PermissionCallback) {
         if (notificationCenter.hasPermissions()) return
-        val (granted, error) = notificationCenter?.requestDefaultAuthorization() ?: return
+        val (granted, error) = notificationCenter.requestDefaultAuthorization()
 
         error?.localizedDescription?.let {
             println("Could not request permission: $it")
@@ -123,7 +122,7 @@ internal class AppleNotificationHandler(
             }
         }
 
-        notificationCenter?.addNotificationRequest(
+        notificationCenter.addNotificationRequest(
             UNNotificationRequest.requestWithIdentifier(
                 identifier = handle.tag,
                 content = content,
@@ -146,7 +145,7 @@ internal class AppleNotificationHandler(
         val identifier = handle.tag
 
         // First try to remove it from the pending notifications
-        notificationCenter?.getPendingNotificationRequestsWithCompletionHandler { requests ->
+        notificationCenter.getPendingNotificationRequestsWithCompletionHandler { requests ->
             for (request in requests as List<UNNotificationRequest>) {
                 if (request.identifier != identifier) continue
                 notificationCenter.removePendingNotificationRequestsWithIdentifiers(listOf(identifier))
@@ -171,7 +170,7 @@ internal class AppleNotificationHandler(
         // This is done like this because, following to the Apple documentation, the API can choose the run the handler
         // closure in a separate background thread.
         val found = suspendCancellableCoroutine { continuation ->
-            notificationCenter?.getPendingNotificationRequestsWithCompletionHandler { requests ->
+            notificationCenter.getPendingNotificationRequestsWithCompletionHandler { requests ->
                 for (request in requests as List<UNNotificationRequest>) {
                     if (request.identifier != handle.tag) continue
                     continuation.resume(true) { _, _, _ -> }
@@ -197,8 +196,8 @@ internal class AppleNotificationHandler(
 
     override suspend fun clearAll() {
         if (!notificationCenter.hasPermissions()) return
-        notificationCenter?.removeAllPendingNotificationRequests()
-        notificationCenter?.removeAllDeliveredNotifications()
+        notificationCenter.removeAllPendingNotificationRequests()
+        notificationCenter.removeAllDeliveredNotifications()
     }
 
     override suspend fun unregister() {
@@ -226,7 +225,31 @@ actual fun NotificationHandler( // @formatter:off
     isDebugEnabled: Boolean,
     appId: String
 ): NotificationHandler { // @formatter:on
-    return AppleNotificationHandler(appId, name, id, priority, closeCallback = {}, isDebugEnabled)
+    return createAppleOrNoopNotificationHandler(
+        name = name,
+        id = id,
+        priority = priority,
+        closeCallback = {},
+        appId = appId,
+    )
+}
+
+internal fun createAppleOrNoopNotificationHandler(
+    name: String,
+    id: String,
+    priority: NotificationPriority,
+    closeCallback: () -> Unit,
+    appId: String
+): NotificationHandler {
+    if (NSBundle.mainBundle.infoDictionary?.get("CFBundlePackageType") != "APPL") {
+        println("WARNING: Not running as Application (CFBundlePackageType != APPL)")
+        println("WARNING: For notification on apple platforms running as application is required")
+        println("WARNING: Registering NoopNotificationHandler instead for development")
+
+        return NoopNotificationHandler
+    }
+
+    return AppleNotificationHandler(appId, name, id, priority, closeCallback)
 }
 
 private suspend fun UNUserNotificationCenter.requestDefaultAuthorization(): Pair<Boolean, NSError?> =
@@ -245,5 +268,3 @@ private suspend fun UNUserNotificationCenter.hasPermissions(): Boolean = suspend
         continuation.resume(hasPermission)
     }
 }
-
-private suspend fun UNUserNotificationCenter?.hasPermissions(): Boolean = this?.hasPermissions() == true
