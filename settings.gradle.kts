@@ -42,7 +42,7 @@ dependencyResolutionManagement {
 
     versionCatalogs {
         create("sharedLibs") {
-            from("de.connect2x.conventions:c2x-shared-catalog:20251114.122133")
+            from("de.connect2x.conventions:c2x-shared-catalog:20251219.132625")
         }
     }
 }
@@ -53,3 +53,12 @@ plugins {
 
 include(":sysnotify")
 include(":sysnotify-sample")
+
+gradle.beforeProject {
+    if (JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_25)) {
+        extra["kotlin.native.jvmArgs"] = listOf(
+            "--enable-native-access=ALL-UNNAMED",
+            "--sun-misc-unsafe-memory-access=allow"
+        ).joinToString(" ")
+    }
+}

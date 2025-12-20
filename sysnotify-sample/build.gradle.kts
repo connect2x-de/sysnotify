@@ -137,6 +137,7 @@ compose {
             mainClass = "${rootProject.group}.${rootProject.name}.sample.MainKt"
             buildTypes.release.proguard { isEnabled = false }
             javaHome = jdkLauncher.get().metadata.installationPath.asFile.absolutePath
+            jvmArgs("--enable-native-access=ALL-UNNAMED")
             nativeDistributions {
                 modules("java.net.http", "java.sql", "java.naming")
                 targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
