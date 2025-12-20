@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+@file:Suppress("NOTHING_TO_INLINE")
+
 package de.connect2x.sysnotify
 
 enum class ColorFormat(
