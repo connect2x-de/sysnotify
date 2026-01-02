@@ -1,0 +1,246 @@
+public final class de/connect2x/sysnotify/ColorFormat : java/lang/Enum {
+	public static final field ARGB Lde/connect2x/sysnotify/ColorFormat;
+	public static final field RGBA Lde/connect2x/sysnotify/ColorFormat;
+	public final fun getAlpha ()I
+	public final fun getBlue ()I
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun getGreen ()I
+	public final fun getRed ()I
+	public static fun valueOf (Ljava/lang/String;)Lde/connect2x/sysnotify/ColorFormat;
+	public static fun values ()[Lde/connect2x/sysnotify/ColorFormat;
+}
+
+public final class de/connect2x/sysnotify/ColorsKt {
+	public static final fun pack-vHcBfBk (Lde/connect2x/sysnotify/ColorFormat;BBBB)I
+	public static final fun swizzle-jXDDuk8 (Lde/connect2x/sysnotify/ColorFormat;Lde/connect2x/sysnotify/ColorFormat;I)I
+	public static final fun unpackAlpha-Qn1smSk (Lde/connect2x/sysnotify/ColorFormat;I)B
+	public static final fun unpackBlue-Qn1smSk (Lde/connect2x/sysnotify/ColorFormat;I)B
+	public static final fun unpackGreen-Qn1smSk (Lde/connect2x/sysnotify/ColorFormat;I)B
+	public static final fun unpackRed-Qn1smSk (Lde/connect2x/sysnotify/ColorFormat;I)B
+}
+
+public abstract interface class de/connect2x/sysnotify/NativeActivationCallback {
+	public static final field Companion Lde/connect2x/sysnotify/NativeActivationCallback$Companion;
+	public abstract fun invoke (J)V
+}
+
+public final class de/connect2x/sysnotify/NativeActivationCallback$Companion {
+	public final fun create (Lkotlin/jvm/functions/Function1;)Lde/connect2x/sysnotify/NativeActivationCallback;
+}
+
+public final class de/connect2x/sysnotify/NativeLoaderException : java/lang/RuntimeException {
+	public fun <init> (Ljava/lang/Throwable;)V
+}
+
+public final class de/connect2x/sysnotify/NativeNotificationHandler {
+	public static final field INSTANCE Lde/connect2x/sysnotify/NativeNotificationHandler;
+	public static final fun clearAll (J)V
+	public static final fun close (J)V
+	public static final fun create (Ljava/lang/String;Ljava/lang/String;ILde/connect2x/sysnotify/NativeActivationCallback;Ljava/lang/String;)J
+	public static final fun getCapabilities (J)I
+	public static final fun getHandle (JLjava/lang/String;)J
+	public static final fun getPlatform (J)I
+	public static final fun hasPermissions (J)Z
+	public static final fun pop (JJ)V
+	public static final fun push (JLjava/lang/String;Ljava/lang/String;Ljava/lang/String;[BIIZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;)J
+	public static final fun requestPermissions (JLde/connect2x/sysnotify/NativePermissionCallback;)V
+	public static final fun unregister (J)V
+	public static final fun update (JJLjava/lang/String;Ljava/lang/String;[BIILjava/lang/String;Ljava/lang/String;)J
+}
+
+public abstract interface class de/connect2x/sysnotify/NativePermissionCallback {
+	public static final field Companion Lde/connect2x/sysnotify/NativePermissionCallback$Companion;
+	public abstract fun invoke (Z)V
+}
+
+public final class de/connect2x/sysnotify/NativePermissionCallback$Companion {
+	public final fun create (Lkotlin/jvm/functions/Function1;)Lde/connect2x/sysnotify/NativePermissionCallback;
+}
+
+public final class de/connect2x/sysnotify/NoopNotificationHandler : de/connect2x/sysnotify/NotificationHandler {
+	public static final field INSTANCE Lde/connect2x/sysnotify/NoopNotificationHandler;
+	public fun clearAll (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun close ()V
+	public fun getAppId ()Ljava/lang/String;
+	public fun getCapabilities-WtXZ38E ()I
+	public fun getHandle (Ljava/lang/String;)Lde/connect2x/sysnotify/NotificationHandle;
+	public fun getHasPermissions ()Z
+	public fun getId ()Ljava/lang/String;
+	public fun getName ()Ljava/lang/String;
+	public fun getPlatform ()Lde/connect2x/sysnotify/NotificationPlatform;
+	public fun getPriority ()Lde/connect2x/sysnotify/NotificationPriority;
+	public fun pop (Lde/connect2x/sysnotify/NotificationHandle;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun pop (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun push (Lde/connect2x/sysnotify/Notification;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun requestPermissions (Lkotlin/jvm/functions/Function1;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun unregister (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun update (Lde/connect2x/sysnotify/NotificationHandle;Lde/connect2x/sysnotify/Notification;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun update (Ljava/lang/String;Lde/connect2x/sysnotify/Notification;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class de/connect2x/sysnotify/Notification {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lde/connect2x/sysnotify/NotificationIcon;Ljava/lang/String;ZLde/connect2x/sysnotify/NotificationPriority;ZLjava/lang/String;Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lde/connect2x/sysnotify/NotificationIcon;Ljava/lang/String;ZLde/connect2x/sysnotify/NotificationPriority;ZLjava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Lde/connect2x/sysnotify/NotificationIcon;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun component5 ()Z
+	public final fun component6 ()Lde/connect2x/sysnotify/NotificationPriority;
+	public final fun component7 ()Z
+	public final fun component8 ()Ljava/lang/String;
+	public final fun component9 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Lde/connect2x/sysnotify/NotificationIcon;Ljava/lang/String;ZLde/connect2x/sysnotify/NotificationPriority;ZLjava/lang/String;Ljava/lang/String;)Lde/connect2x/sysnotify/Notification;
+	public static synthetic fun copy$default (Lde/connect2x/sysnotify/Notification;Ljava/lang/String;Ljava/lang/String;Lde/connect2x/sysnotify/NotificationIcon;Ljava/lang/String;ZLde/connect2x/sysnotify/NotificationPriority;ZLjava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lde/connect2x/sysnotify/Notification;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCallbackData ()Ljava/lang/String;
+	public final fun getDescription ()Ljava/lang/String;
+	public final fun getDismissible ()Z
+	public final fun getGroup ()Ljava/lang/String;
+	public final fun getIcon ()Lde/connect2x/sysnotify/NotificationIcon;
+	public final fun getPlaySound ()Z
+	public final fun getPriority ()Lde/connect2x/sysnotify/NotificationPriority;
+	public final fun getSoundPath ()Ljava/lang/String;
+	public final fun getTitle ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class de/connect2x/sysnotify/NotificationCapabilities {
+	public static final field Companion Lde/connect2x/sysnotify/NotificationCapabilities$Companion;
+	public static final field IS_ACTION_SUPPORTED I
+	public static final field IS_CUSTOM_SOUND_SUPPORTED I
+	public static final field IS_DESCRIPTION_SUPPORTED I
+	public static final field IS_GROUPING_SUPPORTED I
+	public static final field IS_ICON_SUPPORTED I
+	public static final field IS_POP_SUPPORTED I
+	public static final field IS_SOUND_SUPPORTED I
+	public static final field IS_TITLE_SUPPORTED I
+	public static final synthetic fun box-impl (I)Lde/connect2x/sysnotify/NotificationCapabilities;
+	public static fun constructor-impl (I)I
+	public static fun constructor-impl (ZZZZZZZZ)I
+	public fun equals (Ljava/lang/Object;)Z
+	public static fun equals-impl (ILjava/lang/Object;)Z
+	public static final fun equals-impl0 (II)Z
+	public final fun getMask-pVg5ArA ()I
+	public fun hashCode ()I
+	public static fun hashCode-impl (I)I
+	public static final fun isActionSupported-impl (I)Z
+	public static final fun isCustomSoundSupported-impl (I)Z
+	public static final fun isDescriptionSupported-impl (I)Z
+	public static final fun isGroupingSupported-impl (I)Z
+	public static final fun isIconSupported-impl (I)Z
+	public static final fun isPopSupported-impl (I)Z
+	public static final fun isSoundSupported-impl (I)Z
+	public static final fun isSupported-impl (I)Z
+	public static final fun isTitleSupported-impl (I)Z
+	public fun toString ()Ljava/lang/String;
+	public static fun toString-impl (I)Ljava/lang/String;
+	public final synthetic fun unbox-impl ()I
+}
+
+public final class de/connect2x/sysnotify/NotificationCapabilities$Companion {
+	public final fun getALL-pVg5ArA ()I
+}
+
+public abstract interface class de/connect2x/sysnotify/NotificationHandle {
+	public abstract fun getTag ()Ljava/lang/String;
+	public fun isValid ()Z
+}
+
+public final class de/connect2x/sysnotify/NotificationHandle$DefaultImpls {
+	public static fun isValid (Lde/connect2x/sysnotify/NotificationHandle;)Z
+}
+
+public final class de/connect2x/sysnotify/NotificationHandle$INVALID : de/connect2x/sysnotify/NotificationHandle {
+	public static final field INSTANCE Lde/connect2x/sysnotify/NotificationHandle$INVALID;
+	public fun getTag ()Ljava/lang/String;
+	public fun isValid ()Z
+}
+
+public abstract interface class de/connect2x/sysnotify/NotificationHandler : java/lang/AutoCloseable {
+	public abstract fun clearAll (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun close ()V
+	public abstract fun getAppId ()Ljava/lang/String;
+	public abstract fun getCapabilities-WtXZ38E ()I
+	public fun getHandle (Ljava/lang/String;)Lde/connect2x/sysnotify/NotificationHandle;
+	public abstract fun getHasPermissions ()Z
+	public abstract fun getId ()Ljava/lang/String;
+	public abstract fun getName ()Ljava/lang/String;
+	public abstract fun getPlatform ()Lde/connect2x/sysnotify/NotificationPlatform;
+	public abstract fun getPriority ()Lde/connect2x/sysnotify/NotificationPriority;
+	public abstract fun pop (Lde/connect2x/sysnotify/NotificationHandle;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun pop (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun push (Lde/connect2x/sysnotify/Notification;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun push$default (Lde/connect2x/sysnotify/NotificationHandler;Lde/connect2x/sysnotify/Notification;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public fun requestPermissions (Lkotlin/jvm/functions/Function1;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun requestPermissions$default (Lde/connect2x/sysnotify/NotificationHandler;Lkotlin/jvm/functions/Function1;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public abstract fun unregister (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun update (Lde/connect2x/sysnotify/NotificationHandle;Lde/connect2x/sysnotify/Notification;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun update (Ljava/lang/String;Lde/connect2x/sysnotify/Notification;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class de/connect2x/sysnotify/NotificationHandler$DefaultImpls {
+	public static fun getHandle (Lde/connect2x/sysnotify/NotificationHandler;Ljava/lang/String;)Lde/connect2x/sysnotify/NotificationHandle;
+	public static fun pop (Lde/connect2x/sysnotify/NotificationHandler;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun push$default (Lde/connect2x/sysnotify/NotificationHandler;Lde/connect2x/sysnotify/Notification;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static fun requestPermissions (Lde/connect2x/sysnotify/NotificationHandler;Lkotlin/jvm/functions/Function1;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun requestPermissions$default (Lde/connect2x/sysnotify/NotificationHandler;Lkotlin/jvm/functions/Function1;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static fun update (Lde/connect2x/sysnotify/NotificationHandler;Lde/connect2x/sysnotify/NotificationHandle;Lde/connect2x/sysnotify/Notification;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static fun update (Lde/connect2x/sysnotify/NotificationHandler;Ljava/lang/String;Lde/connect2x/sysnotify/Notification;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class de/connect2x/sysnotify/NotificationHandler$Impl {
+	public static final fun NotificationHandler (Ljava/lang/String;Ljava/lang/String;Lde/connect2x/sysnotify/NotificationPriority;Ljava/lang/String;)Lde/connect2x/sysnotify/NotificationHandler;
+	public static synthetic fun NotificationHandler$default (Ljava/lang/String;Ljava/lang/String;Lde/connect2x/sysnotify/NotificationPriority;Ljava/lang/String;ILjava/lang/Object;)Lde/connect2x/sysnotify/NotificationHandler;
+	public static final fun withActivationHandler (Lde/connect2x/sysnotify/NotificationHandler;Lkotlin/jvm/functions/Function1;)Lde/connect2x/sysnotify/NotificationHandler;
+}
+
+public final class de/connect2x/sysnotify/NotificationIcon {
+	public static final field Companion Lde/connect2x/sysnotify/NotificationIcon$Companion;
+	public fun <init> ([BII)V
+	public final fun component1 ()[B
+	public final fun component2 ()I
+	public final fun component3 ()I
+	public final fun copy ([BII)Lde/connect2x/sysnotify/NotificationIcon;
+	public static synthetic fun copy$default (Lde/connect2x/sysnotify/NotificationIcon;[BIIILjava/lang/Object;)Lde/connect2x/sysnotify/NotificationIcon;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getData ()[B
+	public final fun getHeight ()I
+	public final fun getWidth ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class de/connect2x/sysnotify/NotificationIcon$Companion {
+}
+
+public final class de/connect2x/sysnotify/NotificationIconKt {
+	public static final fun fromBufferedImage (Lde/connect2x/sysnotify/NotificationIcon$Companion;Ljava/awt/image/BufferedImage;)Lde/connect2x/sysnotify/NotificationIcon;
+}
+
+public final class de/connect2x/sysnotify/NotificationPlatform : java/lang/Enum {
+	public static final field ANDROID Lde/connect2x/sysnotify/NotificationPlatform;
+	public static final field APPLE Lde/connect2x/sysnotify/NotificationPlatform;
+	public static final field LINUX Lde/connect2x/sysnotify/NotificationPlatform;
+	public static final field UNKNOWN Lde/connect2x/sysnotify/NotificationPlatform;
+	public static final field WEB Lde/connect2x/sysnotify/NotificationPlatform;
+	public static final field WINDOWS Lde/connect2x/sysnotify/NotificationPlatform;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lde/connect2x/sysnotify/NotificationPlatform;
+	public static fun values ()[Lde/connect2x/sysnotify/NotificationPlatform;
+}
+
+public final class de/connect2x/sysnotify/NotificationPriority : java/lang/Enum {
+	public static final field DEFAULT Lde/connect2x/sysnotify/NotificationPriority;
+	public static final field HIGH Lde/connect2x/sysnotify/NotificationPriority;
+	public static final field LOW Lde/connect2x/sysnotify/NotificationPriority;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lde/connect2x/sysnotify/NotificationPriority;
+	public static fun values ()[Lde/connect2x/sysnotify/NotificationPriority;
+}
+
+public abstract interface annotation class de/connect2x/sysnotify/SysnotifyPrivateApi : java/lang/annotation/Annotation {
+}
+

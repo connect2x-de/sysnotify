@@ -24,7 +24,7 @@ variables:
 .artifact-reports: &artifact-reports
   name: reports
   when: always
-  paths: [ "**/build/reports" ]
+  paths: [ "**/build/reports", "**/build/kotlin/abi-legacy" ]
   reports:
     junit: "**/build/test-results/**/TEST-*.xml"
 
@@ -125,6 +125,19 @@ test:windows:
     - *if-merge-request-or-main
   script:
     - ./gradlew :sysnotify:jvmTest :sysnotify:mingwX64Test --stacktrace
+
+# only on mac since it can emulate all targets
+checkAbi:
+  stage: test
+  interruptible: true
+  timeout: 1h
+  needs: [ "build:mac" ]
+  tags: [ "connect2x-mac" ]
+  artifacts: *artifact-reports
+  rules:
+    - *if-merge-request-or-main
+  script:
+    - ./gradlew :sysnotify:checkLegacyAbi --stacktrace
 
 security:dependencies:
   stage: security

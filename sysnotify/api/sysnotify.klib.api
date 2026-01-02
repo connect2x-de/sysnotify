@@ -1,0 +1,270 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, iosX64, js, linuxArm64, linuxX64, macosArm64, macosX64, mingwX64]
+// Alias: apple => [iosArm64, iosSimulatorArm64, iosX64, macosArm64, macosX64]
+// Alias: linux => [linuxArm64, linuxX64]
+// Alias: macos => [macosArm64, macosX64]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <de.connect2x:sysnotify>
+open annotation class de.connect2x.sysnotify/SysnotifyPrivateApi : kotlin/Annotation { // de.connect2x.sysnotify/SysnotifyPrivateApi|null[0]
+    constructor <init>() // de.connect2x.sysnotify/SysnotifyPrivateApi.<init>|<init>(){}[0]
+}
+
+final enum class de.connect2x.sysnotify/ColorFormat : kotlin/Enum<de.connect2x.sysnotify/ColorFormat> { // de.connect2x.sysnotify/ColorFormat|null[0]
+    enum entry ARGB // de.connect2x.sysnotify/ColorFormat.ARGB|null[0]
+    enum entry RGBA // de.connect2x.sysnotify/ColorFormat.RGBA|null[0]
+
+    final val alpha // de.connect2x.sysnotify/ColorFormat.alpha|{}alpha[0]
+        final fun <get-alpha>(): kotlin/Int // de.connect2x.sysnotify/ColorFormat.alpha.<get-alpha>|<get-alpha>(){}[0]
+    final val blue // de.connect2x.sysnotify/ColorFormat.blue|{}blue[0]
+        final fun <get-blue>(): kotlin/Int // de.connect2x.sysnotify/ColorFormat.blue.<get-blue>|<get-blue>(){}[0]
+    final val entries // de.connect2x.sysnotify/ColorFormat.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<de.connect2x.sysnotify/ColorFormat> // de.connect2x.sysnotify/ColorFormat.entries.<get-entries>|<get-entries>#static(){}[0]
+    final val green // de.connect2x.sysnotify/ColorFormat.green|{}green[0]
+        final fun <get-green>(): kotlin/Int // de.connect2x.sysnotify/ColorFormat.green.<get-green>|<get-green>(){}[0]
+    final val red // de.connect2x.sysnotify/ColorFormat.red|{}red[0]
+        final fun <get-red>(): kotlin/Int // de.connect2x.sysnotify/ColorFormat.red.<get-red>|<get-red>(){}[0]
+
+    final fun valueOf(kotlin/String): de.connect2x.sysnotify/ColorFormat // de.connect2x.sysnotify/ColorFormat.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<de.connect2x.sysnotify/ColorFormat> // de.connect2x.sysnotify/ColorFormat.values|values#static(){}[0]
+}
+
+final enum class de.connect2x.sysnotify/NotificationPlatform : kotlin/Enum<de.connect2x.sysnotify/NotificationPlatform> { // de.connect2x.sysnotify/NotificationPlatform|null[0]
+    enum entry ANDROID // de.connect2x.sysnotify/NotificationPlatform.ANDROID|null[0]
+    enum entry APPLE // de.connect2x.sysnotify/NotificationPlatform.APPLE|null[0]
+    enum entry LINUX // de.connect2x.sysnotify/NotificationPlatform.LINUX|null[0]
+    enum entry UNKNOWN // de.connect2x.sysnotify/NotificationPlatform.UNKNOWN|null[0]
+    enum entry WEB // de.connect2x.sysnotify/NotificationPlatform.WEB|null[0]
+    enum entry WINDOWS // de.connect2x.sysnotify/NotificationPlatform.WINDOWS|null[0]
+
+    final val entries // de.connect2x.sysnotify/NotificationPlatform.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<de.connect2x.sysnotify/NotificationPlatform> // de.connect2x.sysnotify/NotificationPlatform.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): de.connect2x.sysnotify/NotificationPlatform // de.connect2x.sysnotify/NotificationPlatform.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<de.connect2x.sysnotify/NotificationPlatform> // de.connect2x.sysnotify/NotificationPlatform.values|values#static(){}[0]
+}
+
+final enum class de.connect2x.sysnotify/NotificationPriority : kotlin/Enum<de.connect2x.sysnotify/NotificationPriority> { // de.connect2x.sysnotify/NotificationPriority|null[0]
+    enum entry DEFAULT // de.connect2x.sysnotify/NotificationPriority.DEFAULT|null[0]
+    enum entry HIGH // de.connect2x.sysnotify/NotificationPriority.HIGH|null[0]
+    enum entry LOW // de.connect2x.sysnotify/NotificationPriority.LOW|null[0]
+
+    final val entries // de.connect2x.sysnotify/NotificationPriority.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<de.connect2x.sysnotify/NotificationPriority> // de.connect2x.sysnotify/NotificationPriority.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): de.connect2x.sysnotify/NotificationPriority // de.connect2x.sysnotify/NotificationPriority.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<de.connect2x.sysnotify/NotificationPriority> // de.connect2x.sysnotify/NotificationPriority.values|values#static(){}[0]
+}
+
+abstract interface de.connect2x.sysnotify/NotificationHandle { // de.connect2x.sysnotify/NotificationHandle|null[0]
+    abstract val tag // de.connect2x.sysnotify/NotificationHandle.tag|{}tag[0]
+        abstract fun <get-tag>(): kotlin/String // de.connect2x.sysnotify/NotificationHandle.tag.<get-tag>|<get-tag>(){}[0]
+    open val isValid // de.connect2x.sysnotify/NotificationHandle.isValid|{}isValid[0]
+        open fun <get-isValid>(): kotlin/Boolean // de.connect2x.sysnotify/NotificationHandle.isValid.<get-isValid>|<get-isValid>(){}[0]
+
+    final object INVALID : de.connect2x.sysnotify/NotificationHandle { // de.connect2x.sysnotify/NotificationHandle.INVALID|null[0]
+        final val tag // de.connect2x.sysnotify/NotificationHandle.INVALID.tag|{}tag[0]
+            final fun <get-tag>(): kotlin/String // de.connect2x.sysnotify/NotificationHandle.INVALID.tag.<get-tag>|<get-tag>(){}[0]
+    }
+}
+
+abstract interface de.connect2x.sysnotify/NotificationHandler : kotlin/AutoCloseable { // de.connect2x.sysnotify/NotificationHandler|null[0]
+    abstract val appId // de.connect2x.sysnotify/NotificationHandler.appId|{}appId[0]
+        abstract fun <get-appId>(): kotlin/String // de.connect2x.sysnotify/NotificationHandler.appId.<get-appId>|<get-appId>(){}[0]
+    abstract val capabilities // de.connect2x.sysnotify/NotificationHandler.capabilities|{}capabilities[0]
+        abstract fun <get-capabilities>(): de.connect2x.sysnotify/NotificationCapabilities // de.connect2x.sysnotify/NotificationHandler.capabilities.<get-capabilities>|<get-capabilities>(){}[0]
+    abstract val hasPermissions // de.connect2x.sysnotify/NotificationHandler.hasPermissions|{}hasPermissions[0]
+        abstract fun <get-hasPermissions>(): kotlin/Boolean // de.connect2x.sysnotify/NotificationHandler.hasPermissions.<get-hasPermissions>|<get-hasPermissions>(){}[0]
+    abstract val id // de.connect2x.sysnotify/NotificationHandler.id|{}id[0]
+        abstract fun <get-id>(): kotlin/String // de.connect2x.sysnotify/NotificationHandler.id.<get-id>|<get-id>(){}[0]
+    abstract val name // de.connect2x.sysnotify/NotificationHandler.name|{}name[0]
+        abstract fun <get-name>(): kotlin/String // de.connect2x.sysnotify/NotificationHandler.name.<get-name>|<get-name>(){}[0]
+    abstract val platform // de.connect2x.sysnotify/NotificationHandler.platform|{}platform[0]
+        abstract fun <get-platform>(): de.connect2x.sysnotify/NotificationPlatform // de.connect2x.sysnotify/NotificationHandler.platform.<get-platform>|<get-platform>(){}[0]
+    abstract val priority // de.connect2x.sysnotify/NotificationHandler.priority|{}priority[0]
+        abstract fun <get-priority>(): de.connect2x.sysnotify/NotificationPriority // de.connect2x.sysnotify/NotificationHandler.priority.<get-priority>|<get-priority>(){}[0]
+
+    abstract fun close() // de.connect2x.sysnotify/NotificationHandler.close|close(){}[0]
+    abstract suspend fun clearAll() // de.connect2x.sysnotify/NotificationHandler.clearAll|clearAll(){}[0]
+    abstract suspend fun pop(de.connect2x.sysnotify/NotificationHandle) // de.connect2x.sysnotify/NotificationHandler.pop|pop(de.connect2x.sysnotify.NotificationHandle){}[0]
+    abstract suspend fun push(de.connect2x.sysnotify/Notification, kotlin/String = ...): de.connect2x.sysnotify/NotificationHandle // de.connect2x.sysnotify/NotificationHandler.push|push(de.connect2x.sysnotify.Notification;kotlin.String){}[0]
+    abstract suspend fun unregister() // de.connect2x.sysnotify/NotificationHandler.unregister|unregister(){}[0]
+    open fun getHandle(kotlin/String): de.connect2x.sysnotify/NotificationHandle // de.connect2x.sysnotify/NotificationHandler.getHandle|getHandle(kotlin.String){}[0]
+    open suspend fun pop(kotlin/String) // de.connect2x.sysnotify/NotificationHandler.pop|pop(kotlin.String){}[0]
+    open suspend fun requestPermissions(kotlin/Function1<kotlin/Boolean, kotlin/Unit> = ...) // de.connect2x.sysnotify/NotificationHandler.requestPermissions|requestPermissions(kotlin.Function1<kotlin.Boolean,kotlin.Unit>){}[0]
+    open suspend fun update(de.connect2x.sysnotify/NotificationHandle, de.connect2x.sysnotify/Notification): de.connect2x.sysnotify/NotificationHandle // de.connect2x.sysnotify/NotificationHandler.update|update(de.connect2x.sysnotify.NotificationHandle;de.connect2x.sysnotify.Notification){}[0]
+    open suspend fun update(kotlin/String, de.connect2x.sysnotify/Notification): de.connect2x.sysnotify/NotificationHandle // de.connect2x.sysnotify/NotificationHandler.update|update(kotlin.String;de.connect2x.sysnotify.Notification){}[0]
+}
+
+final class de.connect2x.sysnotify/Notification { // de.connect2x.sysnotify/Notification|null[0]
+    constructor <init>(kotlin/String? = ..., kotlin/String? = ..., de.connect2x.sysnotify/NotificationIcon? = ..., kotlin/String? = ..., kotlin/Boolean = ..., de.connect2x.sysnotify/NotificationPriority = ..., kotlin/Boolean = ..., kotlin/String? = ..., kotlin/String? = ...) // de.connect2x.sysnotify/Notification.<init>|<init>(kotlin.String?;kotlin.String?;de.connect2x.sysnotify.NotificationIcon?;kotlin.String?;kotlin.Boolean;de.connect2x.sysnotify.NotificationPriority;kotlin.Boolean;kotlin.String?;kotlin.String?){}[0]
+
+    final val callbackData // de.connect2x.sysnotify/Notification.callbackData|{}callbackData[0]
+        final fun <get-callbackData>(): kotlin/String? // de.connect2x.sysnotify/Notification.callbackData.<get-callbackData>|<get-callbackData>(){}[0]
+    final val description // de.connect2x.sysnotify/Notification.description|{}description[0]
+        final fun <get-description>(): kotlin/String? // de.connect2x.sysnotify/Notification.description.<get-description>|<get-description>(){}[0]
+    final val dismissible // de.connect2x.sysnotify/Notification.dismissible|{}dismissible[0]
+        final fun <get-dismissible>(): kotlin/Boolean // de.connect2x.sysnotify/Notification.dismissible.<get-dismissible>|<get-dismissible>(){}[0]
+    final val group // de.connect2x.sysnotify/Notification.group|{}group[0]
+        final fun <get-group>(): kotlin/String? // de.connect2x.sysnotify/Notification.group.<get-group>|<get-group>(){}[0]
+    final val icon // de.connect2x.sysnotify/Notification.icon|{}icon[0]
+        final fun <get-icon>(): de.connect2x.sysnotify/NotificationIcon? // de.connect2x.sysnotify/Notification.icon.<get-icon>|<get-icon>(){}[0]
+    final val playSound // de.connect2x.sysnotify/Notification.playSound|{}playSound[0]
+        final fun <get-playSound>(): kotlin/Boolean // de.connect2x.sysnotify/Notification.playSound.<get-playSound>|<get-playSound>(){}[0]
+    final val priority // de.connect2x.sysnotify/Notification.priority|{}priority[0]
+        final fun <get-priority>(): de.connect2x.sysnotify/NotificationPriority // de.connect2x.sysnotify/Notification.priority.<get-priority>|<get-priority>(){}[0]
+    final val soundPath // de.connect2x.sysnotify/Notification.soundPath|{}soundPath[0]
+        final fun <get-soundPath>(): kotlin/String? // de.connect2x.sysnotify/Notification.soundPath.<get-soundPath>|<get-soundPath>(){}[0]
+    final val title // de.connect2x.sysnotify/Notification.title|{}title[0]
+        final fun <get-title>(): kotlin/String? // de.connect2x.sysnotify/Notification.title.<get-title>|<get-title>(){}[0]
+
+    final fun component1(): kotlin/String? // de.connect2x.sysnotify/Notification.component1|component1(){}[0]
+    final fun component2(): kotlin/String? // de.connect2x.sysnotify/Notification.component2|component2(){}[0]
+    final fun component3(): de.connect2x.sysnotify/NotificationIcon? // de.connect2x.sysnotify/Notification.component3|component3(){}[0]
+    final fun component4(): kotlin/String? // de.connect2x.sysnotify/Notification.component4|component4(){}[0]
+    final fun component5(): kotlin/Boolean // de.connect2x.sysnotify/Notification.component5|component5(){}[0]
+    final fun component6(): de.connect2x.sysnotify/NotificationPriority // de.connect2x.sysnotify/Notification.component6|component6(){}[0]
+    final fun component7(): kotlin/Boolean // de.connect2x.sysnotify/Notification.component7|component7(){}[0]
+    final fun component8(): kotlin/String? // de.connect2x.sysnotify/Notification.component8|component8(){}[0]
+    final fun component9(): kotlin/String? // de.connect2x.sysnotify/Notification.component9|component9(){}[0]
+    final fun copy(kotlin/String? = ..., kotlin/String? = ..., de.connect2x.sysnotify/NotificationIcon? = ..., kotlin/String? = ..., kotlin/Boolean = ..., de.connect2x.sysnotify/NotificationPriority = ..., kotlin/Boolean = ..., kotlin/String? = ..., kotlin/String? = ...): de.connect2x.sysnotify/Notification // de.connect2x.sysnotify/Notification.copy|copy(kotlin.String?;kotlin.String?;de.connect2x.sysnotify.NotificationIcon?;kotlin.String?;kotlin.Boolean;de.connect2x.sysnotify.NotificationPriority;kotlin.Boolean;kotlin.String?;kotlin.String?){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // de.connect2x.sysnotify/Notification.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // de.connect2x.sysnotify/Notification.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // de.connect2x.sysnotify/Notification.toString|toString(){}[0]
+}
+
+final class de.connect2x.sysnotify/NotificationIcon { // de.connect2x.sysnotify/NotificationIcon|null[0]
+    constructor <init>(kotlin/ByteArray, kotlin/Int, kotlin/Int) // de.connect2x.sysnotify/NotificationIcon.<init>|<init>(kotlin.ByteArray;kotlin.Int;kotlin.Int){}[0]
+
+    final val data // de.connect2x.sysnotify/NotificationIcon.data|{}data[0]
+        final fun <get-data>(): kotlin/ByteArray // de.connect2x.sysnotify/NotificationIcon.data.<get-data>|<get-data>(){}[0]
+    final val height // de.connect2x.sysnotify/NotificationIcon.height|{}height[0]
+        final fun <get-height>(): kotlin/Int // de.connect2x.sysnotify/NotificationIcon.height.<get-height>|<get-height>(){}[0]
+    final val width // de.connect2x.sysnotify/NotificationIcon.width|{}width[0]
+        final fun <get-width>(): kotlin/Int // de.connect2x.sysnotify/NotificationIcon.width.<get-width>|<get-width>(){}[0]
+
+    final fun component1(): kotlin/ByteArray // de.connect2x.sysnotify/NotificationIcon.component1|component1(){}[0]
+    final fun component2(): kotlin/Int // de.connect2x.sysnotify/NotificationIcon.component2|component2(){}[0]
+    final fun component3(): kotlin/Int // de.connect2x.sysnotify/NotificationIcon.component3|component3(){}[0]
+    final fun copy(kotlin/ByteArray = ..., kotlin/Int = ..., kotlin/Int = ...): de.connect2x.sysnotify/NotificationIcon // de.connect2x.sysnotify/NotificationIcon.copy|copy(kotlin.ByteArray;kotlin.Int;kotlin.Int){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // de.connect2x.sysnotify/NotificationIcon.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // de.connect2x.sysnotify/NotificationIcon.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // de.connect2x.sysnotify/NotificationIcon.toString|toString(){}[0]
+
+    final object Companion // de.connect2x.sysnotify/NotificationIcon.Companion|null[0]
+}
+
+final value class de.connect2x.sysnotify/NotificationCapabilities { // de.connect2x.sysnotify/NotificationCapabilities|null[0]
+    constructor <init>(kotlin/Boolean, kotlin/Boolean, kotlin/Boolean, kotlin/Boolean, kotlin/Boolean, kotlin/Boolean, kotlin/Boolean, kotlin/Boolean) // de.connect2x.sysnotify/NotificationCapabilities.<init>|<init>(kotlin.Boolean;kotlin.Boolean;kotlin.Boolean;kotlin.Boolean;kotlin.Boolean;kotlin.Boolean;kotlin.Boolean;kotlin.Boolean){}[0]
+    constructor <init>(kotlin/UInt) // de.connect2x.sysnotify/NotificationCapabilities.<init>|<init>(kotlin.UInt){}[0]
+
+    final val isActionSupported // de.connect2x.sysnotify/NotificationCapabilities.isActionSupported|{}isActionSupported[0]
+        final inline fun <get-isActionSupported>(): kotlin/Boolean // de.connect2x.sysnotify/NotificationCapabilities.isActionSupported.<get-isActionSupported>|<get-isActionSupported>(){}[0]
+    final val isCustomSoundSupported // de.connect2x.sysnotify/NotificationCapabilities.isCustomSoundSupported|{}isCustomSoundSupported[0]
+        final inline fun <get-isCustomSoundSupported>(): kotlin/Boolean // de.connect2x.sysnotify/NotificationCapabilities.isCustomSoundSupported.<get-isCustomSoundSupported>|<get-isCustomSoundSupported>(){}[0]
+    final val isDescriptionSupported // de.connect2x.sysnotify/NotificationCapabilities.isDescriptionSupported|{}isDescriptionSupported[0]
+        final inline fun <get-isDescriptionSupported>(): kotlin/Boolean // de.connect2x.sysnotify/NotificationCapabilities.isDescriptionSupported.<get-isDescriptionSupported>|<get-isDescriptionSupported>(){}[0]
+    final val isGroupingSupported // de.connect2x.sysnotify/NotificationCapabilities.isGroupingSupported|{}isGroupingSupported[0]
+        final inline fun <get-isGroupingSupported>(): kotlin/Boolean // de.connect2x.sysnotify/NotificationCapabilities.isGroupingSupported.<get-isGroupingSupported>|<get-isGroupingSupported>(){}[0]
+    final val isIconSupported // de.connect2x.sysnotify/NotificationCapabilities.isIconSupported|{}isIconSupported[0]
+        final inline fun <get-isIconSupported>(): kotlin/Boolean // de.connect2x.sysnotify/NotificationCapabilities.isIconSupported.<get-isIconSupported>|<get-isIconSupported>(){}[0]
+    final val isPopSupported // de.connect2x.sysnotify/NotificationCapabilities.isPopSupported|{}isPopSupported[0]
+        final inline fun <get-isPopSupported>(): kotlin/Boolean // de.connect2x.sysnotify/NotificationCapabilities.isPopSupported.<get-isPopSupported>|<get-isPopSupported>(){}[0]
+    final val isSoundSupported // de.connect2x.sysnotify/NotificationCapabilities.isSoundSupported|{}isSoundSupported[0]
+        final inline fun <get-isSoundSupported>(): kotlin/Boolean // de.connect2x.sysnotify/NotificationCapabilities.isSoundSupported.<get-isSoundSupported>|<get-isSoundSupported>(){}[0]
+    final val isSupported // de.connect2x.sysnotify/NotificationCapabilities.isSupported|{}isSupported[0]
+        final inline fun <get-isSupported>(): kotlin/Boolean // de.connect2x.sysnotify/NotificationCapabilities.isSupported.<get-isSupported>|<get-isSupported>(){}[0]
+    final val isTitleSupported // de.connect2x.sysnotify/NotificationCapabilities.isTitleSupported|{}isTitleSupported[0]
+        final inline fun <get-isTitleSupported>(): kotlin/Boolean // de.connect2x.sysnotify/NotificationCapabilities.isTitleSupported.<get-isTitleSupported>|<get-isTitleSupported>(){}[0]
+    final val mask // de.connect2x.sysnotify/NotificationCapabilities.mask|{}mask[0]
+        final fun <get-mask>(): kotlin/UInt // de.connect2x.sysnotify/NotificationCapabilities.mask.<get-mask>|<get-mask>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // de.connect2x.sysnotify/NotificationCapabilities.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // de.connect2x.sysnotify/NotificationCapabilities.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // de.connect2x.sysnotify/NotificationCapabilities.toString|toString(){}[0]
+
+    final object Companion { // de.connect2x.sysnotify/NotificationCapabilities.Companion|null[0]
+        final const val IS_ACTION_SUPPORTED // de.connect2x.sysnotify/NotificationCapabilities.Companion.IS_ACTION_SUPPORTED|{}IS_ACTION_SUPPORTED[0]
+            final fun <get-IS_ACTION_SUPPORTED>(): kotlin/UInt // de.connect2x.sysnotify/NotificationCapabilities.Companion.IS_ACTION_SUPPORTED.<get-IS_ACTION_SUPPORTED>|<get-IS_ACTION_SUPPORTED>(){}[0]
+        final const val IS_CUSTOM_SOUND_SUPPORTED // de.connect2x.sysnotify/NotificationCapabilities.Companion.IS_CUSTOM_SOUND_SUPPORTED|{}IS_CUSTOM_SOUND_SUPPORTED[0]
+            final fun <get-IS_CUSTOM_SOUND_SUPPORTED>(): kotlin/UInt // de.connect2x.sysnotify/NotificationCapabilities.Companion.IS_CUSTOM_SOUND_SUPPORTED.<get-IS_CUSTOM_SOUND_SUPPORTED>|<get-IS_CUSTOM_SOUND_SUPPORTED>(){}[0]
+        final const val IS_DESCRIPTION_SUPPORTED // de.connect2x.sysnotify/NotificationCapabilities.Companion.IS_DESCRIPTION_SUPPORTED|{}IS_DESCRIPTION_SUPPORTED[0]
+            final fun <get-IS_DESCRIPTION_SUPPORTED>(): kotlin/UInt // de.connect2x.sysnotify/NotificationCapabilities.Companion.IS_DESCRIPTION_SUPPORTED.<get-IS_DESCRIPTION_SUPPORTED>|<get-IS_DESCRIPTION_SUPPORTED>(){}[0]
+        final const val IS_GROUPING_SUPPORTED // de.connect2x.sysnotify/NotificationCapabilities.Companion.IS_GROUPING_SUPPORTED|{}IS_GROUPING_SUPPORTED[0]
+            final fun <get-IS_GROUPING_SUPPORTED>(): kotlin/UInt // de.connect2x.sysnotify/NotificationCapabilities.Companion.IS_GROUPING_SUPPORTED.<get-IS_GROUPING_SUPPORTED>|<get-IS_GROUPING_SUPPORTED>(){}[0]
+        final const val IS_ICON_SUPPORTED // de.connect2x.sysnotify/NotificationCapabilities.Companion.IS_ICON_SUPPORTED|{}IS_ICON_SUPPORTED[0]
+            final fun <get-IS_ICON_SUPPORTED>(): kotlin/UInt // de.connect2x.sysnotify/NotificationCapabilities.Companion.IS_ICON_SUPPORTED.<get-IS_ICON_SUPPORTED>|<get-IS_ICON_SUPPORTED>(){}[0]
+        final const val IS_POP_SUPPORTED // de.connect2x.sysnotify/NotificationCapabilities.Companion.IS_POP_SUPPORTED|{}IS_POP_SUPPORTED[0]
+            final fun <get-IS_POP_SUPPORTED>(): kotlin/UInt // de.connect2x.sysnotify/NotificationCapabilities.Companion.IS_POP_SUPPORTED.<get-IS_POP_SUPPORTED>|<get-IS_POP_SUPPORTED>(){}[0]
+        final const val IS_SOUND_SUPPORTED // de.connect2x.sysnotify/NotificationCapabilities.Companion.IS_SOUND_SUPPORTED|{}IS_SOUND_SUPPORTED[0]
+            final fun <get-IS_SOUND_SUPPORTED>(): kotlin/UInt // de.connect2x.sysnotify/NotificationCapabilities.Companion.IS_SOUND_SUPPORTED.<get-IS_SOUND_SUPPORTED>|<get-IS_SOUND_SUPPORTED>(){}[0]
+        final const val IS_TITLE_SUPPORTED // de.connect2x.sysnotify/NotificationCapabilities.Companion.IS_TITLE_SUPPORTED|{}IS_TITLE_SUPPORTED[0]
+            final fun <get-IS_TITLE_SUPPORTED>(): kotlin/UInt // de.connect2x.sysnotify/NotificationCapabilities.Companion.IS_TITLE_SUPPORTED.<get-IS_TITLE_SUPPORTED>|<get-IS_TITLE_SUPPORTED>(){}[0]
+
+        final val ALL // de.connect2x.sysnotify/NotificationCapabilities.Companion.ALL|{}ALL[0]
+            final fun <get-ALL>(): kotlin/UInt // de.connect2x.sysnotify/NotificationCapabilities.Companion.ALL.<get-ALL>|<get-ALL>(){}[0]
+    }
+}
+
+final object de.connect2x.sysnotify/NoopNotificationHandler : de.connect2x.sysnotify/NotificationHandler { // de.connect2x.sysnotify/NoopNotificationHandler|null[0]
+    final val appId // de.connect2x.sysnotify/NoopNotificationHandler.appId|{}appId[0]
+        final fun <get-appId>(): kotlin/String // de.connect2x.sysnotify/NoopNotificationHandler.appId.<get-appId>|<get-appId>(){}[0]
+    final val capabilities // de.connect2x.sysnotify/NoopNotificationHandler.capabilities|{}capabilities[0]
+        final fun <get-capabilities>(): de.connect2x.sysnotify/NotificationCapabilities // de.connect2x.sysnotify/NoopNotificationHandler.capabilities.<get-capabilities>|<get-capabilities>(){}[0]
+    final val hasPermissions // de.connect2x.sysnotify/NoopNotificationHandler.hasPermissions|{}hasPermissions[0]
+        final fun <get-hasPermissions>(): kotlin/Boolean // de.connect2x.sysnotify/NoopNotificationHandler.hasPermissions.<get-hasPermissions>|<get-hasPermissions>(){}[0]
+    final val id // de.connect2x.sysnotify/NoopNotificationHandler.id|{}id[0]
+        final fun <get-id>(): kotlin/String // de.connect2x.sysnotify/NoopNotificationHandler.id.<get-id>|<get-id>(){}[0]
+    final val name // de.connect2x.sysnotify/NoopNotificationHandler.name|{}name[0]
+        final fun <get-name>(): kotlin/String // de.connect2x.sysnotify/NoopNotificationHandler.name.<get-name>|<get-name>(){}[0]
+    final val platform // de.connect2x.sysnotify/NoopNotificationHandler.platform|{}platform[0]
+        final fun <get-platform>(): de.connect2x.sysnotify/NotificationPlatform // de.connect2x.sysnotify/NoopNotificationHandler.platform.<get-platform>|<get-platform>(){}[0]
+    final val priority // de.connect2x.sysnotify/NoopNotificationHandler.priority|{}priority[0]
+        final fun <get-priority>(): de.connect2x.sysnotify/NotificationPriority // de.connect2x.sysnotify/NoopNotificationHandler.priority.<get-priority>|<get-priority>(){}[0]
+
+    final fun close() // de.connect2x.sysnotify/NoopNotificationHandler.close|close(){}[0]
+    final fun getHandle(kotlin/String): de.connect2x.sysnotify/NotificationHandle // de.connect2x.sysnotify/NoopNotificationHandler.getHandle|getHandle(kotlin.String){}[0]
+    final suspend fun clearAll() // de.connect2x.sysnotify/NoopNotificationHandler.clearAll|clearAll(){}[0]
+    final suspend fun pop(de.connect2x.sysnotify/NotificationHandle) // de.connect2x.sysnotify/NoopNotificationHandler.pop|pop(de.connect2x.sysnotify.NotificationHandle){}[0]
+    final suspend fun push(de.connect2x.sysnotify/Notification, kotlin/String): de.connect2x.sysnotify/NotificationHandle // de.connect2x.sysnotify/NoopNotificationHandler.push|push(de.connect2x.sysnotify.Notification;kotlin.String){}[0]
+    final suspend fun unregister() // de.connect2x.sysnotify/NoopNotificationHandler.unregister|unregister(){}[0]
+    final suspend fun update(de.connect2x.sysnotify/NotificationHandle, de.connect2x.sysnotify/Notification): de.connect2x.sysnotify/NotificationHandle // de.connect2x.sysnotify/NoopNotificationHandler.update|update(de.connect2x.sysnotify.NotificationHandle;de.connect2x.sysnotify.Notification){}[0]
+}
+
+final fun (de.connect2x.sysnotify/NotificationHandler).de.connect2x.sysnotify/withActivationHandler(kotlin/Function1<de.connect2x.sysnotify/Notification, kotlin/Unit>): de.connect2x.sysnotify/NotificationHandler // de.connect2x.sysnotify/withActivationHandler|withActivationHandler@de.connect2x.sysnotify.NotificationHandler(kotlin.Function1<de.connect2x.sysnotify.Notification,kotlin.Unit>){}[0]
+final fun de.connect2x.sysnotify/NotificationHandler(kotlin/String, kotlin/String = ..., de.connect2x.sysnotify/NotificationPriority = ..., kotlin/String = ...): de.connect2x.sysnotify/NotificationHandler // de.connect2x.sysnotify/NotificationHandler|NotificationHandler(kotlin.String;kotlin.String;de.connect2x.sysnotify.NotificationPriority;kotlin.String){}[0]
+final inline fun <#A: reified de.connect2x.sysnotify/NotificationHandler> (de.connect2x.sysnotify/NotificationHandler).de.connect2x.sysnotify/check() // de.connect2x.sysnotify/check|check@de.connect2x.sysnotify.NotificationHandler(){0§<de.connect2x.sysnotify.NotificationHandler>}[0]
+final inline fun de.connect2x.sysnotify/pack(de.connect2x.sysnotify/ColorFormat, kotlin/UByte, kotlin/UByte, kotlin/UByte, kotlin/UByte): kotlin/UInt // de.connect2x.sysnotify/pack|pack(de.connect2x.sysnotify.ColorFormat;kotlin.UByte;kotlin.UByte;kotlin.UByte;kotlin.UByte){}[0]
+final inline fun de.connect2x.sysnotify/swizzle(de.connect2x.sysnotify/ColorFormat, de.connect2x.sysnotify/ColorFormat, kotlin/UInt): kotlin/UInt // de.connect2x.sysnotify/swizzle|swizzle(de.connect2x.sysnotify.ColorFormat;de.connect2x.sysnotify.ColorFormat;kotlin.UInt){}[0]
+final inline fun de.connect2x.sysnotify/unpackAlpha(de.connect2x.sysnotify/ColorFormat, kotlin/UInt): kotlin/UByte // de.connect2x.sysnotify/unpackAlpha|unpackAlpha(de.connect2x.sysnotify.ColorFormat;kotlin.UInt){}[0]
+final inline fun de.connect2x.sysnotify/unpackBlue(de.connect2x.sysnotify/ColorFormat, kotlin/UInt): kotlin/UByte // de.connect2x.sysnotify/unpackBlue|unpackBlue(de.connect2x.sysnotify.ColorFormat;kotlin.UInt){}[0]
+final inline fun de.connect2x.sysnotify/unpackGreen(de.connect2x.sysnotify/ColorFormat, kotlin/UInt): kotlin/UByte // de.connect2x.sysnotify/unpackGreen|unpackGreen(de.connect2x.sysnotify.ColorFormat;kotlin.UInt){}[0]
+final inline fun de.connect2x.sysnotify/unpackRed(de.connect2x.sysnotify/ColorFormat, kotlin/UInt): kotlin/UByte // de.connect2x.sysnotify/unpackRed|unpackRed(de.connect2x.sysnotify.ColorFormat;kotlin.UInt){}[0]
+
+// Targets: [apple]
+final val de.connect2x.sysnotify/relevanceScore // de.connect2x.sysnotify/relevanceScore|@de.connect2x.sysnotify.NotificationPriority{}relevanceScore[0]
+    final inline fun (de.connect2x.sysnotify/NotificationPriority).<get-relevanceScore>(): kotlin/Double // de.connect2x.sysnotify/relevanceScore.<get-relevanceScore>|<get-relevanceScore>@de.connect2x.sysnotify.NotificationPriority(){}[0]
+
+// Targets: [linux, macos, mingwX64]
+final fun de.connect2x.sysnotify/jniOnLoad(kotlinx.cinterop/CPointerVarOf<kotlinx.cinterop/CPointer<jni/JNIInvokeInterface_>>, kotlinx.cinterop/CPointer<out kotlinx.cinterop/CPointed>): kotlin/Int // de.connect2x.sysnotify/jniOnLoad|jniOnLoad(kotlinx.cinterop.CPointerVarOf<kotlinx.cinterop.CPointer<jni.JNIInvokeInterface_>>;kotlinx.cinterop.CPointer<out|kotlinx.cinterop.CPointed>){}[0]
+
+// Targets: [linux]
+final object de.connect2x.sysnotify/LibGObject { // de.connect2x.sysnotify/LibGObject|null[0]
+    final fun g_object_unref(kotlinx.cinterop/CPointer<libnotify/_GObject>?) // de.connect2x.sysnotify/LibGObject.g_object_unref|g_object_unref(kotlinx.cinterop.CPointer<libnotify._GObject>?){}[0]
+    final fun g_signal_connect_data(kotlinx.cinterop/CPointer<libnotify/_GObject>?, kotlin/String, kotlinx.cinterop/CPointer<kotlinx.cinterop/CFunction<kotlin/Function0<kotlin/Unit>>>?, kotlinx.cinterop/CPointer<out kotlinx.cinterop/CPointed>?, kotlinx.cinterop/CPointer<kotlinx.cinterop/CFunction<kotlin/Function2<kotlinx.cinterop/CPointer<out kotlinx.cinterop/CPointed>?, kotlinx.cinterop/CPointer<libnotify/_GClosure>?, kotlin/Unit>>>?, kotlin/UInt): kotlin/ULong // de.connect2x.sysnotify/LibGObject.g_signal_connect_data|g_signal_connect_data(kotlinx.cinterop.CPointer<libnotify._GObject>?;kotlin.String;kotlinx.cinterop.CPointer<kotlinx.cinterop.CFunction<kotlin.Function0<kotlin.Unit>>>?;kotlinx.cinterop.CPointer<out|kotlinx.cinterop.CPointed>?;kotlinx.cinterop.CPointer<kotlinx.cinterop.CFunction<kotlin.Function2<kotlinx.cinterop.CPointer<out|kotlinx.cinterop.CPointed>?,kotlinx.cinterop.CPointer<libnotify._GClosure>?,kotlin.Unit>>>?;kotlin.UInt){}[0]
+}
+
+// Targets: [linux]
+final val de.connect2x.sysnotify/address // de.connect2x.sysnotify/address|@de.connect2x.sysnotify.NotificationHandle{}address[0]
+    final fun (de.connect2x.sysnotify/NotificationHandle).<get-address>(): kotlinx.cinterop/CPointer<libnotify/_NotifyNotification> // de.connect2x.sysnotify/address.<get-address>|<get-address>@de.connect2x.sysnotify.NotificationHandle(){}[0]
+
+// Targets: [linux]
+final val de.connect2x.sysnotify/urgency // de.connect2x.sysnotify/urgency|@de.connect2x.sysnotify.NotificationPriority{}urgency[0]
+    final inline fun (de.connect2x.sysnotify/NotificationPriority).<get-urgency>(): libnotify/NotifyUrgency // de.connect2x.sysnotify/urgency.<get-urgency>|<get-urgency>@de.connect2x.sysnotify.NotificationPriority(){}[0]
+
+// Targets: [js]
+final val de.connect2x.sysnotify/notification // de.connect2x.sysnotify/notification|@de.connect2x.sysnotify.NotificationHandle{}notification[0]
+    final fun (de.connect2x.sysnotify/NotificationHandle).<get-notification>(): org.w3c.notifications/Notification // de.connect2x.sysnotify/notification.<get-notification>|<get-notification>@de.connect2x.sysnotify.NotificationHandle(){}[0]
