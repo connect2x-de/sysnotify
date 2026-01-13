@@ -25,6 +25,6 @@ plugins {
 }
 
 allprojects {
-    group = "de.connect2x"
+    group = "de.connect2x.sysnotify"
     version = withVersionSuffix(rootProject.libs.versions.sysnotify)
 }

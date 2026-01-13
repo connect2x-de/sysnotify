@@ -67,7 +67,7 @@ kotlin {
         freeCompilerArgs.add("-opt-in=kotlin.uuid.ExperimentalUuidApi")
     }
     androidTarget {
-        publishLibraryVariants("release")
+        publishLibraryVariants("debug", "release")
     }
     jvm()
     js {
@@ -187,7 +187,7 @@ kotlin {
 }
 
 android {
-    namespace = "${rootProject.group}.${rootProject.name}"
+    namespace = rootProject.group.toString()
     compileSdk = sharedLibs.versions.androidCompileSDK.get().toInt()
     defaultConfig {
         minSdk = sharedLibs.versions.androidMinimalSDK.get().toInt()
