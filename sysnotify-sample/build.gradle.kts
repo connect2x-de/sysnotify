@@ -93,7 +93,7 @@ kotlin {
 }
 
 android {
-    namespace = "${rootProject.group}.${rootProject.name}.sample"
+    namespace = "${rootProject.group}.sample"
     compileSdk = sharedLibs.versions.androidCompileSDK.get().toInt()
 
     sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
@@ -101,7 +101,7 @@ android {
     sourceSets["main"].resources.srcDirs("src/commonMain/resources")
 
     defaultConfig {
-        applicationId = "${rootProject.group}.${rootProject.name}.sample"
+        applicationId = "${rootProject.group}.sample"
         minSdk = sharedLibs.versions.androidMinimalSDK.get().toInt()
         targetSdk = sharedLibs.versions.androidCompileSDK.get().toInt()
         versionCode = 1

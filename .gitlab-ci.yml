@@ -8,7 +8,6 @@ workflow:
 
 stages:
   - build
-  - test
   - security
   - publish
 
@@ -28,8 +27,7 @@ variables:
   reports:
     junit: "**/build/test-results/**/TEST-*.xml"
 
-.if-merge-request-or-main: &if-merge-request-or-main
-  - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+.if-merge-request: &if-merge-request
   - if: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME
   - if: $CI_PIPELINE_SOURCE == "schedule"
     when: never
@@ -50,24 +48,22 @@ build:windows:
   timeout: 2h
   tags: [ "saas-windows-medium-amd64" ]
   rules:
-    - *if-merge-request-or-main
+    - *if-merge-request
   script:
-    - ./gradlew
-      clean
-      :sysnotify:linkMingwX64
-      --stacktrace
+    - ./gradlew 
+      :sysnotify:linkMingwX64 
+      :sysnotify:mingwX64Test
 
 build:mac:
   stage: build
   interruptible: true
   tags: [ "connect2x-mac" ]
   rules:
-    - *if-merge-request-or-main
+    - *if-merge-request
   script:
     - ./gradlew
-      clean
       :sysnotify:link{MacosX64,MacosArm64,IosArm64,IosX64,IosSimulatorArm64}
-      --stacktrace
+      :sysnotify:{macosX64,iosX64}Test
 
 build:linux:
   stage: build
@@ -75,56 +71,15 @@ build:linux:
   tags: [ "connect2x-linux" ]
   image: $BUILD_LINUX_IMAGE_NAME
   rules:
-    - *if-merge-request-or-main
+    - *if-merge-request
   before_script:
     - apt update -y
     - apt install -y $LINUX_DEPENDENCIES
   script:
     - ./gradlew
-      clean
       :sysnotify:compile{ReleaseKotlinAndroid,KotlinJvm}
       :sysnotify:linkLinux{X64,Arm64}
-      --stacktrace
-
-test:linux:
-  stage: test
-  interruptible: true
-  timeout: 1h
-  needs: [ "build:linux" ]
-  tags: [ "connect2x-linux" ]
-  image: $BUILD_LINUX_IMAGE_NAME
-  artifacts: *artifact-reports
-  rules:
-    - *if-merge-request-or-main
-  before_script:
-    - apt update -y
-    - apt install -y $LINUX_DEPENDENCIES
-  script:
-    - ./gradlew :sysnotify:{jvm,linuxX64}Test --stacktrace
-
-test:mac:
-  stage: test
-  interruptible: true
-  timeout: 1h
-  needs: [ "build:mac" ]
-  tags: [ "connect2x-mac" ]
-  artifacts: *artifact-reports
-  rules:
-    - *if-merge-request-or-main
-  script:
-    - ./gradlew :sysnotify:{jvm,macosX64}Test --stacktrace
-
-test:windows:
-  stage: test
-  interruptible: true
-  timeout: 2h
-  needs: [ "build:windows" ]
-  tags: [ "saas-windows-medium-amd64" ]
-  artifacts: *artifact-reports
-  rules:
-    - *if-merge-request-or-main
-  script:
-    - ./gradlew :sysnotify:jvmTest :sysnotify:mingwX64Test --stacktrace
+      :sysnotify:{linuxX64,jvm}Test
 
 security:dependencies:
   stage: security
