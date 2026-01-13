@@ -17,9 +17,10 @@ import de.connect2x.conventions.GitLabPackage
 import de.connect2x.conventions.authenticatedPackageRegistry
 import de.connect2x.conventions.c2xOrganization
 import de.connect2x.conventions.configureJava
+import de.connect2x.conventions.enableAbiChecker
 import de.connect2x.conventions.gitlab
 import org.gradle.internal.extensions.stdlib.capitalized
-import org.jetbrains.kotlin.gradle.dsl.abi.ExperimentalAbiValidation
+import org.gradle.kotlin.dsl.abiValidation
 import org.jetbrains.kotlin.gradle.plugin.mpp.DefaultCInteropSettings
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.konan.target.Family
@@ -63,15 +64,9 @@ fun DefaultCInteropSettings.includePlatformBinaries(target: KotlinNativeTarget) 
 }
 
 kotlin {
-    val effectivelyPrivateAnnotation = "de.connect2x.sysnotify.SysnotifyPrivateApi"
-    @OptIn(ExperimentalAbiValidation::class)
-    abiValidation {
-        enabled = true
-        filters { excluded { annotatedWith.add(effectivelyPrivateAnnotation) } }
-    }
+    enableAbiChecker("SysnotifyPrivateApi")
     withSourcesJar(true)
     compilerOptions {
-        optIn.add(effectivelyPrivateAnnotation)
         freeCompilerArgs.add("-opt-in=kotlin.uuid.ExperimentalUuidApi")
     }
     androidTarget {
