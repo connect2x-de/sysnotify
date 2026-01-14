@@ -8,7 +8,7 @@
 // - Show manifest properties: true
 // - Show declarations: true
 
-// Library unique name: <de.connect2x:sysnotify>
+// Library unique name: <de.connect2x.sysnotify:sysnotify>
 open annotation class de.connect2x.sysnotify/SysnotifyPrivateApi : kotlin/Annotation { // de.connect2x.sysnotify/SysnotifyPrivateApi|null[0]
     constructor <init>() // de.connect2x.sysnotify/SysnotifyPrivateApi.<init>|<init>(){}[0]
 }
