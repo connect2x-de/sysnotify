@@ -1,5 +1,6 @@
 /*
- * Copyright 2025 connect2x GmbH
+ * Copyright 2026 connect2x GmbH
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -20,7 +21,6 @@ import de.connect2x.conventions.configureJava
 import de.connect2x.conventions.enableAbiChecker
 import de.connect2x.conventions.gitlab
 import org.gradle.internal.extensions.stdlib.capitalized
-import org.gradle.kotlin.dsl.abiValidation
 import org.jetbrains.kotlin.gradle.plugin.mpp.DefaultCInteropSettings
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.konan.target.Family
@@ -70,7 +70,7 @@ kotlin {
         freeCompilerArgs.add("-opt-in=kotlin.uuid.ExperimentalUuidApi")
     }
     androidTarget {
-        publishLibraryVariants("release")
+        publishLibraryVariants("debug", "release")
     }
     jvm()
     js {
@@ -190,7 +190,7 @@ kotlin {
 }
 
 android {
-    namespace = "${rootProject.group}.${rootProject.name}"
+    namespace = rootProject.group.toString()
     compileSdk = sharedLibs.versions.androidCompileSDK.get().toInt()
     defaultConfig {
         minSdk = sharedLibs.versions.androidMinimalSDK.get().toInt()
@@ -258,7 +258,7 @@ publishing {
     repositories {
         authenticatedPackageRegistry()
     }
-    publications.withType<MavenPublication>().configureEach {
+    publications.withType<MavenPublication> {
         pom {
             name = project.name
             description = "Cross-platform system notifications for Kotlin Multiplatform"

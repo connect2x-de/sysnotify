@@ -1,5 +1,6 @@
 /*
- * Copyright 2025 connect2x GmbH
+ * Copyright 2026 connect2x GmbH
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -42,7 +43,7 @@ dependencyResolutionManagement {
 
     versionCatalogs {
         create("sharedLibs") {
-            from("de.connect2x.conventions:c2x-shared-catalog:0.0.0")
+            from("de.connect2x.conventions:c2x-shared-catalog:20260114.024657")
         }
     }
 }

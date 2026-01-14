@@ -1,5 +1,6 @@
 /*
- * Copyright 2025 connect2x GmbH
+ * Copyright 2026 connect2x GmbH
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -93,7 +94,7 @@ kotlin {
 }
 
 android {
-    namespace = "${rootProject.group}.${rootProject.name}.sample"
+    namespace = "${rootProject.group}.sample"
     compileSdk = sharedLibs.versions.androidCompileSDK.get().toInt()
 
     sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
@@ -101,7 +102,7 @@ android {
     sourceSets["main"].resources.srcDirs("src/commonMain/resources")
 
     defaultConfig {
-        applicationId = "${rootProject.group}.${rootProject.name}.sample"
+        applicationId = "${rootProject.group}.sample"
         minSdk = sharedLibs.versions.androidMinimalSDK.get().toInt()
         targetSdk = sharedLibs.versions.androidCompileSDK.get().toInt()
         versionCode = 1
