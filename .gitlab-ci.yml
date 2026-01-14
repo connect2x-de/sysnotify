@@ -8,6 +8,7 @@ workflow:
 
 stages:
   - build
+  - test
   - security
   - publish
 
@@ -23,7 +24,7 @@ variables:
 .artifact-reports: &artifact-reports
   name: reports
   when: always
-  paths: [ "**/build/reports" ]
+  paths: [ "**/build/reports", "**/build/kotlin/abi-legacy" ]
   reports:
     junit: "**/build/test-results/**/TEST-*.xml"
 
@@ -81,6 +82,19 @@ build:linux:
       :sysnotify:linkLinux{X64,Arm64}
       :sysnotify:{linuxX64,jvm}Test
 
+# Only required on macOS since it can build all targets
+checkAbi:
+  stage: test
+  interruptible: true
+  timeout: 1h
+  needs: [ "build:mac" ]
+  tags: [ "connect2x-mac" ]
+  artifacts: *artifact-reports
+  rules:
+    - *if-merge-request
+  script:
+    - ./gradlew :sysnotify:checkLegacyAbi
+
 security:dependencies:
   stage: security
   interruptible: true
@@ -118,9 +132,7 @@ publish:mac:
     - *if-main
     - *if-release
   script:
-    - ./gradlew
-      :sysnotify:publish{MacosX64,MacosArm64,IosArm64,IosSimulatorArm64,IosX64,Jvm}PublicationToGitlabRepository
-      --stacktrace
+    - ./gradlew :sysnotify:publish{MacosX64,MacosArm64,IosArm64,IosSimulatorArm64,IosX64,Jvm}PublicationToGitlabRepository
 
 publish:linux:
   stage: publish
@@ -133,9 +145,7 @@ publish:linux:
     - apt update -y
     - apt install -y $LINUX_DEPENDENCIES
   script:
-    - ./gradlew
-      :sysnotify:publish{KotlinMultiplatform,Js,AndroidRelease}PublicationToGitlabRepository
-      --stacktrace
+    - ./gradlew :sysnotify:publish{KotlinMultiplatform,Js,AndroidRelease}PublicationToGitlabRepository
 
 publish:windows:
   stage: publish
@@ -145,6 +155,4 @@ publish:windows:
     - *if-main
     - *if-release
   script:
-    - ./gradlew
-      :sysnotify:publishMingwX64PublicationToGitlabRepository
-      --stacktrace
+    - ./gradlew :sysnotify:publishMingwX64PublicationToGitlabRepository

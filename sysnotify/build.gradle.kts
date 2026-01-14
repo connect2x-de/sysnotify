@@ -1,5 +1,6 @@
 /*
- * Copyright 2025 connect2x GmbH
+ * Copyright 2026 connect2x GmbH
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -17,6 +18,7 @@ import de.connect2x.conventions.GitLabPackage
 import de.connect2x.conventions.authenticatedPackageRegistry
 import de.connect2x.conventions.c2xOrganization
 import de.connect2x.conventions.configureJava
+import de.connect2x.conventions.enableAbiChecker
 import de.connect2x.conventions.gitlab
 import org.gradle.internal.extensions.stdlib.capitalized
 import org.jetbrains.kotlin.gradle.plugin.mpp.DefaultCInteropSettings
@@ -62,6 +64,7 @@ fun DefaultCInteropSettings.includePlatformBinaries(target: KotlinNativeTarget) 
 }
 
 kotlin {
+    enableAbiChecker("SysnotifyPrivateApi")
     withSourcesJar(true)
     compilerOptions {
         freeCompilerArgs.add("-opt-in=kotlin.uuid.ExperimentalUuidApi")
@@ -255,7 +258,7 @@ publishing {
     repositories {
         authenticatedPackageRegistry()
     }
-    publications.withType<MavenPublication>().configureEach {
+    publications.withType<MavenPublication> {
         pom {
             name = project.name
             description = "Cross-platform system notifications for Kotlin Multiplatform"

@@ -1,5 +1,6 @@
 /*
- * Copyright 2024 connect2x GmbH
+ * Copyright 2026 connect2x GmbH
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -19,13 +20,13 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.window.ComposeViewport
 import de.connect2x.sysnotify.NotificationIcon
-import de.connect2x.sysnotify_sample.generated.resources.Res
+import de.connect2x.sysnotify.sysnotify_sample.generated.resources.Res
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.decodeToImageBitmap
 import org.jetbrains.skiko.wasm.onWasmReady
 
 @OptIn(ExperimentalComposeUiApi::class, ExperimentalResourceApi::class)
-suspend fun main() {
+fun main() {
     onWasmReady {
         ComposeViewport {
             App(getIcon = {

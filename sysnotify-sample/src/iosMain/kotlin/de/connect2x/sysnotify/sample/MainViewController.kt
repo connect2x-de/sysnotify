@@ -1,5 +1,6 @@
 /*
- * Copyright 2024 connect2x GmbH
+ * Copyright 2026 connect2x GmbH
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -17,11 +18,14 @@ package de.connect2x.sysnotify.sample
 
 import androidx.compose.ui.window.ComposeUIViewController
 import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.staticCFunction
 import platform.UIKit.UIViewController
-import platform.UserNotifications.*
+import platform.UserNotifications.UNNotification
+import platform.UserNotifications.UNNotificationPresentationOptionBanner
+import platform.UserNotifications.UNNotificationPresentationOptionSound
+import platform.UserNotifications.UNNotificationPresentationOptions
+import platform.UserNotifications.UNUserNotificationCenter
+import platform.UserNotifications.UNUserNotificationCenterDelegateProtocol
 import platform.darwin.NSObject
-import platform.posix.atexit
 
 @OptIn(ExperimentalForeignApi::class)
 fun MainViewController(): UIViewController {
@@ -35,7 +39,7 @@ fun MainViewController(): UIViewController {
         }
     }
     UNUserNotificationCenter.currentNotificationCenter().setDelegate(notificationDelegate)
-    
+
     return ComposeUIViewController {
         App()
     }
