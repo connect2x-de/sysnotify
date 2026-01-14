@@ -18,11 +18,14 @@ package de.connect2x.sysnotify.sample
 
 import androidx.compose.ui.window.ComposeUIViewController
 import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.staticCFunction
 import platform.UIKit.UIViewController
-import platform.UserNotifications.*
+import platform.UserNotifications.UNNotification
+import platform.UserNotifications.UNNotificationPresentationOptionBanner
+import platform.UserNotifications.UNNotificationPresentationOptionSound
+import platform.UserNotifications.UNNotificationPresentationOptions
+import platform.UserNotifications.UNUserNotificationCenter
+import platform.UserNotifications.UNUserNotificationCenterDelegateProtocol
 import platform.darwin.NSObject
-import platform.posix.atexit
 
 @OptIn(ExperimentalForeignApi::class)
 fun MainViewController(): UIViewController {
@@ -36,7 +39,7 @@ fun MainViewController(): UIViewController {
         }
     }
     UNUserNotificationCenter.currentNotificationCenter().setDelegate(notificationDelegate)
-    
+
     return ComposeUIViewController {
         App()
     }
