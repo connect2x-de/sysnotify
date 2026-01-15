@@ -18,11 +18,8 @@ rootProject.name = "sysnotify"
 
 pluginManagement {
     repositories {
-        google()
-        mavenCentral()
         mavenLocal()
         gradlePluginPortal()
-        maven("https://central.sonatype.com/repository/maven-snapshots")
         maven("https://gitlab.com/api/v4/projects/68438621/packages/maven") // c2x Conventions
         maven("https://gitlab.com/api/v4/projects/75787729/packages/maven") // compose multiplatform a11y
     }
@@ -31,35 +28,17 @@ pluginManagement {
 @Suppress("UnstableApiUsage")
 dependencyResolutionManagement {
     repositories {
-        google()
-        mavenCentral()
         mavenLocal()
-        maven("https://central.sonatype.com/repository/maven-snapshots")
         maven("https://gitlab.com/api/v4/projects/68438621/packages/maven") // c2x Conventions
         maven("https://gitlab.com/api/v4/projects/65231927/packages/maven") // kmp-jni
         maven("https://gitlab.com/api/v4/projects/75787860/packages/maven") // compose multiplatform core a11y
         maven("https://gitlab.com/api/v4/projects/75787729/packages/maven") // compose multiplatform a11y
     }
-
-    versionCatalogs {
-        create("sharedLibs") {
-            from("de.connect2x.conventions:c2x-shared-catalog:20260114.024657")
-        }
-    }
 }
 
 plugins {
-    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
+    id("de.connect2x.conventions.c2x-settings-plugin") version "20260115.085419"
 }
 
 include(":sysnotify")
 include(":sysnotify-sample")
-
-gradle.beforeProject {
-    if (JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_25)) {
-        extra["kotlin.native.jvmArgs"] = listOf(
-            "--enable-native-access=ALL-UNNAMED",
-            "--sun-misc-unsafe-memory-access=allow"
-        ).joinToString(" ")
-    }
-}
