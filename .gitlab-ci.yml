@@ -131,7 +131,6 @@ security:dependencies:
 publish:dev:
   stage: publish
   tags: [ "connect2x-mac" ]
-  needs: [ "build:mac" ]
   timeout: 2h
   rules:
     - *if-dev-release
