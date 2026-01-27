@@ -16,7 +16,7 @@ variables:
   GRADLE_OPTS: -Dorg.gradle.daemon=false
   GRADLE_USER_HOME: $CI_PROJECT_DIR/.gradle
   KONAN_DATA_DIR: $CI_PROJECT_DIR/.konan
-  BUILD_LINUX_IMAGE_NAME: registry.gitlab.com/trixnity/kmp-dockerfiles/kmp-dockerfiles-base:latest
+  BUILD_LINUX_IMAGE_NAME: registry.gitlab.com/connect2x/build-infrastructure/kmp-dockerfiles/kmp-dockerfiles-base:latest
   LINUX_DEPENDENCIES: >
     libglib2.0-0 libgdk-pixbuf-2.0-0 libnotify4 libnotify-bin libx11-6
   SYSNOTIFY_DEBUG: 1
@@ -33,10 +33,13 @@ variables:
   - if: $CI_PIPELINE_SOURCE == "schedule"
     when: never
 
-.if-main: &if-main
-  - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+.if-dev-release: &if-dev-release
+  - if: '$CI_COMMIT_TAG =~ /^v\d+.\d+.\d+.*/'
+    when: never
   - if: $CI_PIPELINE_SOURCE == "schedule"
     when: never
+  - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  - if: '$CI_COMMIT_BRANCH =~ /^v-\d+.\d+.\d+.*/'
 
 .if-release: &if-release
   - if: '$CI_COMMIT_TAG =~ /^v\d+.\d+.\d+.*/'
@@ -51,8 +54,8 @@ build:windows:
   rules:
     - *if-merge-request
   script:
-    - ./gradlew 
-      :sysnotify:linkMingwX64 
+    - ./gradlew
+      :sysnotify:linkMingwX64
       :sysnotify:mingwX64Test
 
 build:mac:
@@ -125,34 +128,27 @@ security:dependencies:
     - trivy repo ./ --exit-code 0 --format template --template "@/contrib/gitlab.tpl" --output report.json
     - trivy repo ./ --exit-code 1 --severity CRITICAL
 
-publish:mac:
+publish:dev:
   stage: publish
   tags: [ "connect2x-mac" ]
-  rules:
-    - *if-main
-    - *if-release
-  script:
-    - ./gradlew :sysnotify:publish{MacosX64,MacosArm64,IosArm64,IosSimulatorArm64,IosX64,Jvm}PublicationToGitlabRepository
-
-publish:linux:
-  stage: publish
-  tags: [ "connect2x-linux" ]
-  image: $BUILD_LINUX_IMAGE_NAME
-  rules:
-    - *if-main
-    - *if-release
-  before_script:
-    - apt update -y
-    - apt install -y $LINUX_DEPENDENCIES
-  script:
-    - ./gradlew :sysnotify:publish{KotlinMultiplatform,Js,AndroidRelease}PublicationToGitlabRepository
-
-publish:windows:
-  stage: publish
+  needs: [ "build:mac" ]
   timeout: 2h
-  tags: [ "saas-windows-medium-amd64" ]
   rules:
-    - *if-main
+    - *if-dev-release
+  script:
+    - ./gradlew
+      publishAllPublicationsToGitLabRepository
+      --stacktrace
+
+publish:release:
+  stage: publish
+  tags: [ "connect2x-mac" ]
+  needs: [ "build:mac" ]
+  timeout: 2h
+  rules:
     - *if-release
   script:
-    - ./gradlew :sysnotify:publishMingwX64PublicationToGitlabRepository
+    - ./gradlew
+      publishAllPublicationsToGitLabRepository
+      publishAndReleaseToMavenCentral
+      --stacktrace

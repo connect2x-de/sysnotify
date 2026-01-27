@@ -22,6 +22,7 @@ plugins {
     alias(sharedLibs.plugins.kotlin.multiplatform) apply false
     alias(sharedLibs.plugins.compose.multiplatform) apply false
     alias(sharedLibs.plugins.compose.compiler) apply false
+    alias(sharedLibs.plugins.mavenPublish) apply false
     alias(sharedLibs.plugins.c2xConventions)
 }
 

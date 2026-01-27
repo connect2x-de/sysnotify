@@ -15,11 +15,13 @@
  */
 
 import de.connect2x.conventions.GitLabPackage
-import de.connect2x.conventions.authenticatedPackageRegistry
+import de.connect2x.conventions.apache2
 import de.connect2x.conventions.c2xOrganization
 import de.connect2x.conventions.configureJava
+import de.connect2x.conventions.defaultPublishing
 import de.connect2x.conventions.enableAbiChecker
 import de.connect2x.conventions.gitlab
+import de.connect2x.conventions.setProjectInfo
 import org.gradle.internal.extensions.stdlib.capitalized
 import org.jetbrains.kotlin.gradle.plugin.mpp.DefaultCInteropSettings
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
@@ -31,6 +33,7 @@ import kotlin.io.path.div
 plugins {
     alias(sharedLibs.plugins.kotlin.multiplatform)
     alias(sharedLibs.plugins.android.library)
+    alias(sharedLibs.plugins.mavenPublish)
     `maven-publish`
 }
 
@@ -254,25 +257,18 @@ tasks {
     }
 }
 
+defaultPublishing()
+
 publishing {
-    repositories {
-        authenticatedPackageRegistry()
-    }
     publications.withType<MavenPublication> {
         pom {
-            name = project.name
-            description = "Cross-platform system notifications for Kotlin Multiplatform"
-            url = "https://gitlab.com/connect2x/sysnotify"
+            apache2()
             c2xOrganization()
-            licenses {
-                license {
-                    name = "Apache 2.0"
-                    url = "https://www.apache.org/licenses/LICENSE-2.0.txt"
-                }
-            }
-            scm {
-                url = this@pom.url
-            }
+            setProjectInfo(
+                name = project.name,
+                description = "Cross-platform system notifications for Kotlin Multiplatform",
+                repository = "connect2x/sysnotify",
+            )
         }
     }
 }
