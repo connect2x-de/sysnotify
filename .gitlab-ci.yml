@@ -143,7 +143,6 @@ publish:dev:
 publish:release:
   stage: publish
   tags: [ "connect2x-mac" ]
-  needs: [ "build:mac" ]
   timeout: 2h
   rules:
     - *if-release
