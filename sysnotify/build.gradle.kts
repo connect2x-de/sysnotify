@@ -194,9 +194,9 @@ kotlin {
 
 android {
     namespace = rootProject.group.toString()
-    compileSdk = sharedLibs.versions.androidCompileSDK.get().toInt()
+    compileSdk = sharedLibs.versions.androidCompileSdk.get().toInt()
     defaultConfig {
-        minSdk = sharedLibs.versions.androidMinimalSDK.get().toInt()
+        minSdk = sharedLibs.versions.androidMinSdk.get().toInt()
     }
     buildTypes {
         debug {
