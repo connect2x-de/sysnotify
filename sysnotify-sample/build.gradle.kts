@@ -15,6 +15,13 @@
  */
 
 import de.connect2x.conventions.configureJava
+import de.connect2x.conventions.defaultCompilerOptions
+import de.connect2x.conventions.withAndroid
+import de.connect2x.conventions.withBrowser
+import de.connect2x.conventions.withIos
+import de.connect2x.conventions.withJs
+import de.connect2x.conventions.withJvm
+import de.connect2x.conventions.withMacos
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 
 plugins {
@@ -27,10 +34,11 @@ plugins {
 configureJava(sharedLibs.versions.targetJvm)
 
 kotlin {
-    androidTarget()
-    jvm()
-    js {
-        browser {
+    defaultCompilerOptions()
+    withAndroid("$group.sample")
+    withJvm()
+    withJs {
+        withBrowser {
             runTask {
                 mainOutputFileName = "sample.js"
             }
@@ -40,22 +48,18 @@ kotlin {
         }
         binaries.executable()
     }
-    listOf(macosX64(), macosArm64()).forEach {
-        it.apply {
-            binaries {
-                executable {
-                    entryPoint = "${rootProject.group}.${rootProject.name}.sample.main"
-                }
+    withMacos {
+        binaries {
+            executable {
+                entryPoint = "${rootProject.group}.${rootProject.name}.sample.main"
             }
         }
     }
-    listOf(iosX64(), iosArm64(), iosSimulatorArm64()).forEach {
-        it.apply {
-            binaries {
-                framework {
-                    baseName = "Sysnotify"
-                    isStatic = true
-                }
+    withIos {
+        binaries {
+            framework {
+                baseName = "Sysnotify"
+                isStatic = true
             }
         }
     }
@@ -66,7 +70,7 @@ kotlin {
                 implementation(sharedLibs.androidx.activity.compose)
             }
         }
-        val commonMain by getting {
+        commonMain {
             dependencies {
                 implementation(compose.runtime)
                 implementation(compose.foundation)
@@ -94,17 +98,10 @@ kotlin {
 }
 
 android {
-    namespace = "${rootProject.group}.sample"
-    compileSdk = sharedLibs.versions.androidCompileSdk.get().toInt()
-
     sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
     sourceSets["main"].res.srcDirs("src/androidMain/res")
     sourceSets["main"].resources.srcDirs("src/commonMain/resources")
-
     defaultConfig {
-        applicationId = "${rootProject.group}.sample"
-        minSdk = sharedLibs.versions.androidMinSdk.get().toInt()
-        targetSdk = sharedLibs.versions.androidCompileSdk.get().toInt()
         versionCode = 1
         versionName = libs.versions.sysnotify.get()
     }
@@ -127,7 +124,7 @@ android {
     }
 }
 
-val jdkLauncher = javaToolchains.launcherFor {
+val jdkLauncher: Provider<JavaLauncher> = javaToolchains.launcherFor {
     languageVersion = JavaLanguageVersion.of(sharedLibs.versions.distributionJvm.get().toInt())
     vendor = JvmVendorSpec.ADOPTIUM
 }

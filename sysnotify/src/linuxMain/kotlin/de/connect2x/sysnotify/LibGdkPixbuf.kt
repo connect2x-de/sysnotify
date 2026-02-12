@@ -47,6 +47,7 @@ private typealias _gdk_pixbuf_unref = (buffer: CPointer<GdkPixbuf>?) -> Unit
 @Suppress("FunctionName")
 internal object LibGdkPixbuf {
     private val library: SharedLibrary? = SharedLibrary.open("libgdk_pixbuf-2.0.so")
+    inline val isAvailable: Boolean get() = library != null
 
     init {
         atexit(staticCFunction<Unit> {

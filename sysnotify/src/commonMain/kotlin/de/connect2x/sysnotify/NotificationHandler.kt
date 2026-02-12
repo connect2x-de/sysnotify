@@ -28,7 +28,6 @@ import kotlin.uuid.Uuid
 /**
  * A callback function that is invoked after permission to show notifications has been requested.
  *
- * @param handler The notification handler that requested the permission
  * @param granted Boolean indicating whether permission was granted (true) or denied (false)
  */
 typealias PermissionCallback = (granted: Boolean) -> Unit
@@ -115,7 +114,7 @@ interface NotificationHandler : AutoCloseable {
      * when possible. Otherwise, this function returns without any side effects.
      */
     suspend fun requestPermissions(callback: PermissionCallback = { _ -> }) {
-        callback(true) // Default behaviour for platforms without permissions
+        callback(true) // Default behavior for platforms without permissions
     }
 
     /**
@@ -224,6 +223,8 @@ internal inline fun <reified H : NotificationHandler> NotificationHandler.check(
  * @param name The display name of the notification handler.
  * @param id The internal ID of the notification handler.
  * @param priority The priority of the notification handler. See [NotificationPriority] for more information.
+ * @return A new [NotificationHandler] platform implementation, or [NoopNotificationHandler] if
+ *  the implementation is not supported on the current platform.
  */
 expect fun NotificationHandler(
     name: String,

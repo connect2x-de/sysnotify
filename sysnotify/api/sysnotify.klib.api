@@ -252,12 +252,6 @@ final val de.connect2x.sysnotify/relevanceScore // de.connect2x.sysnotify/releva
 final fun de.connect2x.sysnotify/jniOnLoad(kotlinx.cinterop/CPointerVarOf<kotlinx.cinterop/CPointer<jni/JNIInvokeInterface_>>, kotlinx.cinterop/CPointer<out kotlinx.cinterop/CPointed>): kotlin/Int // de.connect2x.sysnotify/jniOnLoad|jniOnLoad(kotlinx.cinterop.CPointerVarOf<kotlinx.cinterop.CPointer<jni.JNIInvokeInterface_>>;kotlinx.cinterop.CPointer<out|kotlinx.cinterop.CPointed>){}[0]
 
 // Targets: [linux]
-final object de.connect2x.sysnotify/LibGObject { // de.connect2x.sysnotify/LibGObject|null[0]
-    final fun g_object_unref(kotlinx.cinterop/CPointer<libnotify/_GObject>?) // de.connect2x.sysnotify/LibGObject.g_object_unref|g_object_unref(kotlinx.cinterop.CPointer<libnotify._GObject>?){}[0]
-    final fun g_signal_connect_data(kotlinx.cinterop/CPointer<libnotify/_GObject>?, kotlin/String, kotlinx.cinterop/CPointer<kotlinx.cinterop/CFunction<kotlin/Function0<kotlin/Unit>>>?, kotlinx.cinterop/CPointer<out kotlinx.cinterop/CPointed>?, kotlinx.cinterop/CPointer<kotlinx.cinterop/CFunction<kotlin/Function2<kotlinx.cinterop/CPointer<out kotlinx.cinterop/CPointed>?, kotlinx.cinterop/CPointer<libnotify/_GClosure>?, kotlin/Unit>>>?, kotlin/UInt): kotlin/ULong // de.connect2x.sysnotify/LibGObject.g_signal_connect_data|g_signal_connect_data(kotlinx.cinterop.CPointer<libnotify._GObject>?;kotlin.String;kotlinx.cinterop.CPointer<kotlinx.cinterop.CFunction<kotlin.Function0<kotlin.Unit>>>?;kotlinx.cinterop.CPointer<out|kotlinx.cinterop.CPointed>?;kotlinx.cinterop.CPointer<kotlinx.cinterop.CFunction<kotlin.Function2<kotlinx.cinterop.CPointer<out|kotlinx.cinterop.CPointed>?,kotlinx.cinterop.CPointer<libnotify._GClosure>?,kotlin.Unit>>>?;kotlin.UInt){}[0]
-}
-
-// Targets: [linux]
 final val de.connect2x.sysnotify/address // de.connect2x.sysnotify/address|@de.connect2x.sysnotify.NotificationHandle{}address[0]
     final fun (de.connect2x.sysnotify/NotificationHandle).<get-address>(): kotlinx.cinterop/CPointer<libnotify/_NotifyNotification> // de.connect2x.sysnotify/address.<get-address>|<get-address>@de.connect2x.sysnotify.NotificationHandle(){}[0]
 
