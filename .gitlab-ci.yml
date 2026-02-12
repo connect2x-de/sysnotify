@@ -14,8 +14,6 @@ stages:
 
 variables:
   GRADLE_OPTS: -Dorg.gradle.daemon=false
-  GRADLE_USER_HOME: $CI_PROJECT_DIR/.gradle
-  KONAN_DATA_DIR: $CI_PROJECT_DIR/.konan
   BUILD_LINUX_IMAGE_NAME: registry.gitlab.com/connect2x/build-infrastructure/kmp-dockerfiles/kmp-dockerfiles-base:latest
   LINUX_DEPENDENCIES: >
     libglib2.0-0 libgdk-pixbuf-2.0-0 libnotify4 libnotify-bin libx11-6
@@ -55,6 +53,7 @@ build:windows:
     - *if-merge-request
   script:
     - ./gradlew
+      :sysnotify:clean
       :sysnotify:linkMingwX64
       :sysnotify:mingwX64Test
 
@@ -66,6 +65,7 @@ build:mac:
     - *if-merge-request
   script:
     - ./gradlew
+      :sysnotify:clean
       :sysnotify:link{MacosX64,MacosArm64,IosArm64,IosX64,IosSimulatorArm64}
       :sysnotify:{macosX64,iosX64}Test
 
@@ -81,6 +81,7 @@ build:linux:
     - apt install -y $LINUX_DEPENDENCIES
   script:
     - ./gradlew
+      :sysnotify:clean
       :sysnotify:compile{ReleaseKotlinAndroid,KotlinJvm}
       :sysnotify:linkLinux{X64,Arm64}
       :sysnotify:{linuxX64,jvm}Test
@@ -96,7 +97,7 @@ checkAbi:
   rules:
     - *if-merge-request
   script:
-    - ./gradlew :sysnotify:checkLegacyAbi
+    - ./gradlew :sysnotify:clean :sysnotify:checkLegacyAbi
 
 security:dependencies:
   stage: security

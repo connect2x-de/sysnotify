@@ -66,6 +66,7 @@ private typealias _g_main_loop_quit = (loop: CPointer<GMainLoop>?) -> Unit
 @Suppress("FunctionName")
 internal object LibGLib {
     private val library: SharedLibrary? = SharedLibrary.open("libglib-2.0.so")
+    inline val isAvailable: Boolean get() = library != null
 
     init {
         atexit(staticCFunction<Unit> {

@@ -14,19 +14,32 @@
  * limitations under the License.
  */
 
+@file:OptIn(ExperimentalKotlinGradlePluginApi::class)
+
 import de.connect2x.conventions.GitLabPackage
 import de.connect2x.conventions.apache2
 import de.connect2x.conventions.c2xOrganization
 import de.connect2x.conventions.configureJava
+import de.connect2x.conventions.defaultCompilerOptions
 import de.connect2x.conventions.defaultPublishing
 import de.connect2x.conventions.enableAbiChecker
 import de.connect2x.conventions.gitlab
 import de.connect2x.conventions.setProjectInfo
+import de.connect2x.conventions.withAndroidLibrary
+import de.connect2x.conventions.withBrowser
+import de.connect2x.conventions.withIos
+import de.connect2x.conventions.withJs
+import de.connect2x.conventions.withJvm
+import de.connect2x.conventions.withLinux
+import de.connect2x.conventions.withMacos
+import de.connect2x.conventions.withMingw
 import org.gradle.internal.extensions.stdlib.capitalized
+import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.plugin.mpp.DefaultCInteropSettings
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.konan.target.Family
 import org.jetbrains.kotlin.konan.target.KonanTarget
+import java.time.ZonedDateTime
 import kotlin.io.path.Path
 import kotlin.io.path.div
 
@@ -34,10 +47,12 @@ plugins {
     alias(sharedLibs.plugins.kotlin.multiplatform)
     alias(sharedLibs.plugins.android.library)
     alias(sharedLibs.plugins.mavenPublish)
+    alias(sharedLibs.plugins.dokka)
     `maven-publish`
 }
 
 configureJava(sharedLibs.versions.targetJvm)
+defaultPublishing()
 
 val KonanTarget.familyName: String
     get() = when (family) {
@@ -67,86 +82,97 @@ fun DefaultCInteropSettings.includePlatformBinaries(target: KotlinNativeTarget) 
 }
 
 kotlin {
+    defaultCompilerOptions()
     enableAbiChecker("SysnotifyPrivateApi")
     withSourcesJar(true)
-    compilerOptions {
-        freeCompilerArgs.add("-opt-in=kotlin.uuid.ExperimentalUuidApi")
-    }
-    androidTarget {
-        publishLibraryVariants("debug", "release")
-    }
-    jvm()
-    js {
-        browser {
+    withAndroidLibrary()
+    withJvm()
+    withJs {
+        withBrowser {
             testTask {
                 enabled = false
             }
         }
-        binaries.library()
         generateTypeScriptDefinitions()
+        binaries.library()
     }
-    listOf(macosX64(), macosArm64()).forEach { target ->
-        target.apply {
-            compilations.getByName("main") {
-                cinterops {
-                    val notificationdata by creating
-                }
-            }
-            binaries {
-                sharedLib()
-                framework()
-            }
-        }
-    }
-    listOf(iosX64(), iosArm64(), iosSimulatorArm64()).forEach { target ->
-        target.apply {
-            binaries {
-                sharedLib()
-                framework()
-            }
-        }
-    }
-    listOf(linuxX64(), linuxArm64()).forEach {
-        it.apply {
-            compilations.getByName("main") {
-                cinterops {
-                    val libnotify by creating {
-                        includePlatformBinaries(target)
-                    }
-                    val notificationdata by creating
-                }
-            }
-            binaries {
-                sharedLib {
-                    // Fix for libcrypt.so.1 not-found error on distroless
-                    // See https://youtrack.jetbrains.com/projects/KT/issues/KT-55643
-                    linkerOpts("--as-needed")
-                    freeCompilerArgs += "-Xoverride-konan-properties=linkerGccFlags.linux=-lgcc -lgcc_eh -lc -ldl"
-                }
-            }
-        }
-    }
-    mingwX64 {
+    withMacos {
         compilations.getByName("main") {
             cinterops {
-                val sysnotifycom by creating {
+                create("notificationdata")
+            }
+        }
+        binaries {
+            sharedLib()
+            framework()
+        }
+    }
+    withIos {
+        binaries {
+            sharedLib()
+            framework()
+        }
+    }
+    withLinux {
+        compilations.getByName("main") {
+            cinterops {
+                create("libnotify") {
                     includePlatformBinaries(target)
                 }
-                val notificationdata by creating
+                create("notificationdata")
+            }
+        }
+        binaries {
+            sharedLib {
+                // Fix for libcrypt.so.1 not-found error on distroless
+                // See https://youtrack.jetbrains.com/projects/KT/issues/KT-55643
+                // TODO: Integrate into conventions plugin
+                linkerOpts("--as-needed")
+                freeCompilerArgs += "-Xoverride-konan-properties=linkerGccFlags.linux=-lgcc -lgcc_eh -lc -ldl"
+            }
+        }
+    }
+    withMingw {
+        compilations.getByName("main") {
+            cinterops {
+                create("sysnotifycom") {
+                    includePlatformBinaries(target)
+                }
+                create("notificationdata")
             }
         }
         binaries {
             sharedLib()
         }
     }
-    applyDefaultHierarchyTemplate()
+    applyDefaultHierarchyTemplate {
+        common {
+            group("native") {
+                group("desktop") {
+                    group("macos")
+                    group("linux")
+                    group("mingw")
+                }
+            }
+            group("shared") { // For tests
+                group("native")
+                withJvm()
+                withJs()
+            }
+            group("activatable") {
+                group("native")
+                withJvm()
+                withJs()
+            }
+        }
+    }
     sourceSets {
-        val commonMain by getting {
+        commonMain {
             dependencies {
                 api(sharedLibs.kotlinx.coroutines.core)
             }
         }
-        val commonTest by getting {
+        commonTest {
             dependencies {
                 implementation(sharedLibs.kotlin.test)
             }
@@ -161,49 +187,31 @@ kotlin {
             // Include JVM natives for desktop targets
             resources.srcDir("build/generatedResources")
         }
-        val nativeMain by getting
-        val desktopMain by creating {
-            dependsOn(nativeMain)
+        named("desktopMain") {
             dependencies {
                 implementation(libs.kmpJni)
             }
         }
-        macosMain { dependsOn(desktopMain) }
-        linuxMain { dependsOn(desktopMain) }
-        mingwMain { dependsOn(desktopMain) }
-
-        val sharedTest by creating {
-            dependsOn(commonTest)
-        }
-        appleTest { dependsOn(sharedTest) }
-        linuxTest { dependsOn(sharedTest) }
-        mingwTest { dependsOn(sharedTest) }
-        jvmTest { dependsOn(sharedTest) }
-        jsTest { dependsOn(sharedTest) }
-
-        val activatableMain by creating {
-            dependsOn(commonMain)
-        }
-        linuxMain { dependsOn(activatableMain) }
-        mingwMain { dependsOn(activatableMain) }
-        appleMain { dependsOn(activatableMain) }
-        jvmMain { dependsOn(activatableMain) }
-        jsMain { dependsOn(activatableMain) }
     }
 }
 
 android {
-    namespace = rootProject.group.toString()
-    compileSdk = sharedLibs.versions.androidCompileSdk.get().toInt()
-    defaultConfig {
-        minSdk = sharedLibs.versions.androidMinSdk.get().toInt()
-    }
     buildTypes {
         debug {
             isDefault = true
         }
         release {
             isMinifyEnabled = false
+        }
+    }
+}
+
+dokka {
+    moduleName = project.name
+    pluginsConfiguration {
+        html {
+            homepageLink = "https://gitlab.com/connect2x/lognity"
+            footerMessage = "&copy; ${ZonedDateTime.now().year} connect2x GmbH"
         }
     }
 }
@@ -256,8 +264,6 @@ tasks {
         dependsOn(copyNativesForJvm)
     }
 }
-
-defaultPublishing()
 
 publishing {
     publications.withType<MavenPublication> {

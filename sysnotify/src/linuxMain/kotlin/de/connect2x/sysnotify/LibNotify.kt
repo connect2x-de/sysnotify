@@ -104,6 +104,7 @@ private typealias _notify_notification_add_action = (
 @Suppress("FunctionName")
 internal object LibNotify {
     private val library: SharedLibrary? = SharedLibrary.open("libnotify.so")
+    inline val isAvailable: Boolean get() = library != null
 
     init {
         atexit(staticCFunction<Unit> {
