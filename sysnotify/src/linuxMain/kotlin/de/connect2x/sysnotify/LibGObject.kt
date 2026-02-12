@@ -48,7 +48,7 @@ private typealias _g_object_unref = (obj: CPointer<GObject>?) -> Unit
  * See [the GTK documentation](https://docs.gtk.org/gobject/index.html)
  */
 internal object LibGObject {
-    private val library: SharedLibrary? = SharedLibrary.open("libgobject-2.0.so")
+    private val library: SharedLibrary? = SharedLibrary.open(arrayOf("libgobject-2.0.so.0", "libgobject-2.0.so"))
     inline val isAvailable: Boolean get() = library != null
 
     init {

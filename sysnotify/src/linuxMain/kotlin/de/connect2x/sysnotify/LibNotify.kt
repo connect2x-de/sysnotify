@@ -103,7 +103,7 @@ private typealias _notify_notification_add_action = (
  */
 @Suppress("FunctionName")
 internal object LibNotify {
-    private val library: SharedLibrary? = SharedLibrary.open("libnotify.so")
+    private val library: SharedLibrary? = SharedLibrary.open(arrayOf("libnotify.so.4", "libnotify.so"))
     inline val isAvailable: Boolean get() = library != null
 
     init {
