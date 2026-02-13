@@ -19,7 +19,6 @@
 
 package de.connect2x.sysnotify
 
-import de.connect2x.sysnotify.NoopNotificationHandler.unregister
 import de.connect2x.sysnotify.native.SNNotificationData
 import jni.JNIEnvVar
 import jni.jboolean

@@ -39,7 +39,6 @@ import org.jetbrains.kotlin.gradle.plugin.mpp.DefaultCInteropSettings
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.konan.target.Family
 import org.jetbrains.kotlin.konan.target.KonanTarget
-import java.time.ZonedDateTime
 import kotlin.io.path.Path
 import kotlin.io.path.div
 
@@ -47,7 +46,6 @@ plugins {
     alias(sharedLibs.plugins.kotlin.multiplatform)
     alias(sharedLibs.plugins.android.library)
     alias(sharedLibs.plugins.mavenPublish)
-    alias(sharedLibs.plugins.dokka)
     `maven-publish`
 }
 
@@ -202,16 +200,6 @@ android {
         }
         release {
             isMinifyEnabled = false
-        }
-    }
-}
-
-dokka {
-    moduleName = project.name
-    pluginsConfiguration {
-        html {
-            homepageLink = "https://gitlab.com/connect2x/lognity"
-            footerMessage = "&copy; ${ZonedDateTime.now().year} connect2x GmbH"
         }
     }
 }

@@ -19,23 +19,24 @@ package de.connect2x.sysnotify
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.graphics.drawable.IconCompat
 import androidx.core.net.toUri
-import kotlinx.coroutines.runBlocking
 import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
-import android.app.NotificationChannel as AndroidNotificationChannel
 
 /**
  * Function type for retrieving the Android Context.
@@ -65,6 +66,10 @@ internal class AndroidNotificationHandler( // @formatter:off
     override val id: String,
     override val priority: NotificationPriority,
 ) : NotificationHandler { // @formatter:on
+    companion object {
+        private const val EXTRA_CHANNEL_ID: String = "sysnotify_channel_id"
+    }
+
     private var channel: AtomicReference<AndroidNotificationChannel?> = AtomicReference(null)
 
     internal var contextGetter: AtomicReference<ContextGetter?> = AtomicReference(null)
@@ -83,18 +88,28 @@ internal class AndroidNotificationHandler( // @formatter:off
     internal fun getOrCreateChannel(): AndroidNotificationChannel {
         val current = channel.load()
         if (current != null) return current
-        val new = AndroidNotificationChannel(
-            id, name, priority.nativeImportance
-        ).apply { manager.createNotificationChannel(this) }
+        val new = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            AndroidNotificationChannel.Real(id, name, priority.nativeImportance)
+        } else {
+            AndroidNotificationChannel.Fake(id, name, priority.nativeImportance)
+        }
+        new.init(context) // Make sure implementation is initialized
         channel.store(new)
         return new
     }
 
-    // TODO: expose this in public API in 2.2
+    // TODO: expose this in public API in 2.4
     private fun getActiveNotifications(): Set<String> {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            // If we are on API level 26 and above, we can directly use channelId
+            return manager.activeNotifications
+                .filter { notification -> notification.notification.channelId == id }
+                .map { notification -> notification.tag }
+                .toSet()
+        }
         return manager.activeNotifications
-            .filter { notification -> notification.notification.channelId == id }
+            .filter { notification -> notification.notification.extras.getString(EXTRA_CHANNEL_ID) == id }
             .map { notification -> notification.tag }
             .toSet()
     }
@@ -146,6 +161,13 @@ internal class AndroidNotificationHandler( // @formatter:off
                 setAutoCancel(true) // Remove notification when user taps it
                 setGroup(notification.group)
 
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+                    // For API level 26 and below, we need to add a channel tag to the extras so we can filter later on
+                    setExtras(Bundle().apply {
+                        putString(EXTRA_CHANNEL_ID, id)
+                    })
+                }
+
                 // Setup sound
                 if (notification.playSound) notification.soundPath?.let { setSound(it.toUri()) }
                 else {
@@ -154,13 +176,11 @@ internal class AndroidNotificationHandler( // @formatter:off
                 }
 
                 // Setup icon, fallback to default icon if none was specified
-                val icon = notification.icon
-                if (icon != null) {
-                    icon.toBitmap().apply {
-                        setSmallIcon(IconCompat.createWithBitmap(this))
-                        setLargeIcon(this)
-                    }
-                } else setSmallIcon(R.drawable.ic_notification)
+                notification.icon?.let(NotificationIcon::toBitmap)?.let(::setLargeIcon)
+                val smallIcon =
+                    notification.statusIcon?.let(NotificationIcon::toBitmap)?.let(IconCompat::createWithBitmap)
+                if (smallIcon != null) setSmallIcon(smallIcon)
+                else setSmallIcon(R.drawable.ic_notification)
 
                 // Setup activation intent if present
                 setContentIntent(
@@ -411,10 +431,15 @@ fun NotificationHandler.getLaunchNotification(): ParcelableNotification? {
  * @return The Android notification channel
  * @throws ClassCastException if the handler is not an AndroidNotificationHandler
  */
-val NotificationHandler.channel: AndroidNotificationChannel
+@get:RequiresApi(Build.VERSION_CODES.O)
+val NotificationHandler.channel: NotificationChannel
     get() {
         check<AndroidNotificationHandler>()
-        return getOrCreateChannel()
+        val channelWrapper = getOrCreateChannel()
+        check(channelWrapper is AndroidNotificationChannel.Real) {
+            "NotificationChannel requires API level 26 and above"
+        }
+        return channelWrapper.channel
     }
 
 /**

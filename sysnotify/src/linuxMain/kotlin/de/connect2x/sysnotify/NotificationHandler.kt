@@ -51,7 +51,8 @@ internal class LinuxNotificationHandler(
         isPopSupported = true,
         isSoundSupported = true,
         isCustomSoundSupported = true,
-        isGroupingSupported = false
+        isGroupingSupported = false,
+        isStatusIconSupported = false
     )
 
     private var lastNotification: AtomicReference<Notification?> = AtomicReference(null)

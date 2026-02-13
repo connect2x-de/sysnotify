@@ -38,7 +38,6 @@ import kotlinx.cinterop.ptr
 import kotlinx.cinterop.staticCFunction
 import kotlinx.cinterop.toCValues
 import kotlinx.cinterop.value
-import kotlinx.coroutines.runBlocking
 import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
@@ -69,7 +68,8 @@ internal class WindowsNotificationHandler(
         isPopSupported = true,
         isSoundSupported = true,
         isCustomSoundSupported = true,
-        isGroupingSupported = false
+        isGroupingSupported = false,
+        isStatusIconSupported = false
     )
 
     internal var activationHandler: AtomicReference<ActivationHandler?> = AtomicReference(null)

@@ -15,8 +15,6 @@ stages:
 variables:
   GRADLE_OPTS: -Dorg.gradle.daemon=false
   BUILD_LINUX_IMAGE_NAME: registry.gitlab.com/connect2x/build-infrastructure/kmp-dockerfiles/kmp-dockerfiles-base:latest
-  LINUX_DEPENDENCIES: >
-    libglib2.0-0 libgdk-pixbuf-2.0-0 libnotify4 libnotify-bin libx11-6
   SYSNOTIFY_DEBUG: 1
 
 .artifact-reports: &artifact-reports
@@ -53,7 +51,6 @@ build:windows:
     - *if-merge-request
   script:
     - ./gradlew
-      :sysnotify:clean
       :sysnotify:linkMingwX64
       :sysnotify:mingwX64Test
 
@@ -65,7 +62,6 @@ build:mac:
     - *if-merge-request
   script:
     - ./gradlew
-      :sysnotify:clean
       :sysnotify:link{MacosX64,MacosArm64,IosArm64,IosX64,IosSimulatorArm64}
       :sysnotify:{macosX64,iosX64}Test
 
@@ -76,12 +72,8 @@ build:linux:
   image: $BUILD_LINUX_IMAGE_NAME
   rules:
     - *if-merge-request
-  before_script:
-    - apt update -y
-    - apt install -y $LINUX_DEPENDENCIES
   script:
-    - ./gradlew
-      :sysnotify:clean
+    - gradle
       :sysnotify:compile{ReleaseKotlinAndroid,KotlinJvm}
       :sysnotify:linkLinux{X64,Arm64}
       :sysnotify:{linuxX64,jvm}Test
