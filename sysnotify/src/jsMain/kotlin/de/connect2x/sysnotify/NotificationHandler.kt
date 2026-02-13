@@ -17,11 +17,7 @@
 package de.connect2x.sysnotify
 
 import kotlinx.browser.document
-import kotlinx.browser.window
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.await
-import kotlinx.coroutines.launch
 import org.khronos.webgl.Int8Array
 import org.khronos.webgl.Uint8ClampedArray
 import org.w3c.dom.CanvasRenderingContext2D
@@ -30,7 +26,6 @@ import org.w3c.dom.ImageData
 import org.w3c.dom.url.URL
 import org.w3c.notifications.GRANTED
 import org.w3c.notifications.NotificationOptions
-import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.io.encoding.ExperimentalEncodingApi
@@ -61,7 +56,8 @@ private class WebNotificationHandler(
         isPopSupported = true,
         isSoundSupported = true,
         isCustomSoundSupported = true,
-        isGroupingSupported = false
+        isGroupingSupported = false,
+        isStatusIconSupported = false
     )
 
     val activationHandler: AtomicReference<ActivationHandler> = AtomicReference {}

@@ -14,7 +14,12 @@
  * limitations under the License.
  */
 
+import de.connect2x.conventions.CI
 import de.connect2x.conventions.withVersionSuffix
+import org.jetbrains.dokka.gradle.DokkaExtension
+import org.jetbrains.dokka.gradle.DokkaPlugin
+import org.jetbrains.dokka.gradle.engine.plugins.DokkaHtmlPluginParameters
+import java.time.ZonedDateTime
 
 plugins {
     alias(sharedLibs.plugins.android.library) apply false
@@ -30,4 +35,20 @@ plugins {
 allprojects {
     group = "de.connect2x.sysnotify"
     version = withVersionSuffix(rootProject.libs.versions.sysnotify)
+}
+
+subprojects {
+    if ("sample" in project.name) return@subprojects
+    if (CI.isCI) {
+        apply<DokkaPlugin>()
+        configure<DokkaExtension> {
+            moduleName = project.name
+            pluginsConfiguration {
+                named<DokkaHtmlPluginParameters>("html") {
+                    homepageLink = "https://gitlab.com/connect2x/sysnotify"
+                    footerMessage = "&copy; ${ZonedDateTime.now().year} connect2x GmbH"
+                }
+            }
+        }
+    }
 }

@@ -35,29 +35,15 @@ value class NotificationCapabilities(val mask: UInt) {
      */
     companion object {
         // @formatter:off
-        /** Indicates whether the notification system supports displaying a title. */
-        const val IS_TITLE_SUPPORTED: UInt          = 0b0000_0001U
-
-        /** Indicates whether the notification system supports displaying a description/content. */
-        const val IS_DESCRIPTION_SUPPORTED: UInt    = 0b0000_0010U
-
-        /** Indicates whether the notification system supports displaying an icon. */
-        const val IS_ICON_SUPPORTED: UInt           = 0b0000_0100U
-
-        /** Indicates whether the notification system supports action callbacks. */
-        const val IS_ACTION_SUPPORTED: UInt         = 0b0000_1000U
-
-        /** Indicates whether the notification system supports dismissing/popping notifications. */
-        const val IS_POP_SUPPORTED: UInt            = 0b0001_0000U
-
-        /** Indicates whether the notification system supports playing sounds. */
-        const val IS_SOUND_SUPPORTED: UInt          = 0b0010_0000U
-
-        /** Indicates whether the notification system supports custom sound files. */
-        const val IS_CUSTOM_SOUND_SUPPORTED: UInt   = 0b0100_0000U
-
-        /** Indicates whether the notification system supports grouping notifications. */
-        const val IS_GROUPING_SUPPORTED: UInt       = 0b1000_0000U
+        const val IS_TITLE_SUPPORTED: UInt          = 0b0000_0000_0001U
+        const val IS_DESCRIPTION_SUPPORTED: UInt    = 0b0000_0000_0010U
+        const val IS_ICON_SUPPORTED: UInt           = 0b0000_0000_0100U
+        const val IS_ACTION_SUPPORTED: UInt         = 0b0000_0000_1000U
+        const val IS_POP_SUPPORTED: UInt            = 0b0000_0001_0000U
+        const val IS_SOUND_SUPPORTED: UInt          = 0b0000_0010_0000U
+        const val IS_CUSTOM_SOUND_SUPPORTED: UInt   = 0b0000_0100_0000U
+        const val IS_GROUPING_SUPPORTED: UInt       = 0b0000_1000_0000U
+        const val IS_STATUS_ICON_SUPPORTED: UInt    = 0b0001_0000_0000U
         // @formatter:on
 
         /**
@@ -71,7 +57,8 @@ value class NotificationCapabilities(val mask: UInt) {
                 IS_POP_SUPPORTED or
                 IS_SOUND_SUPPORTED or
                 IS_CUSTOM_SOUND_SUPPORTED or
-                IS_GROUPING_SUPPORTED
+                IS_GROUPING_SUPPORTED or
+                IS_STATUS_ICON_SUPPORTED
     }
 
     /**
@@ -94,7 +81,8 @@ value class NotificationCapabilities(val mask: UInt) {
         isPopSupported: Boolean,
         isSoundSupported: Boolean,
         isCustomSoundSupported: Boolean,
-        isGroupingSupported: Boolean
+        isGroupingSupported: Boolean,
+        isStatusIconSupported: Boolean
     ) : this(
         if (isTitleSupported) IS_TITLE_SUPPORTED else 0U
                 or if (isDescriptionSupported) IS_DESCRIPTION_SUPPORTED else 0U
@@ -104,6 +92,7 @@ value class NotificationCapabilities(val mask: UInt) {
                 or if (isSoundSupported) IS_SOUND_SUPPORTED else 0U
                 or if (isCustomSoundSupported) IS_CUSTOM_SOUND_SUPPORTED else 0U
                 or if (isGroupingSupported) IS_GROUPING_SUPPORTED else 0U
+                or if (isStatusIconSupported) IS_STATUS_ICON_SUPPORTED else 0U
     )
 
     /**
@@ -153,6 +142,12 @@ value class NotificationCapabilities(val mask: UInt) {
      */
     inline val isGroupingSupported: Boolean
         get() = (mask and IS_GROUPING_SUPPORTED) == IS_GROUPING_SUPPORTED
+
+    /**
+     * Indicates whether the notification system supports a separate status icon for the status bar (on Android etc.).
+     */
+    inline val isStatusIconSupported: Boolean
+        get() = (mask and IS_STATUS_ICON_SUPPORTED) == IS_STATUS_ICON_SUPPORTED
 
     /**
      * If true, the underlying implementation supports at least

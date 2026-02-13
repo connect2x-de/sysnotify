@@ -22,6 +22,7 @@ package de.connect2x.sysnotify
  * @param title The title of the notification, should be short.
  * @param description The description or "content" of a notification.
  * @param icon The icon shown as part of the notification. This can be the application icon or an avatar.
+ * @param statusIcon The icon shown in the status bar of the device on platforms like Android.
  * @param callbackData A string that is passed to the application when it is started from activating a notification.
  * @param dismissible Determines whether this notification can be "swiped away" by the user. False means the
  *  notification will remain persistent until explicitly popped.
@@ -37,6 +38,7 @@ data class Notification(
     val title: String? = null,
     val description: String? = null,
     val icon: NotificationIcon? = null,
+    val statusIcon: NotificationIcon? = null,
     val callbackData: String? = null,
     val dismissible: Boolean = true,
     val priority: NotificationPriority = NotificationPriority.DEFAULT,

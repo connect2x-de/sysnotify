@@ -64,7 +64,8 @@ internal class AppleNotificationHandler(
         isPopSupported = true,
         isSoundSupported = true,
         isCustomSoundSupported = true,
-        isGroupingSupported = true
+        isGroupingSupported = true,
+        isStatusIconSupported = false
     )
 
     // TODO this does not survive a restart
