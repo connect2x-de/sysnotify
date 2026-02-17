@@ -72,13 +72,13 @@ kotlin {
         }
         commonMain {
             dependencies {
-                implementation(compose.runtime)
-                implementation(compose.foundation)
-                implementation(compose.material)
-                implementation(compose.ui)
-                implementation(compose.materialIconsExtended)
-                implementation(compose.components.resources)
-                implementation(compose.components.uiToolingPreview)
+                implementation(sharedLibs.compose.runtime)
+                implementation(sharedLibs.compose.foundation)
+                implementation(sharedLibs.compose.material)
+                implementation(sharedLibs.compose.ui)
+                implementation(sharedLibs.compose.materialIconsExtended)
+                implementation(sharedLibs.compose.resources)
+                implementation(sharedLibs.compose.uiToolingPreview)
                 implementation(project(":sysnotify"))
             }
         }
@@ -86,11 +86,11 @@ kotlin {
             dependencies {
                 // this is needed to create lock files working on all machines
                 if (System.getProperty("bundleAll") == "true") {
-                    implementation(compose.desktop.linux_x64)
-                    implementation(compose.desktop.linux_arm64)
-                    implementation(compose.desktop.windows_x64)
-                    implementation(compose.desktop.macos_x64)
-                    implementation(compose.desktop.macos_arm64)
+                    implementation(sharedLibs.compose.desktop.linuxX64)
+                    implementation(sharedLibs.compose.desktop.linuxArm64)
+                    implementation(sharedLibs.compose.desktop.windowsX64)
+                    implementation(sharedLibs.compose.desktop.macosX64)
+                    implementation(sharedLibs.compose.desktop.macosArm64)
                 } else implementation(compose.desktop.currentOs)
             }
         }
