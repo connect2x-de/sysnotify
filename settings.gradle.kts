@@ -36,8 +36,10 @@ dependencyResolutionManagement {
 }
 
 plugins {
-    id("de.connect2x.conventions.c2x-settings-plugin") version "20260217.173858"
+    id("de.connect2x.conventions.c2x-settings-plugin") version "20260223.080735"
 }
 
-include(":sysnotify")
-include(":sysnotify-sample")
+enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
+
+include("sysnotify-core")
+include("sysnotify-sample")

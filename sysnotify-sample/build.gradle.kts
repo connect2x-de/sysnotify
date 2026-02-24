@@ -19,9 +19,9 @@ import de.connect2x.conventions.defaultCompilerOptions
 import de.connect2x.conventions.withAndroid
 import de.connect2x.conventions.withBrowser
 import de.connect2x.conventions.withIos
-import de.connect2x.conventions.withJs
 import de.connect2x.conventions.withJvm
 import de.connect2x.conventions.withMacos
+import de.connect2x.conventions.withWeb
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 
 plugins {
@@ -37,7 +37,7 @@ kotlin {
     defaultCompilerOptions()
     withAndroid("$group.sample")
     withJvm()
-    withJs {
+    withWeb {
         withBrowser {
             runTask {
                 mainOutputFileName = "sample.js"
@@ -79,7 +79,7 @@ kotlin {
                 implementation(sharedLibs.compose.materialIconsExtended)
                 implementation(sharedLibs.compose.resources)
                 implementation(sharedLibs.compose.uiToolingPreview)
-                implementation(project(":sysnotify"))
+                implementation(projects.sysnotifyCore)
             }
         }
         jvmMain {
@@ -98,9 +98,13 @@ kotlin {
 }
 
 android {
-    sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
-    sourceSets["main"].res.srcDirs("src/androidMain/res")
-    sourceSets["main"].resources.srcDirs("src/commonMain/resources")
+    sourceSets {
+        named("main") {
+            manifest.srcFile("src/androidMain/AndroidManifest.xml")
+            res.srcDirs("src/androidMain/res")
+            resources.srcDirs("src/commonMain/resources")
+        }
+    }
     defaultConfig {
         versionCode = 1
         versionName = libs.versions.sysnotify.get()
