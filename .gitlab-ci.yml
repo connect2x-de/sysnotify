@@ -51,8 +51,9 @@ build:windows:
     - *if-merge-request
   script:
     - ./gradlew
-      :sysnotify:linkMingwX64
-      :sysnotify:mingwX64Test
+      :sysnotify-core:clean
+      :sysnotify-core:linkMingwX64
+      :sysnotify-core:mingwX64Test
 
 build:mac:
   stage: build
@@ -62,8 +63,9 @@ build:mac:
     - *if-merge-request
   script:
     - ./gradlew
-      :sysnotify:link{MacosX64,MacosArm64,IosArm64,IosX64,IosSimulatorArm64}
-      :sysnotify:{macosX64,iosX64}Test
+      :sysnotify-core:clean
+      :sysnotify-core:link{MacosX64,MacosArm64,IosArm64,IosX64,IosSimulatorArm64}
+      :sysnotify-core:{macosX64,iosX64}Test
 
 build:linux:
   stage: build
@@ -74,9 +76,9 @@ build:linux:
     - *if-merge-request
   script:
     - gradle
-      :sysnotify:compile{ReleaseKotlinAndroid,KotlinJvm}
-      :sysnotify:linkLinux{X64,Arm64}
-      :sysnotify:{linuxX64,jvm}Test
+      :sysnotify-core:compile{ReleaseKotlinAndroid,KotlinJvm}
+      :sysnotify-core:linkLinux{X64,Arm64}
+      :sysnotify-core:{linuxX64,jvm}Test
 
 # Only required on macOS since it can build all targets
 checkAbi:
@@ -89,7 +91,7 @@ checkAbi:
   rules:
     - *if-merge-request
   script:
-    - ./gradlew :sysnotify:clean :sysnotify:checkLegacyAbi
+    - ./gradlew :sysnotify-core:clean :sysnotify-core:checkLegacyAbi
 
 security:dependencies:
   stage: security
