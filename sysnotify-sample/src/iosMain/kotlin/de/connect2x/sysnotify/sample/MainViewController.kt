@@ -17,29 +17,14 @@
 package de.connect2x.sysnotify.sample
 
 import androidx.compose.ui.window.ComposeUIViewController
-import kotlinx.cinterop.ExperimentalForeignApi
+import de.connect2x.sysnotify.NotificationHandler
 import platform.UIKit.UIViewController
-import platform.UserNotifications.UNNotification
-import platform.UserNotifications.UNNotificationPresentationOptionBanner
-import platform.UserNotifications.UNNotificationPresentationOptionSound
-import platform.UserNotifications.UNNotificationPresentationOptions
-import platform.UserNotifications.UNUserNotificationCenter
-import platform.UserNotifications.UNUserNotificationCenterDelegateProtocol
-import platform.darwin.NSObject
 
-@OptIn(ExperimentalForeignApi::class)
+@Suppress("UNUSED")
 fun MainViewController(): UIViewController {
-    val notificationDelegate = object : NSObject(), UNUserNotificationCenterDelegateProtocol {
-        override fun userNotificationCenter(
-            center: UNUserNotificationCenter,
-            willPresentNotification: UNNotification,
-            withCompletionHandler: (UNNotificationPresentationOptions) -> Unit
-        ) {
-            withCompletionHandler(UNNotificationPresentationOptionBanner or UNNotificationPresentationOptionSound)
-        }
-    }
-    UNUserNotificationCenter.currentNotificationCenter().setDelegate(notificationDelegate)
-
+    NotificationHandler.installHooks()
+    // iOS cannot handle custom dimissals properly, the counter stays hidden
+    // when the app is closed completely
     return ComposeUIViewController {
         App()
     }

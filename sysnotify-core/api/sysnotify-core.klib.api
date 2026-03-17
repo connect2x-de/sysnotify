@@ -9,8 +9,8 @@
 // - Show declarations: true
 
 // Library unique name: <de.connect2x.sysnotify:sysnotify-core>
-open annotation class de.connect2x.sysnotify/SysnotifyPrivateApi : kotlin/Annotation { // de.connect2x.sysnotify/SysnotifyPrivateApi|null[0]
-    constructor <init>() // de.connect2x.sysnotify/SysnotifyPrivateApi.<init>|<init>(){}[0]
+open annotation class de.connect2x.sysnotify/InternalNotificationApi : kotlin/Annotation { // de.connect2x.sysnotify/InternalNotificationApi|null[0]
+    constructor <init>() // de.connect2x.sysnotify/InternalNotificationApi.<init>|<init>(){}[0]
 }
 
 final enum class de.connect2x.sysnotify/ColorFormat : kotlin/Enum<de.connect2x.sysnotify/ColorFormat> { // de.connect2x.sysnotify/ColorFormat|null[0]
@@ -76,6 +76,8 @@ abstract interface de.connect2x.sysnotify/NotificationHandler : kotlin/AutoClose
         abstract fun <get-appId>(): kotlin/String // de.connect2x.sysnotify/NotificationHandler.appId.<get-appId>|<get-appId>(){}[0]
     abstract val capabilities // de.connect2x.sysnotify/NotificationHandler.capabilities|{}capabilities[0]
         abstract fun <get-capabilities>(): de.connect2x.sysnotify/NotificationCapabilities // de.connect2x.sysnotify/NotificationHandler.capabilities.<get-capabilities>|<get-capabilities>(){}[0]
+    abstract val contributesToCounter // de.connect2x.sysnotify/NotificationHandler.contributesToCounter|{}contributesToCounter[0]
+        abstract fun <get-contributesToCounter>(): kotlin/Boolean // de.connect2x.sysnotify/NotificationHandler.contributesToCounter.<get-contributesToCounter>|<get-contributesToCounter>(){}[0]
     abstract val hasPermissions // de.connect2x.sysnotify/NotificationHandler.hasPermissions|{}hasPermissions[0]
         abstract fun <get-hasPermissions>(): kotlin/Boolean // de.connect2x.sysnotify/NotificationHandler.hasPermissions.<get-hasPermissions>|<get-hasPermissions>(){}[0]
     abstract val id // de.connect2x.sysnotify/NotificationHandler.id|{}id[0]
@@ -97,6 +99,10 @@ abstract interface de.connect2x.sysnotify/NotificationHandler : kotlin/AutoClose
     open suspend fun requestPermissions(kotlin/Function1<kotlin/Boolean, kotlin/Unit> = ...) // de.connect2x.sysnotify/NotificationHandler.requestPermissions|requestPermissions(kotlin.Function1<kotlin.Boolean,kotlin.Unit>){}[0]
     open suspend fun update(de.connect2x.sysnotify/NotificationHandle, de.connect2x.sysnotify/Notification): de.connect2x.sysnotify/NotificationHandle // de.connect2x.sysnotify/NotificationHandler.update|update(de.connect2x.sysnotify.NotificationHandle;de.connect2x.sysnotify.Notification){}[0]
     open suspend fun update(kotlin/String, de.connect2x.sysnotify/Notification): de.connect2x.sysnotify/NotificationHandle // de.connect2x.sysnotify/NotificationHandler.update|update(kotlin.String;de.connect2x.sysnotify.Notification){}[0]
+
+    final object Companion { // de.connect2x.sysnotify/NotificationHandler.Companion|null[0]
+        final inline fun installHooks() // de.connect2x.sysnotify/NotificationHandler.Companion.installHooks|installHooks(){}[0]
+    }
 }
 
 final class de.connect2x.sysnotify/Notification { // de.connect2x.sysnotify/Notification|null[0]
@@ -161,11 +167,13 @@ final class de.connect2x.sysnotify/NotificationIcon { // de.connect2x.sysnotify/
 }
 
 final value class de.connect2x.sysnotify/NotificationCapabilities { // de.connect2x.sysnotify/NotificationCapabilities|null[0]
-    constructor <init>(kotlin/Boolean, kotlin/Boolean, kotlin/Boolean, kotlin/Boolean, kotlin/Boolean, kotlin/Boolean, kotlin/Boolean, kotlin/Boolean, kotlin/Boolean) // de.connect2x.sysnotify/NotificationCapabilities.<init>|<init>(kotlin.Boolean;kotlin.Boolean;kotlin.Boolean;kotlin.Boolean;kotlin.Boolean;kotlin.Boolean;kotlin.Boolean;kotlin.Boolean;kotlin.Boolean){}[0]
+    constructor <init>(kotlin/Boolean, kotlin/Boolean, kotlin/Boolean, kotlin/Boolean, kotlin/Boolean, kotlin/Boolean, kotlin/Boolean, kotlin/Boolean, kotlin/Boolean, kotlin/Boolean) // de.connect2x.sysnotify/NotificationCapabilities.<init>|<init>(kotlin.Boolean;kotlin.Boolean;kotlin.Boolean;kotlin.Boolean;kotlin.Boolean;kotlin.Boolean;kotlin.Boolean;kotlin.Boolean;kotlin.Boolean;kotlin.Boolean){}[0]
     constructor <init>(kotlin/UInt) // de.connect2x.sysnotify/NotificationCapabilities.<init>|<init>(kotlin.UInt){}[0]
 
     final val isActionSupported // de.connect2x.sysnotify/NotificationCapabilities.isActionSupported|{}isActionSupported[0]
         final inline fun <get-isActionSupported>(): kotlin/Boolean // de.connect2x.sysnotify/NotificationCapabilities.isActionSupported.<get-isActionSupported>|<get-isActionSupported>(){}[0]
+    final val isCounterSupported // de.connect2x.sysnotify/NotificationCapabilities.isCounterSupported|{}isCounterSupported[0]
+        final inline fun <get-isCounterSupported>(): kotlin/Boolean // de.connect2x.sysnotify/NotificationCapabilities.isCounterSupported.<get-isCounterSupported>|<get-isCounterSupported>(){}[0]
     final val isCustomSoundSupported // de.connect2x.sysnotify/NotificationCapabilities.isCustomSoundSupported|{}isCustomSoundSupported[0]
         final inline fun <get-isCustomSoundSupported>(): kotlin/Boolean // de.connect2x.sysnotify/NotificationCapabilities.isCustomSoundSupported.<get-isCustomSoundSupported>|<get-isCustomSoundSupported>(){}[0]
     final val isDescriptionSupported // de.connect2x.sysnotify/NotificationCapabilities.isDescriptionSupported|{}isDescriptionSupported[0]
@@ -194,6 +202,8 @@ final value class de.connect2x.sysnotify/NotificationCapabilities { // de.connec
     final object Companion { // de.connect2x.sysnotify/NotificationCapabilities.Companion|null[0]
         final const val IS_ACTION_SUPPORTED // de.connect2x.sysnotify/NotificationCapabilities.Companion.IS_ACTION_SUPPORTED|{}IS_ACTION_SUPPORTED[0]
             final fun <get-IS_ACTION_SUPPORTED>(): kotlin/UInt // de.connect2x.sysnotify/NotificationCapabilities.Companion.IS_ACTION_SUPPORTED.<get-IS_ACTION_SUPPORTED>|<get-IS_ACTION_SUPPORTED>(){}[0]
+        final const val IS_COUNTER_SUPPORTED // de.connect2x.sysnotify/NotificationCapabilities.Companion.IS_COUNTER_SUPPORTED|{}IS_COUNTER_SUPPORTED[0]
+            final fun <get-IS_COUNTER_SUPPORTED>(): kotlin/UInt // de.connect2x.sysnotify/NotificationCapabilities.Companion.IS_COUNTER_SUPPORTED.<get-IS_COUNTER_SUPPORTED>|<get-IS_COUNTER_SUPPORTED>(){}[0]
         final const val IS_CUSTOM_SOUND_SUPPORTED // de.connect2x.sysnotify/NotificationCapabilities.Companion.IS_CUSTOM_SOUND_SUPPORTED|{}IS_CUSTOM_SOUND_SUPPORTED[0]
             final fun <get-IS_CUSTOM_SOUND_SUPPORTED>(): kotlin/UInt // de.connect2x.sysnotify/NotificationCapabilities.Companion.IS_CUSTOM_SOUND_SUPPORTED.<get-IS_CUSTOM_SOUND_SUPPORTED>|<get-IS_CUSTOM_SOUND_SUPPORTED>(){}[0]
         final const val IS_DESCRIPTION_SUPPORTED // de.connect2x.sysnotify/NotificationCapabilities.Companion.IS_DESCRIPTION_SUPPORTED|{}IS_DESCRIPTION_SUPPORTED[0]
@@ -221,6 +231,8 @@ final object de.connect2x.sysnotify/NoopNotificationHandler : de.connect2x.sysno
         final fun <get-appId>(): kotlin/String // de.connect2x.sysnotify/NoopNotificationHandler.appId.<get-appId>|<get-appId>(){}[0]
     final val capabilities // de.connect2x.sysnotify/NoopNotificationHandler.capabilities|{}capabilities[0]
         final fun <get-capabilities>(): de.connect2x.sysnotify/NotificationCapabilities // de.connect2x.sysnotify/NoopNotificationHandler.capabilities.<get-capabilities>|<get-capabilities>(){}[0]
+    final val contributesToCounter // de.connect2x.sysnotify/NoopNotificationHandler.contributesToCounter|{}contributesToCounter[0]
+        final fun <get-contributesToCounter>(): kotlin/Boolean // de.connect2x.sysnotify/NoopNotificationHandler.contributesToCounter.<get-contributesToCounter>|<get-contributesToCounter>(){}[0]
     final val hasPermissions // de.connect2x.sysnotify/NoopNotificationHandler.hasPermissions|{}hasPermissions[0]
         final fun <get-hasPermissions>(): kotlin/Boolean // de.connect2x.sysnotify/NoopNotificationHandler.hasPermissions.<get-hasPermissions>|<get-hasPermissions>(){}[0]
     final val id // de.connect2x.sysnotify/NoopNotificationHandler.id|{}id[0]
@@ -241,8 +253,12 @@ final object de.connect2x.sysnotify/NoopNotificationHandler : de.connect2x.sysno
     final suspend fun update(de.connect2x.sysnotify/NotificationHandle, de.connect2x.sysnotify/Notification): de.connect2x.sysnotify/NotificationHandle // de.connect2x.sysnotify/NoopNotificationHandler.update|update(de.connect2x.sysnotify.NotificationHandle;de.connect2x.sysnotify.Notification){}[0]
 }
 
+final object de.connect2x.sysnotify/NotificationHandlerStatics { // de.connect2x.sysnotify/NotificationHandlerStatics|null[0]
+    final fun installHooks() // de.connect2x.sysnotify/NotificationHandlerStatics.installHooks|installHooks(){}[0]
+}
+
 final fun (de.connect2x.sysnotify/NotificationHandler).de.connect2x.sysnotify/withActivationHandler(kotlin/Function1<de.connect2x.sysnotify/Notification, kotlin/Unit>): de.connect2x.sysnotify/NotificationHandler // de.connect2x.sysnotify/withActivationHandler|withActivationHandler@de.connect2x.sysnotify.NotificationHandler(kotlin.Function1<de.connect2x.sysnotify.Notification,kotlin.Unit>){}[0]
-final fun de.connect2x.sysnotify/NotificationHandler(kotlin/String, kotlin/String = ..., de.connect2x.sysnotify/NotificationPriority = ..., kotlin/String = ...): de.connect2x.sysnotify/NotificationHandler // de.connect2x.sysnotify/NotificationHandler|NotificationHandler(kotlin.String;kotlin.String;de.connect2x.sysnotify.NotificationPriority;kotlin.String){}[0]
+final fun de.connect2x.sysnotify/NotificationHandler(kotlin/String, kotlin/String = ..., de.connect2x.sysnotify/NotificationPriority = ..., kotlin/String = ..., kotlin/Boolean = ...): de.connect2x.sysnotify/NotificationHandler // de.connect2x.sysnotify/NotificationHandler|NotificationHandler(kotlin.String;kotlin.String;de.connect2x.sysnotify.NotificationPriority;kotlin.String;kotlin.Boolean){}[0]
 final inline fun de.connect2x.sysnotify/pack(de.connect2x.sysnotify/ColorFormat, kotlin/UByte, kotlin/UByte, kotlin/UByte, kotlin/UByte): kotlin/UInt // de.connect2x.sysnotify/pack|pack(de.connect2x.sysnotify.ColorFormat;kotlin.UByte;kotlin.UByte;kotlin.UByte;kotlin.UByte){}[0]
 final inline fun de.connect2x.sysnotify/swizzle(de.connect2x.sysnotify/ColorFormat, de.connect2x.sysnotify/ColorFormat, kotlin/UInt): kotlin/UInt // de.connect2x.sysnotify/swizzle|swizzle(de.connect2x.sysnotify.ColorFormat;de.connect2x.sysnotify.ColorFormat;kotlin.UInt){}[0]
 final inline fun de.connect2x.sysnotify/unpackAlpha(de.connect2x.sysnotify/ColorFormat, kotlin/UInt): kotlin/UByte // de.connect2x.sysnotify/unpackAlpha|unpackAlpha(de.connect2x.sysnotify.ColorFormat;kotlin.UInt){}[0]

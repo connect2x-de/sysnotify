@@ -46,7 +46,8 @@ internal expect fun createNotificationHandler(
     priority: NotificationPriority,
     activationHandler: ActivationHandler,
     closeCallback: () -> Unit = {},
-    appId: String
+    appId: String,
+    contributesToCounter: Boolean
 ): NotificationHandler
 
 private val typeNativeNotificationHandler =
@@ -59,12 +60,16 @@ private val typeString = JvmRefType("java.lang.String")
 
 internal fun registerNatives(env: JNIEnvVar) {
     typeNativeNotificationHandler.getJClass(env).apply {
+        registerNativeFunction(env, "installHooks", staticCFunction(::installHooks)) {
+            returns(JvmBuiltinType.VOID)
+        }
         registerNativeFunction(env, "create", staticCFunction(::create)) {
             typeString named "name"
             typeString named "id"
             JvmBuiltinType.INT named "priority"
             typeNativeActivationCallback named "activationCallback"
             typeString named "appId"
+            JvmBuiltinType.BOOLEAN named "contributesToCounter"
             returns(JvmBuiltinType.LONG)
         }
         registerNativeFunction(env, "hasPermissions", staticCFunction(::hasPermissions)) {
@@ -136,6 +141,10 @@ internal fun registerNatives(env: JNIEnvVar) {
     }
 }
 
+private fun installHooks(env: JNIEnvVar, clazz: jclass) {
+    NotificationHandlerStatics.installHooks()
+}
+
 private fun create(
     env: JNIEnvVar,
     clazz: jclass,
@@ -143,7 +152,8 @@ private fun create(
     id: jstring,
     priority: jint,
     activationCallback: jobject,
-    appId: jstring
+    appId: jstring,
+    contributesToCounter: jboolean
 ): jlong {
     val globalCallback = activationCallback.newGlobalRef(env)
     val handler = createNotificationHandler(
@@ -179,7 +189,8 @@ private fun create(
                 globalCallback.deleteGlobalRef(this)
             }
         },
-        appId = appId.toKString(env)
+        appId = appId.toKString(env),
+        contributesToCounter = contributesToCounter.toKBoolean()
     )
     return StableRef.create(handler).asCPointer().rawValue.toLong()
 }
@@ -248,7 +259,13 @@ private fun push(
                 title = title?.toKString(env) ?: "Unknown",
                 description = description?.toKString(env),
                 icon = icon?.let { NotificationIcon(it.toByteArray(env), iconWidth, iconHeight) },
-                statusIcon = statusIcon?.let { NotificationIcon(it.toByteArray(env), statusIconWidth, statusIconHeight) },
+                statusIcon = statusIcon?.let {
+                    NotificationIcon(
+                        it.toByteArray(env),
+                        statusIconWidth,
+                        statusIconHeight
+                    )
+                },
                 playSound = playSound.toKBoolean(),
                 soundPath = soundPath?.toKString(env),
                 group = group?.toKString(env),
@@ -298,7 +315,13 @@ private fun update(
                     title = title?.toKString(env) ?: "Unknown",
                     description = description?.toKString(env),
                     icon = icon?.let { NotificationIcon(it.toByteArray(env), iconWidth, iconHeight) },
-                    statusIcon = statusIcon?.let { NotificationIcon(it.toByteArray(env), statusIconWidth, statusIconHeight) },
+                    statusIcon = statusIcon?.let {
+                        NotificationIcon(
+                            it.toByteArray(env),
+                            statusIconWidth,
+                            statusIconHeight
+                        )
+                    },
                     group = group?.toKString(env),
                     callbackData = callbackData?.toKString(env)
                 )
@@ -345,7 +368,6 @@ private fun unregister(env: JNIEnvVar, clazz: jclass, handler: jlong) {
             .get().unregister()
     }
 }
-
 
 private fun close(env: JNIEnvVar, clazz: jclass, handler: jlong) {
     requireNotNull(handler.toCPointer<CPointed>())

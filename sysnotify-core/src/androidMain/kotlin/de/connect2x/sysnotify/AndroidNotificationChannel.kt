@@ -26,35 +26,56 @@ import androidx.core.app.NotificationManagerCompat
  * Small abstraction over [android.app.NotificationChannel]
  * to support API levels < 26.
  */
-@SysnotifyPrivateApi
 internal sealed interface AndroidNotificationChannel {
     @RequiresApi(Build.VERSION_CODES.O)
     data class Real(
         override val id: String,
         override val name: String,
-        override val priority: Int
+        override val priority: Int,
+        override val contributesToCounter: Boolean
     ) : AndroidNotificationChannel {
-        lateinit var channel: NotificationChannel
-            private set
+        @PublishedApi
+        internal var _channel: NotificationChannel? = null
 
-        override fun init(context: Context) {
+        @PublishedApi
+        internal val channelLock: Any = Any()
+
+        inline val channel: NotificationChannel
+            get() = checkNotNull(synchronized(channelLock, ::_channel)) {
+                "AndroidNotificationChannel has not been initialized"
+            }
+
+        override fun init(context: Context) = synchronized(channelLock) {
             val manager = NotificationManagerCompat.from(context)
-            channel = NotificationChannel(id, name, priority)
+            val channel = NotificationChannel(id, name, priority)
             manager.createNotificationChannel(channel)
+            channel.setShowBadge(contributesToCounter)
+            _channel = channel
+        }
+
+        override fun delete(context: Context): Unit = synchronized(channelLock) {
+            _channel?.let { channel ->
+                val manager = NotificationManagerCompat.from(context)
+                manager.deleteNotificationChannel(channel.id)
+            }
         }
     }
 
     data class Fake(
         override val id: String,
         override val name: String,
-        override val priority: Int
+        override val priority: Int,
+        override val contributesToCounter: Boolean
     ) : AndroidNotificationChannel {
         override fun init(context: Context) = Unit
+        override fun delete(context: Context) = Unit
     }
 
     val id: String
     val name: String
     val priority: Int
+    val contributesToCounter: Boolean
 
     fun init(context: Context)
+    fun delete(context: Context)
 }

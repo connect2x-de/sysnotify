@@ -27,6 +27,7 @@ private class JvmNotificationHandler(
     override val name: String,
     override val id: String,
     override val priority: NotificationPriority,
+    override val contributesToCounter: Boolean
 ) : NotificationHandler {
     var activationHandler: AtomicReference<ActivationHandler?> = AtomicReference(null)
 
@@ -38,7 +39,8 @@ private class JvmNotificationHandler(
             // Wire activation through to instance activation handler
             activationHandler.load()?.invoke(it)
         },
-        appId = appId
+        appId = appId,
+        contributesToCounter = contributesToCounter
     )
 
     override val platform: NotificationPlatform by lazy {
@@ -59,7 +61,6 @@ private class JvmNotificationHandler(
 
     override suspend fun requestPermissions(callback: PermissionCallback) {
         NativeNotificationHandler.requestPermissions(address, NativePermissionCallback.create {
-
             callback(it)
         })
     }
@@ -140,7 +141,8 @@ actual fun NotificationHandler( // @formatter:off
     name: String,
     id: String,
     priority: NotificationPriority,
-    appId: String
+    appId: String,
+    contributesToCounter: Boolean
 ): NotificationHandler { // @formatter:on
-    return JvmNotificationHandler(appId = appId, name = name, id = id, priority = priority)
+    return JvmNotificationHandler(appId, name, id, priority, contributesToCounter)
 }

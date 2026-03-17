@@ -22,7 +22,8 @@ internal actual fun createNotificationHandler(
     priority: NotificationPriority,
     activationHandler: ActivationHandler,
     closeCallback: () -> Unit,
-    appId: String
+    appId: String,
+    contributesToCounter: Boolean
 ): NotificationHandler {
     return createAppleOrNoopNotificationHandler(
         name = name,
@@ -30,5 +31,6 @@ internal actual fun createNotificationHandler(
         priority = priority,
         closeCallback = closeCallback,
         appId = appId,
+        contributesToCounter = contributesToCounter
     ).withActivationHandler(activationHandler)
 }

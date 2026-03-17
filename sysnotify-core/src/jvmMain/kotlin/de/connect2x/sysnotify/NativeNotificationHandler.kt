@@ -16,10 +16,14 @@
 
 package de.connect2x.sysnotify
 
+@InternalNotificationApi
 object NativeNotificationHandler {
     init {
         NativeLoader.ensureLoaded()
     }
+
+    @JvmStatic
+    external fun installHooks()
 
     @JvmStatic
     external fun create( // @formatter:off
@@ -27,7 +31,8 @@ object NativeNotificationHandler {
         id: String,
         priority: Int,
         activationCallback: NativeActivationCallback,
-        appId: String
+        appId: String,
+        contributesToCounter: Boolean
     ): Long // @formatter:on
 
     @JvmStatic

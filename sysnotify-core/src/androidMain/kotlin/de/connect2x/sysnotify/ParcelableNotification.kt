@@ -16,9 +16,6 @@
 
 package de.connect2x.sysnotify
 
-import android.app.Activity
-import android.content.Context
-import android.content.Intent
 import android.os.Parcel
 import android.os.Parcelable
 import android.os.Parcelable.Creator
@@ -71,39 +68,5 @@ data class ParcelableNotification(
         override fun newArray(size: Int): Array<ParcelableNotification?> {
             return arrayOfNulls(size)
         }
-    }
-}
-
-/**
- * A specialized Android Intent for launching activities with notification data.
- * This class simplifies the process of creating intents that carry notification information
- * to be displayed or processed by an Activity.
- *
- * @param packageContext The context of the application package implementing the activity
- * @param clazz The Activity class that will receive and handle the notification
- * @param notification The notification object to be passed to the activity
- */
-open class SysNotifyIntent(
-    packageContext: Context,
-    clazz: Class<out Activity>,
-    notification: Notification,
-) : Intent(packageContext, clazz) {
-    /**
-     * Companion object containing constants used by SysNotifyIntent.
-     */
-    companion object {
-        /**
-         * Key for the notification extra in the intent.
-         * Used to retrieve the notification data from the intent in the receiving activity.
-         */
-        const val EXTRA_LAUNCH_NOTIFICATION: String = "launch_notification"
-    }
-
-    /**
-     * Initializes the intent by adding the notification as a parcelable extra.
-     * The notification is converted to a [ParcelableNotification] before being added.
-     */
-    init {
-        this.putExtra(EXTRA_LAUNCH_NOTIFICATION, ParcelableNotification(notification))
     }
 }

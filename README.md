@@ -8,14 +8,16 @@ The support matrix below indicates which specific features are available on whic
 
 |              | Android   | iOS  | Windows  | macOS  | Linux | Browser |
 |--------------|-----------|------|----------|--------|-------|---------|
-| Title        | ✅        | ✅   | ✅       | ✅     | ✅    | ✅      |
-| Description  | ✅        | ✅   | ✅       | ✅     | ✅    | ✅      |
-| Icon         | ✅        | ❌   | ✅       | ❌     | ✅    | ✅      |
-| Action       | ✅        | ❌   | ✅       | ❌     | ✅    | ✅      |
-| Pop          | ✅        | ✅   | ✅       | ✅     | ✅    | ✅      |
-| Sound        | ✅        | ✅   | ✅       | ✅     | ✅    | ✅      |
-| Custom Sound | ✅        | ✅   | ✅       | ✅     | ✅    | ❌      |
-| Grouping     | ✅        | ✅   | ❌       | ✅     | ❌    | ❌      |
+| Title        | ✅        | ✅   | ✅       | ✅     | ✅    | ✅    |
+| Description  | ✅        | ✅   | ✅       | ✅     | ✅    | ✅    |
+| Icon         | ✅        | ❌   | ✅       | ❌     | ✅    | ✅    |
+| Action       | ✅        | ✅   | ✅       | ✅     | ✅    | ✅    |
+| Pop          | ✅        | ✅   | ✅       | ✅     | ✅    | ✅    |
+| Sound        | ✅        | ✅   | ✅       | ✅     | ✅    | ✅    |
+| Custom Sound | ✅        | ✅   | ✅       | ✅     | ✅    | ❌    |
+| Grouping     | ✅        | ✅   | ❌       | ✅     | ❌    | ❌    |
+| Status Icons | ✅        | ❌   | ❌       | ❌     | ❌    | ❌    |
+| Icon Badges  | ✅        | ✅   | ❌       | ✅     | ❌    | ❌    |
 
 **For the JVM, the same features as the respective host-native implementation are available.**
 
@@ -86,6 +88,8 @@ class MyApplication : ComponentActivity() {
 
     override fun onCreate(savedInstance: Bundle?) {
         super.onCreate(savedInstance)
+        // This should be called as early as possible on EVERY platform
+        NotificationHandler.installHooks()
         notificationHandler = NotificationHandler(
             name = "MyApp",
             id = "com.example.MyApp",

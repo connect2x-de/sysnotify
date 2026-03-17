@@ -72,6 +72,7 @@ fun hasNotificationPermissions(context: Context): Boolean {
  * @param value The nullable value to write to the parcel
  * @param writer A function that writes a non-null value of type T to the parcel
  */
+@InternalNotificationApi
 internal inline fun <T> Parcel.writeNullable(value: T?, writer: Parcel.(T) -> Unit) {
     if (value == null) {
         writeInt(0)
@@ -90,6 +91,7 @@ internal inline fun <T> Parcel.writeNullable(value: T?, writer: Parcel.(T) -> Un
  * @param reader A function that reads a non-null value of type T from the parcel
  * @return The read value of type T, or null if the value was written as null
  */
+@InternalNotificationApi
 internal inline fun <T> Parcel.readNullable(reader: Parcel.() -> T): T? {
     return if (readInt() == 0) null
     else reader(this)

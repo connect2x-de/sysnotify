@@ -115,7 +115,7 @@ internal object NotificationDispatcher {
                         while (isRunning() && pendingNotificationsLock.withLock { pendingNotifications.isNotEmpty() }) {
                             val (tag, isSameContent, notification, handler) = pendingNotificationsLock.withLock { pendingNotifications.removeFirst() }
                             val handle = create(tag, notification, handler)
-                            if(handle !is LinuxNotificationHandle) continue // Only proceed when notification is valid
+                            if (handle !is LinuxNotificationHandle) continue // Only proceed when notification is valid
                             notificationsLock.withLock {
                                 notifications[tag] = handle
                             }

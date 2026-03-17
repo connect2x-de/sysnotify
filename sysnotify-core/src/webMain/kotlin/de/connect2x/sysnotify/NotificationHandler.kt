@@ -39,7 +39,8 @@ private class WebNotificationHandler(
     override val appId: String,
     override val name: String,
     override val id: String,
-    override val priority: NotificationPriority
+    override val priority: NotificationPriority,
+    override val contributesToCounter: Boolean
 ) : NotificationHandler {
     // TODO this does not survive a restart
     private val notifications: MutableMap<String, JsNotification> = mutableMapOf()
@@ -57,7 +58,8 @@ private class WebNotificationHandler(
         isSoundSupported = false, // TODO: reimplement this
         isCustomSoundSupported = true,
         isGroupingSupported = false,
-        isStatusIconSupported = false
+        isStatusIconSupported = false,
+        isCounterSupported = false
     )
 
     var activationHandler: ActivationHandler = {}
@@ -154,9 +156,9 @@ private class WebNotificationHandler(
 actual fun NotificationHandler.withActivationHandler(handler: ActivationHandler): NotificationHandler {
     if (this !is WebNotificationHandler) return this
     val previousHandler = activationHandler
-    activationHandler = {
-        handler(it)
-        previousHandler(it)
+    activationHandler = { notification ->
+        handler(notification)
+        previousHandler(notification)
     }
     return this
 }
@@ -165,5 +167,12 @@ actual fun NotificationHandler( // @formatter:off
     name: String,
     id: String,
     priority: NotificationPriority,
-    appId: String
-): NotificationHandler = WebNotificationHandler(appId, name, id, priority) // // @formatter:on
+    appId: String,
+    contributesToCounter: Boolean
+): NotificationHandler = WebNotificationHandler( // @formatter:on
+    appId = appId,
+    name = name,
+    id = id,
+    priority = priority,
+    contributesToCounter = contributesToCounter
+)

@@ -64,7 +64,8 @@ fun App(
     fun createNotificationHandler(): NotificationHandler =
         NotificationHandler(
             name = "Sysnotify Sample",
-            id = "de.connect2x.sysnotify"
+            id = "de.connect2x.sysnotify",
+            contributesToCounter = true
         ).apply(configureNotificationHandler)
 
     LaunchedEffect(Unit) {
@@ -133,7 +134,7 @@ fun App(
                 Text(
                     text = "Title",
                     modifier = Modifier.padding(vertical = 5.dp),
-                    style = MaterialTheme.typography.h5,
+                    style = MaterialTheme.typography.h6,
                 )
                 Row {
                     TextField(
@@ -146,7 +147,7 @@ fun App(
                 Text(
                     text = "Description",
                     modifier = Modifier.padding(vertical = 5.dp),
-                    style = MaterialTheme.typography.h5,
+                    style = MaterialTheme.typography.h6,
                 )
                 Row {
                     TextField(
@@ -159,7 +160,7 @@ fun App(
                 Text(
                     text = "Tag",
                     modifier = Modifier.padding(vertical = 5.dp),
-                    style = MaterialTheme.typography.h5,
+                    style = MaterialTheme.typography.h6,
                 )
                 Row {
                     TextField(
@@ -180,7 +181,7 @@ fun App(
                 Text(
                     text = "User Data",
                     modifier = Modifier.padding(vertical = 5.dp),
-                    style = MaterialTheme.typography.h5,
+                    style = MaterialTheme.typography.h6,
                 )
                 Row {
                     TextField(
@@ -195,7 +196,7 @@ fun App(
                     Text(
                         text = "Launch Notification",
                         modifier = Modifier.padding(vertical = 5.dp),
-                        style = MaterialTheme.typography.h5,
+                        style = MaterialTheme.typography.h6,
                     )
                     Text(
                         modifier = Modifier.padding(vertical = 5.dp),
@@ -213,9 +214,9 @@ fun App(
                                         description = description.takeIf { it.isNotEmpty() },
                                         icon = getIcon(),
                                         callbackData = callbackData,
-                                        playSound = true,
+                                        playSound = true
                                     ),
-                                    tag = tag,
+                                    tag = tag
                                 )
                             }
                         },

@@ -48,6 +48,7 @@ internal class WindowsNotificationHandler(
     override val name: String,
     override val id: String,
     override val priority: NotificationPriority,
+    override val contributesToCounter: Boolean,
     private val closeCallback: () -> Unit = {}
 ) : NotificationHandler {
     val address: sn_notification_handler = memScoped {
@@ -69,7 +70,8 @@ internal class WindowsNotificationHandler(
         isSoundSupported = true,
         isCustomSoundSupported = true,
         isGroupingSupported = false,
-        isStatusIconSupported = false
+        isStatusIconSupported = false,
+        isCounterSupported = false
     )
 
     internal var activationHandler: AtomicReference<ActivationHandler?> = AtomicReference(null)
@@ -150,5 +152,12 @@ actual fun NotificationHandler(
     name: String,
     id: String,
     priority: NotificationPriority,
-    appId: String
-): NotificationHandler = WindowsNotificationHandler(appId = appId, name = name, id = id, priority = priority)
+    appId: String,
+    contributesToCounter: Boolean
+): NotificationHandler = WindowsNotificationHandler(
+    appId = appId,
+    name = name,
+    id = id,
+    priority = priority,
+    contributesToCounter = contributesToCounter
+)

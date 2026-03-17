@@ -34,7 +34,6 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.graphics.drawable.IconCompat
 import androidx.core.net.toUri
 import kotlin.concurrent.atomics.AtomicReference
-import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -57,49 +56,42 @@ typealias ActivityGetter = () -> ComponentActivity?
  * @param notification The Notification that was activated
  * @return An Intent that will be used as the PendingIntent for the notification
  */
-typealias ActivationFactory = (context: Context, notification: Notification) -> Intent
+typealias NotificationIntentFactory = (context: Context, notification: Notification) -> Intent
 
-@OptIn(ExperimentalAtomicApi::class)
+@InternalNotificationApi
 internal class AndroidNotificationHandler( // @formatter:off
     override val appId: String,
     override val name: String,
     override val id: String,
     override val priority: NotificationPriority,
+    override val contributesToCounter: Boolean
 ) : NotificationHandler { // @formatter:on
     companion object {
+        private const val EXTRA_APP_ID: String = "sysnotify_app_id"
         private const val EXTRA_CHANNEL_ID: String = "sysnotify_channel_id"
     }
 
-    private var channel: AtomicReference<AndroidNotificationChannel?> = AtomicReference(null)
-
-    internal var contextGetter: AtomicReference<ContextGetter?> = AtomicReference(null)
-    internal var activityGetter: AtomicReference<ActivityGetter?> = AtomicReference(null)
-    internal var activationIntent: AtomicReference<ActivationFactory?> = AtomicReference(null)
+    val contextGetter: AtomicReference<ContextGetter?> = AtomicReference(null)
+    val activityGetter: AtomicReference<ActivityGetter?> = AtomicReference(null)
+    val activationIntent: AtomicReference<NotificationIntentFactory?> = AtomicReference(null)
+    val deletionIntent: AtomicReference<NotificationIntentFactory?> = AtomicReference(null)
 
     override val platform: NotificationPlatform = NotificationPlatform.ANDROID
     override val capabilities: NotificationCapabilities = NotificationCapabilities(NotificationCapabilities.ALL)
 
-    internal val manager: NotificationManagerCompat
+    val manager: NotificationManagerCompat
         get() = NotificationManagerCompat.from(context)
 
     override val hasPermissions: Boolean
         get() = hasNotificationPermissions(context)
 
-    internal fun getOrCreateChannel(): AndroidNotificationChannel {
-        val current = channel.load()
-        if (current != null) return current
-        val new = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            AndroidNotificationChannel.Real(id, name, priority.nativeImportance)
-        } else {
-            AndroidNotificationChannel.Fake(id, name, priority.nativeImportance)
-        }
-        new.init(context) // Make sure implementation is initialized
-        channel.store(new)
-        return new
+    val channelDelegate: AndroidNotificationChannel by lazy {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            AndroidNotificationChannel.Real(id, name, priority.nativeImportance, contributesToCounter)
+        } else AndroidNotificationChannel.Fake(id, name, priority.nativeImportance, contributesToCounter)
     }
 
-    // TODO: expose this in public API in 2.4
-    private fun getActiveNotifications(): Set<String> {
+    fun getActiveNotifications(): Set<String> {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             // If we are on API level 26 and above, we can directly use channelId
@@ -146,9 +138,71 @@ internal class AndroidNotificationHandler( // @formatter:off
         callback(true) // On all other versions where perm is not needed, we invoke callback directly
     }
 
-    internal fun createImpl(
+    private fun createActivationIntent(notification: Notification): Intent? {
+        return activationIntent.load()?.let { it(context, notification) }
+            ?: activity?.getDefaultActivationIntentFactory(appId)(context, notification)
+    }
+
+    private fun createDeletionIntent(notification: Notification): Intent? {
+        return activationIntent.load()?.let { it(context, notification) }
+    }
+
+    context(builder: NotificationCompat.Builder)
+    private fun setupIntents(notification: Notification) = with(builder) {
+        createActivationIntent(notification)?.let { intent ->
+            setContentIntent(
+                PendingIntent.getActivity(
+                    activity,
+                    0,
+                    intent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+            )
+        }
+        createDeletionIntent(notification)?.let { intent ->
+            setDeleteIntent(
+                PendingIntent.getBroadcast(
+                    context,
+                    0,
+                    intent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+            )
+        }
+    }
+
+    context(builder: NotificationCompat.Builder)
+    private fun setupIcons(notification: Notification) = with(builder) {
+        notification.icon?.let(NotificationIcon::toBitmap)?.let(::setLargeIcon)
+        val smallIcon =
+            notification.statusIcon?.let(NotificationIcon::toBitmap)?.let(IconCompat::createWithBitmap)
+        if (smallIcon != null) setSmallIcon(smallIcon)
+        else setSmallIcon(R.drawable.ic_notification)
+    }
+
+    context(builder: NotificationCompat.Builder)
+    private fun setupSound(notification: Notification) = with(builder) {
+        if (notification.playSound) notification.soundPath?.let { setSound(it.toUri()) }
+        else {
+            setSilent(true)
+            setSound(null)
+        }
+    }
+
+    context(builder: NotificationCompat.Builder)
+    private fun setupExtras() = with(builder) {
+        setExtras(Bundle().apply {
+            putString(EXTRA_APP_ID, appId)
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+                // For API level 26 and below, we need to add a channel tag to the extras so we can filter later on
+                putString(EXTRA_CHANNEL_ID, id)
+            }
+        })
+    }
+
+    fun create(
         notification: Notification,
-        handle: AndroidNotificationHandle = AndroidNotificationHandle(),
+        handle: AndroidNotificationHandle,
         callback: NotificationCompat.Builder.() -> Unit = {},
     ): AndroidNotificationHandle {
         return handle.apply {
@@ -161,37 +215,15 @@ internal class AndroidNotificationHandler( // @formatter:off
                 setAutoCancel(true) // Remove notification when user taps it
                 setGroup(notification.group)
 
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
-                    // For API level 26 and below, we need to add a channel tag to the extras so we can filter later on
-                    setExtras(Bundle().apply {
-                        putString(EXTRA_CHANNEL_ID, id)
-                    })
+                if (contributesToCounter) {
+                    setBadgeIconType(NotificationCompat.BADGE_ICON_NONE)
+                    setNumber(1)
                 }
 
-                // Setup sound
-                if (notification.playSound) notification.soundPath?.let { setSound(it.toUri()) }
-                else {
-                    setSilent(true)
-                    setSound(null)
-                }
-
-                // Setup icon, fallback to default icon if none was specified
-                notification.icon?.let(NotificationIcon::toBitmap)?.let(::setLargeIcon)
-                val smallIcon =
-                    notification.statusIcon?.let(NotificationIcon::toBitmap)?.let(IconCompat::createWithBitmap)
-                if (smallIcon != null) setSmallIcon(smallIcon)
-                else setSmallIcon(R.drawable.ic_notification)
-
-                // Setup activation intent if present
-                setContentIntent(
-                    PendingIntent.getActivity(
-                        context,
-                        0,
-                        activationIntent.load()?.let { it(context, notification) }
-                            ?: context.getDefaultActivationFactory()(context, notification),
-                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                    )
-                )
+                setupExtras()
+                setupSound(notification)
+                setupIcons(notification)
+                setupIntents(notification)
 
                 callback(this)
             }.build()
@@ -199,9 +231,15 @@ internal class AndroidNotificationHandler( // @formatter:off
     }
 
     @SuppressLint("MissingPermission") // It is the callers responsibility to make sure perms are defined
-    override suspend fun push(notification: Notification, tag: String): NotificationHandle {
+    override suspend fun push(
+        notification: Notification,
+        tag: String
+    ): NotificationHandle {
         if (!hasPermissions) return NotificationHandle.INVALID
-        return createImpl(notification, AndroidNotificationHandle(tag)).apply {
+        // If this is already active, we just create a valid handle to the existing notification
+        if (tag in getActiveNotifications()) return AndroidNotificationHandle(tag)
+        // If this handler contributes to the global counter, we increment BEFORE creating the new notification
+        return create(notification, AndroidNotificationHandle(tag)).apply {
             manager.notify(this.tag, 0, requireNotNull(value) { "Invalid notification handle" })
         }
     }
@@ -214,7 +252,7 @@ internal class AndroidNotificationHandler( // @formatter:off
         if (!hasPermissions || handle !is AndroidNotificationHandle) return NotificationHandle.INVALID
         // If the notification is not active anymore, we ignore the update
         if (handle.tag !in getActiveNotifications()) return NotificationHandle.INVALID
-        return createImpl(notification, handle).apply {
+        return create(notification, handle).apply {
             manager.notify(tag, 0, requireNotNull(value) { "Invalid notification handle" })
         }
     }
@@ -230,10 +268,8 @@ internal class AndroidNotificationHandler( // @formatter:off
     }
 
     override suspend fun unregister() {
-        if (!hasPermissions) return
         clearAll()
-        manager.deleteNotificationChannel(id)
-        close()
+        channelDelegate.delete(context)
     }
 
     override fun close() {}
@@ -246,7 +282,6 @@ internal class AndroidNotificationHandler( // @formatter:off
  * @throws ClassCastException if the handler is not an AndroidNotificationHandler
  * @throws IllegalStateException if no context has been set
  */
-@OptIn(ExperimentalAtomicApi::class)
 val NotificationHandler.context: Context
     get() {
         check(this is AndroidNotificationHandler) { "In order to retrieve Android context, NotificationHandler must be valid" }
@@ -262,7 +297,6 @@ val NotificationHandler.context: Context
  * @throws ClassCastException if the handler is not an AndroidNotificationHandler
  * @throws IllegalStateException if no activity getter has been set
  */
-@OptIn(ExperimentalAtomicApi::class)
 val NotificationHandler.activity: ComponentActivity?
     get() {
         check(this is AndroidNotificationHandler) { "In order to retrieve Android activity, NotificationHandler must be valid" }
@@ -276,13 +310,11 @@ val NotificationHandler.activity: ComponentActivity?
  *
  * @param getter A function that provides the Android Context
  * @return This NotificationHandler for method chaining
- * @throws ClassCastException if the handler is not an AndroidNotificationHandler
  */
-@OptIn(ExperimentalAtomicApi::class)
 fun NotificationHandler.withContext(getter: () -> Context): NotificationHandler {
     if (this !is AndroidNotificationHandler) return this
     contextGetter.store(getter)
-    getOrCreateChannel() // Make sure channel is created once context is available
+    channelDelegate.init(getter()) // Initialize channel delegate
     return this
 }
 
@@ -294,31 +326,38 @@ fun NotificationHandler.withContext(getter: () -> Context): NotificationHandler 
  *
  * @param getter A function that provides the current Activity
  * @return This NotificationHandler for method chaining
- * @throws ClassCastException if the handler is not an AndroidNotificationHandler
  */
-@OptIn(ExperimentalAtomicApi::class)
 fun NotificationHandler.withActivity(getter: () -> ComponentActivity): NotificationHandler {
     if (this !is AndroidNotificationHandler) return this
     activityGetter.store(getter)
-    getOrCreateChannel() // Make sure channel is created once activity is available
+    val activity = getter()
+    channelDelegate.init(activity) // Initialize channel delegate
     return this
 }
 
 /**
- * Associates an ActivationFactory with this NotificationHandler.
- *
- * The ActivationFactory is used to create Intents that determine what happens
- * when a user clicks on a notification. This allows customizing the activation
- * behavior of notifications.
+ * Associates an [NotificationIntentFactory] with this NotificationHandler instance
+ * used to create the activation intent for when the user taps on the notification.
  *
  * @param factory A function that creates an Intent for notification activation
  * @return This NotificationHandler for method chaining
- * @throws ClassCastException if the handler is not an AndroidNotificationHandler
  */
-@OptIn(ExperimentalAtomicApi::class)
-fun NotificationHandler.withActivationFactory(factory: ActivationFactory): NotificationHandler {
+fun NotificationHandler.withActivationIntent(factory: NotificationIntentFactory): NotificationHandler {
     if (this !is AndroidNotificationHandler) return this
     activationIntent.store(factory)
+    return this
+}
+
+/**
+ * Associates an [NotificationIntentFactory] with this NotificationHandler instance
+ * used to create the deletion intent for when the user swipes away the notification.
+ *
+ * @param factory A function that creates an Intent for notification activation
+ * @return This NotificationHandler for method chaining
+ */
+fun NotificationHandler.withDeletionIntent(factory: NotificationIntentFactory): NotificationHandler {
+    if (this !is AndroidNotificationHandler) return this
+    deletionIntent.store(factory)
     return this
 }
 
@@ -332,7 +371,6 @@ fun NotificationHandler.withActivationFactory(factory: ActivationFactory): Notif
  * @param tag A unique identifier for the notification (defaults to a random UUID)
  * @param callback Additional configuration to apply to the notification builder
  * @return A handle for the created notification
- * @throws ClassCastException if the handler is not an AndroidNotificationHandler
  */
 fun NotificationHandler.create(
     notification: Notification,
@@ -340,7 +378,7 @@ fun NotificationHandler.create(
     callback: NotificationCompat.Builder.() -> Unit,
 ): NotificationHandle {
     if (this !is AndroidNotificationHandler) return NotificationHandle.INVALID
-    return createImpl(
+    return create(
         notification = notification,
         handle = AndroidNotificationHandle(tag),
         callback = callback
@@ -357,7 +395,6 @@ fun NotificationHandler.create(
  * @param tag A unique identifier for the notification (defaults to a random UUID)
  * @param callback Additional configuration to apply to the notification builder
  * @return A handle for the displayed notification, or INVALID if permissions are not granted
- * @throws ClassCastException if the handler is not an AndroidNotificationHandler
  */
 @OptIn(ExperimentalUuidApi::class)
 @SuppressLint("MissingPermission") // It is the callers responsibility to make sure perms are defined
@@ -367,7 +404,9 @@ fun NotificationHandler.push(
     callback: NotificationCompat.Builder.() -> Unit,
 ): NotificationHandle {
     if (!hasPermissions || this !is AndroidNotificationHandler) return NotificationHandle.INVALID
-    return createImpl(
+    // If this is already active, we just create a valid handle to the existing notification
+    if (tag in getActiveNotifications()) return AndroidNotificationHandle(tag)
+    return create(
         notification = notification,
         callback = callback,
         handle = AndroidNotificationHandle(tag)
@@ -383,7 +422,6 @@ fun NotificationHandler.push(
  * @param notification The new notification content
  * @param callback Additional configuration to apply to the notification builder
  * @return The updated notification handle, or INVALID if permissions are not granted
- * @throws ClassCastException if the handler is not an AndroidNotificationHandler or if the handle is not an AndroidNotificationHandle
  */
 @OptIn(ExperimentalUuidApi::class)
 @SuppressLint("MissingPermission") // It is the callers responsibility to make sure perms are defined
@@ -393,7 +431,7 @@ fun NotificationHandler.update(
     callback: NotificationCompat.Builder.() -> Unit,
 ): NotificationHandle {
     if (!hasPermissions || this !is AndroidNotificationHandler || handle !is AndroidNotificationHandle) return NotificationHandle.INVALID
-    return createImpl(
+    return create(
         notification = notification,
         callback = callback,
         handle = handle,
@@ -409,32 +447,29 @@ fun NotificationHandler.update(
  * and to retrieve the notification data.
  *
  * @return The notification that launched the activity, or null if the activity was not launched from a notification
- * @throws ClassCastException if the handler is not an AndroidNotificationHandler
  */
 @Suppress("DEPRECATION")
 fun NotificationHandler.getLaunchNotification(): ParcelableNotification? {
     if (this !is AndroidNotificationHandler) return null
-    return activity?.intent?.let { intent ->
-        return@let if (!intent.hasExtra(SysNotifyIntent.EXTRA_LAUNCH_NOTIFICATION)) null
-        else intent.getParcelableExtra(SysNotifyIntent.EXTRA_LAUNCH_NOTIFICATION)
-    }
+    return (activity?.intent as? NotificationIntent)?.notification
 }
 
 /**
  * Gets the Android notification channel associated with this NotificationHandler.
+ * **Note: before calling this function, make sure to provide a [Context] via [withContext] or [withActivity]!**
  *
  * @return The Android notification channel
- * @throws ClassCastException if the handler is not an AndroidNotificationHandler
+ * @throws IllegalStateException if the handler is not an AndroidNotificationHandler
  */
 @get:RequiresApi(Build.VERSION_CODES.O)
 val NotificationHandler.channel: NotificationChannel
     get() {
         check(this is AndroidNotificationHandler) { "In order to retrieve notification channel, NotificationHandler must be valid" }
-        val channelWrapper = getOrCreateChannel()
-        check(channelWrapper is AndroidNotificationChannel.Real) {
+        val delegate = channelDelegate
+        check(delegate is AndroidNotificationChannel.Real) {
             "NotificationChannel requires API level 26 and above"
         }
-        return channelWrapper.channel
+        return delegate.channel
     }
 
 /**
@@ -446,16 +481,22 @@ val NotificationHandler.channel: NotificationChannel
  * @return An ActivationFactory that creates Intents for notification activation
  * @throws IllegalStateException if the Context is not an Activity
  */
-fun Context.getDefaultActivationFactory(): ActivationFactory = { context, notification ->
-    check(this is Activity) { "An activity is required for a notification intent" }
-    SysNotifyIntent(context, this::class.java, notification)
+fun Activity.getDefaultActivationIntentFactory(appId: String): NotificationIntentFactory = { context, notification ->
+    NotificationActivationIntent(context, this::class.java, appId, notification)
 }
 
 actual fun NotificationHandler( // @formatter:off
     name: String,
     id: String,
     priority: NotificationPriority,
-    appId: String
+    appId: String,
+    contributesToCounter: Boolean
 ): NotificationHandler { // @formatter:on
-    return AndroidNotificationHandler(appId = appId, name = name, id = id, priority = priority)
+    return AndroidNotificationHandler(
+        appId = appId,
+        name = name,
+        id = id,
+        priority = priority,
+        contributesToCounter = contributesToCounter
+    )
 }

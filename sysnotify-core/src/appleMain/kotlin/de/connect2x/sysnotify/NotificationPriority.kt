@@ -26,7 +26,7 @@ package de.connect2x.sysnotify
  * - [NotificationPriority.HIGH]: 1.0 (high importance)
  *
  * The relevance score affects how notifications are displayed and sorted in the notification center.
- * Higher scores may result in more prominent display of notifications.
+ * Higher scores may result in a more prominent display of notifications.
  *
  * @return A [Double] value between 0.25 and 1.0 representing the notification's relevance
  */

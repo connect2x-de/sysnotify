@@ -19,12 +19,16 @@ public final class de/connect2x/sysnotify/ColorsKt {
 	public static final fun unpackRed-Qn1smSk (Lde/connect2x/sysnotify/ColorFormat;I)B
 }
 
+public abstract interface annotation class de/connect2x/sysnotify/InternalNotificationApi : java/lang/annotation/Annotation {
+}
+
 public final class de/connect2x/sysnotify/NoopNotificationHandler : de/connect2x/sysnotify/NotificationHandler {
 	public static final field INSTANCE Lde/connect2x/sysnotify/NoopNotificationHandler;
 	public fun clearAll (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun close ()V
 	public fun getAppId ()Ljava/lang/String;
 	public fun getCapabilities-WtXZ38E ()I
+	public fun getContributesToCounter ()Z
 	public fun getHandle (Ljava/lang/String;)Lde/connect2x/sysnotify/NotificationHandle;
 	public fun getHasPermissions ()Z
 	public fun getId ()Ljava/lang/String;
@@ -71,9 +75,14 @@ public final class de/connect2x/sysnotify/Notification {
 	public fun toString ()Ljava/lang/String;
 }
 
+public class de/connect2x/sysnotify/NotificationActivationIntent : de/connect2x/sysnotify/NotificationIntent {
+	public fun <init> (Landroid/content/Context;Ljava/lang/Class;Ljava/lang/String;Lde/connect2x/sysnotify/Notification;)V
+}
+
 public final class de/connect2x/sysnotify/NotificationCapabilities {
 	public static final field Companion Lde/connect2x/sysnotify/NotificationCapabilities$Companion;
 	public static final field IS_ACTION_SUPPORTED I
+	public static final field IS_COUNTER_SUPPORTED I
 	public static final field IS_CUSTOM_SOUND_SUPPORTED I
 	public static final field IS_DESCRIPTION_SUPPORTED I
 	public static final field IS_GROUPING_SUPPORTED I
@@ -84,7 +93,7 @@ public final class de/connect2x/sysnotify/NotificationCapabilities {
 	public static final field IS_TITLE_SUPPORTED I
 	public static final synthetic fun box-impl (I)Lde/connect2x/sysnotify/NotificationCapabilities;
 	public static fun constructor-impl (I)I
-	public static fun constructor-impl (ZZZZZZZZZ)I
+	public static fun constructor-impl (ZZZZZZZZZZ)I
 	public fun equals (Ljava/lang/Object;)Z
 	public static fun equals-impl (ILjava/lang/Object;)Z
 	public static final fun equals-impl0 (II)Z
@@ -92,6 +101,7 @@ public final class de/connect2x/sysnotify/NotificationCapabilities {
 	public fun hashCode ()I
 	public static fun hashCode-impl (I)I
 	public static final fun isActionSupported-impl (I)Z
+	public static final fun isCounterSupported-impl (I)Z
 	public static final fun isCustomSoundSupported-impl (I)Z
 	public static final fun isDescriptionSupported-impl (I)Z
 	public static final fun isGroupingSupported-impl (I)Z
@@ -108,6 +118,10 @@ public final class de/connect2x/sysnotify/NotificationCapabilities {
 
 public final class de/connect2x/sysnotify/NotificationCapabilities$Companion {
 	public final fun getALL-pVg5ArA ()I
+}
+
+public class de/connect2x/sysnotify/NotificationDeletionIntent : de/connect2x/sysnotify/NotificationIntent {
+	public fun <init> (Landroid/content/Context;Ljava/lang/Class;Ljava/lang/String;Lde/connect2x/sysnotify/Notification;)V
 }
 
 public abstract interface class de/connect2x/sysnotify/NotificationHandle {
@@ -130,10 +144,12 @@ public final class de/connect2x/sysnotify/NotificationHandleKt {
 }
 
 public abstract interface class de/connect2x/sysnotify/NotificationHandler : java/lang/AutoCloseable {
+	public static final field Companion Lde/connect2x/sysnotify/NotificationHandler$Companion;
 	public abstract fun clearAll (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun close ()V
 	public abstract fun getAppId ()Ljava/lang/String;
 	public abstract fun getCapabilities-WtXZ38E ()I
+	public abstract fun getContributesToCounter ()Z
 	public fun getHandle (Ljava/lang/String;)Lde/connect2x/sysnotify/NotificationHandle;
 	public abstract fun getHasPermissions ()Z
 	public abstract fun getId ()Ljava/lang/String;
@@ -151,6 +167,10 @@ public abstract interface class de/connect2x/sysnotify/NotificationHandler : jav
 	public fun update (Ljava/lang/String;Lde/connect2x/sysnotify/Notification;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
+public final class de/connect2x/sysnotify/NotificationHandler$Companion {
+	public final fun installHooks ()V
+}
+
 public final class de/connect2x/sysnotify/NotificationHandler$DefaultImpls {
 	public static fun getHandle (Lde/connect2x/sysnotify/NotificationHandler;Ljava/lang/String;)Lde/connect2x/sysnotify/NotificationHandle;
 	public static fun pop (Lde/connect2x/sysnotify/NotificationHandler;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -162,21 +182,27 @@ public final class de/connect2x/sysnotify/NotificationHandler$DefaultImpls {
 }
 
 public final class de/connect2x/sysnotify/NotificationHandlerKt {
-	public static final fun NotificationHandler (Ljava/lang/String;Ljava/lang/String;Lde/connect2x/sysnotify/NotificationPriority;Ljava/lang/String;)Lde/connect2x/sysnotify/NotificationHandler;
-	public static synthetic fun NotificationHandler$default (Ljava/lang/String;Ljava/lang/String;Lde/connect2x/sysnotify/NotificationPriority;Ljava/lang/String;ILjava/lang/Object;)Lde/connect2x/sysnotify/NotificationHandler;
+	public static final fun NotificationHandler (Ljava/lang/String;Ljava/lang/String;Lde/connect2x/sysnotify/NotificationPriority;Ljava/lang/String;Z)Lde/connect2x/sysnotify/NotificationHandler;
+	public static synthetic fun NotificationHandler$default (Ljava/lang/String;Ljava/lang/String;Lde/connect2x/sysnotify/NotificationPriority;Ljava/lang/String;ZILjava/lang/Object;)Lde/connect2x/sysnotify/NotificationHandler;
 	public static final fun create (Lde/connect2x/sysnotify/NotificationHandler;Lde/connect2x/sysnotify/Notification;Ljava/lang/String;Lkotlin/jvm/functions/Function1;)Lde/connect2x/sysnotify/NotificationHandle;
 	public static synthetic fun create$default (Lde/connect2x/sysnotify/NotificationHandler;Lde/connect2x/sysnotify/Notification;Ljava/lang/String;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lde/connect2x/sysnotify/NotificationHandle;
 	public static final fun getActivity (Lde/connect2x/sysnotify/NotificationHandler;)Landroidx/activity/ComponentActivity;
 	public static final fun getChannel (Lde/connect2x/sysnotify/NotificationHandler;)Landroid/app/NotificationChannel;
 	public static final fun getContext (Lde/connect2x/sysnotify/NotificationHandler;)Landroid/content/Context;
-	public static final fun getDefaultActivationFactory (Landroid/content/Context;)Lkotlin/jvm/functions/Function2;
+	public static final fun getDefaultActivationIntentFactory (Landroid/app/Activity;Ljava/lang/String;)Lkotlin/jvm/functions/Function2;
 	public static final fun getLaunchNotification (Lde/connect2x/sysnotify/NotificationHandler;)Lde/connect2x/sysnotify/ParcelableNotification;
 	public static final fun push (Lde/connect2x/sysnotify/NotificationHandler;Lde/connect2x/sysnotify/Notification;Ljava/lang/String;Lkotlin/jvm/functions/Function1;)Lde/connect2x/sysnotify/NotificationHandle;
 	public static synthetic fun push$default (Lde/connect2x/sysnotify/NotificationHandler;Lde/connect2x/sysnotify/Notification;Ljava/lang/String;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lde/connect2x/sysnotify/NotificationHandle;
 	public static final fun update (Lde/connect2x/sysnotify/NotificationHandler;Lde/connect2x/sysnotify/NotificationHandle;Lde/connect2x/sysnotify/Notification;Lkotlin/jvm/functions/Function1;)Lde/connect2x/sysnotify/NotificationHandle;
-	public static final fun withActivationFactory (Lde/connect2x/sysnotify/NotificationHandler;Lkotlin/jvm/functions/Function2;)Lde/connect2x/sysnotify/NotificationHandler;
+	public static final fun withActivationIntent (Lde/connect2x/sysnotify/NotificationHandler;Lkotlin/jvm/functions/Function2;)Lde/connect2x/sysnotify/NotificationHandler;
 	public static final fun withActivity (Lde/connect2x/sysnotify/NotificationHandler;Lkotlin/jvm/functions/Function0;)Lde/connect2x/sysnotify/NotificationHandler;
 	public static final fun withContext (Lde/connect2x/sysnotify/NotificationHandler;Lkotlin/jvm/functions/Function0;)Lde/connect2x/sysnotify/NotificationHandler;
+	public static final fun withDeletionIntent (Lde/connect2x/sysnotify/NotificationHandler;Lkotlin/jvm/functions/Function2;)Lde/connect2x/sysnotify/NotificationHandler;
+}
+
+public final class de/connect2x/sysnotify/NotificationHandlerStatics {
+	public static final field INSTANCE Lde/connect2x/sysnotify/NotificationHandlerStatics;
+	public final fun installHooks ()V
 }
 
 public final class de/connect2x/sysnotify/NotificationIcon {
@@ -203,6 +229,18 @@ public final class de/connect2x/sysnotify/NotificationIconKt {
 	public static final fun fromDrawable (Lde/connect2x/sysnotify/NotificationIcon$Companion;Landroid/graphics/drawable/Drawable;)Lde/connect2x/sysnotify/NotificationIcon;
 	public static final fun getNotificationIcon (Landroid/content/res/Resources;I)Lde/connect2x/sysnotify/NotificationIcon;
 	public static final fun toBitmap (Lde/connect2x/sysnotify/NotificationIcon;)Landroid/graphics/Bitmap;
+}
+
+public abstract class de/connect2x/sysnotify/NotificationIntent : android/content/Intent {
+	public static final field Companion Lde/connect2x/sysnotify/NotificationIntent$Companion;
+	public static final field EXTRA_SYSNOTIFY_APP_ID Ljava/lang/String;
+	public static final field EXTRA_SYSNOTIFY_NOTIFICATION Ljava/lang/String;
+	public fun <init> (Landroid/content/Context;Ljava/lang/Class;Ljava/lang/String;Lde/connect2x/sysnotify/Notification;)V
+	public final fun getAppId ()Ljava/lang/String;
+	public final fun getNotification ()Lde/connect2x/sysnotify/ParcelableNotification;
+}
+
+public final class de/connect2x/sysnotify/NotificationIntent$Companion {
 }
 
 public final class de/connect2x/sysnotify/NotificationPlatform : java/lang/Enum {
@@ -255,18 +293,6 @@ public final class de/connect2x/sysnotify/ParcelableNotification$CREATOR : andro
 	public synthetic fun createFromParcel (Landroid/os/Parcel;)Ljava/lang/Object;
 	public fun newArray (I)[Lde/connect2x/sysnotify/ParcelableNotification;
 	public synthetic fun newArray (I)[Ljava/lang/Object;
-}
-
-public class de/connect2x/sysnotify/SysNotifyIntent : android/content/Intent {
-	public static final field Companion Lde/connect2x/sysnotify/SysNotifyIntent$Companion;
-	public static final field EXTRA_LAUNCH_NOTIFICATION Ljava/lang/String;
-	public fun <init> (Landroid/content/Context;Ljava/lang/Class;Lde/connect2x/sysnotify/Notification;)V
-}
-
-public final class de/connect2x/sysnotify/SysNotifyIntent$Companion {
-}
-
-public abstract interface annotation class de/connect2x/sysnotify/SysnotifyPrivateApi : java/lang/annotation/Annotation {
 }
 
 public final class de/connect2x/sysnotify/UtilsKt {
