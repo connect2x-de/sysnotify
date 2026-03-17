@@ -44,6 +44,7 @@ value class NotificationCapabilities(val mask: UInt) {
         const val IS_CUSTOM_SOUND_SUPPORTED: UInt   = 0b0000_0100_0000U
         const val IS_GROUPING_SUPPORTED: UInt       = 0b0000_1000_0000U
         const val IS_STATUS_ICON_SUPPORTED: UInt    = 0b0001_0000_0000U
+        const val IS_COUNTER_SUPPORTED: UInt        = 0b0010_0000_0000U
         // @formatter:on
 
         /**
@@ -58,7 +59,8 @@ value class NotificationCapabilities(val mask: UInt) {
                 IS_SOUND_SUPPORTED or
                 IS_CUSTOM_SOUND_SUPPORTED or
                 IS_GROUPING_SUPPORTED or
-                IS_STATUS_ICON_SUPPORTED
+                IS_STATUS_ICON_SUPPORTED or
+                IS_COUNTER_SUPPORTED
     }
 
     /**
@@ -82,7 +84,8 @@ value class NotificationCapabilities(val mask: UInt) {
         isSoundSupported: Boolean,
         isCustomSoundSupported: Boolean,
         isGroupingSupported: Boolean,
-        isStatusIconSupported: Boolean
+        isStatusIconSupported: Boolean,
+        isCounterSupported: Boolean
     ) : this(
         if (isTitleSupported) IS_TITLE_SUPPORTED else 0U
                 or if (isDescriptionSupported) IS_DESCRIPTION_SUPPORTED else 0U
@@ -93,6 +96,7 @@ value class NotificationCapabilities(val mask: UInt) {
                 or if (isCustomSoundSupported) IS_CUSTOM_SOUND_SUPPORTED else 0U
                 or if (isGroupingSupported) IS_GROUPING_SUPPORTED else 0U
                 or if (isStatusIconSupported) IS_STATUS_ICON_SUPPORTED else 0U
+                or if (isCounterSupported) IS_COUNTER_SUPPORTED else 0U
     )
 
     /**
@@ -148,6 +152,12 @@ value class NotificationCapabilities(val mask: UInt) {
      */
     inline val isStatusIconSupported: Boolean
         get() = (mask and IS_STATUS_ICON_SUPPORTED) == IS_STATUS_ICON_SUPPORTED
+
+    /**
+     * Indicates whether the notification system supports a counter badge on the application icon or status bar.
+     */
+    inline val isCounterSupported: Boolean
+        get() = (mask and IS_COUNTER_SUPPORTED) == IS_COUNTER_SUPPORTED
 
     /**
      * If true, the underlying implementation supports at least

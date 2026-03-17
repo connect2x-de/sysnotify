@@ -16,6 +16,7 @@
 
 package de.connect2x.sysnotify
 
+@InternalNotificationApi
 interface NativeActivationCallback {
     companion object {
         fun create(closure: (Notification) -> Unit): NativeActivationCallback =

@@ -21,8 +21,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import platform.Foundation.NSBundle
-import platform.Foundation.NSError
+import platform.Foundation.NSLock
 import platform.UserNotifications.UNAuthorizationOptionAlert
 import platform.UserNotifications.UNAuthorizationOptionBadge
 import platform.UserNotifications.UNAuthorizationOptionSound
@@ -34,27 +33,66 @@ import platform.UserNotifications.UNNotification
 import platform.UserNotifications.UNNotificationAction
 import platform.UserNotifications.UNNotificationCategory
 import platform.UserNotifications.UNNotificationCategoryOptionNone
+import platform.UserNotifications.UNNotificationDefaultActionIdentifier
 import platform.UserNotifications.UNNotificationRequest
 import platform.UserNotifications.UNNotificationSound
 import platform.UserNotifications.UNUserNotificationCenter
-import kotlin.concurrent.atomics.ExperimentalAtomicApi
+import kotlin.concurrent.atomics.AtomicInt
+import kotlin.concurrent.atomics.decrementAndFetch
+import kotlin.concurrent.atomics.incrementAndFetch
 import kotlin.coroutines.resume
 import kotlin.experimental.ExperimentalNativeApi
 
-@OptIn(ExperimentalNativeApi::class, ExperimentalAtomicApi::class)
+internal const val USERINFO_CALLBACK_DATA: String = "sysnotify_callback_data"
+internal const val USERINFO_SYSNOTIFY_MARKER: String = "__sysnotify__"
+
+internal expect fun initializePlatform()
+
+@OptIn(ExperimentalNativeApi::class)
 internal class AppleNotificationHandler(
     override val appId: String,
     override val name: String,
     override val id: String,
     override val priority: NotificationPriority,
-    private val closeCallback: () -> Unit = {},
+    override val contributesToCounter: Boolean,
+    private val closeCallback: () -> Unit = {}
 ) : NotificationHandler {
-    @OptIn(ExperimentalForeignApi::class)
+    companion object {
+        private var isDelegateInstalled: Boolean = false
+        private val isDelegateInstalledLock: NSLock = NSLock()
+        private val globalCount: AtomicInt = AtomicInt(0)
+
+        fun incrementGlobalCounter() {
+            UNUserNotificationCenter.currentNotificationCenter()
+                .setBadgeCount(globalCount.incrementAndFetch().toLong(), null)
+        }
+
+        fun decrementGlobalCounter() {
+            UNUserNotificationCenter.currentNotificationCenter()
+                .setBadgeCount(globalCount.decrementAndFetch().coerceAtLeast(0).toLong(), null)
+        }
+
+        fun setGlobalCounter(count: Int) {
+            globalCount.store(count)
+            UNUserNotificationCenter.currentNotificationCenter().setBadgeCount(count.toLong(), null)
+        }
+
+        fun installDelegates() = isDelegateInstalledLock.withLock {
+            if (isDelegateInstalled) return@withLock
+            UNUserNotificationCenter.currentNotificationCenter().setDelegate(DefaultNotificationDelegate().apply {
+                addActionHandler { _, _, _, _ ->
+                    decrementGlobalCounter()
+                }
+            })
+            initializePlatform()
+            isDelegateInstalled = true
+        }
+    }
 
     override val platform: NotificationPlatform = NotificationPlatform.APPLE
 
     override val hasPermissions: Boolean
-        get() = runBlocking { notificationCenter.hasPermissions() }
+        get() = runBlocking { UNUserNotificationCenter.currentNotificationCenter().hasPermissions() }
 
     override val capabilities: NotificationCapabilities = NotificationCapabilities(
         isTitleSupported = true,
@@ -65,14 +103,12 @@ internal class AppleNotificationHandler(
         isSoundSupported = true,
         isCustomSoundSupported = true,
         isGroupingSupported = true,
-        isStatusIconSupported = false
+        isStatusIconSupported = false,
+        isCounterSupported = true
     )
 
-    // TODO this does not survive a restart
     private val notificationCategories: HashMap<String, UNNotificationCategory> = HashMap()
     private val notificationCategoriesLock: Mutex = Mutex()
-
-    private val notificationCenter: UNUserNotificationCenter = UNUserNotificationCenter.currentNotificationCenter()
 
     private suspend fun ensureCategoryExists(key: String) {
         if (notificationCategoriesLock.withLock { key in notificationCategories }) return
@@ -85,7 +121,8 @@ internal class AppleNotificationHandler(
         notificationCategoriesLock.withLock {
             notificationCategories[key] = category
             // We have to update ALL the categories every time we add a new one
-            notificationCenter.setNotificationCategories(notificationCategories.values.toSet())
+            UNUserNotificationCenter.currentNotificationCenter()
+                .setNotificationCategories(notificationCategories.values.toSet())
         }
     }
 
@@ -95,39 +132,122 @@ internal class AppleNotificationHandler(
     }
 
     override suspend fun requestPermissions(callback: PermissionCallback) {
+        val notificationCenter = UNUserNotificationCenter.currentNotificationCenter()
         if (notificationCenter.hasPermissions()) return
-        val (granted, error) = notificationCenter.requestDefaultAuthorization()
-
-        error?.localizedDescription?.let {
-            println("Could not request permission: $it")
+        // @formatter:off
+        notificationCenter.requestAuthorizationWithOptions(UNAuthorizationOptionAlert
+                or UNAuthorizationOptionSound
+                or UNAuthorizationOptionBadge) { granted, _ ->
+            callback(granted)
         }
-
-        callback(granted)
+        // @formatter:on
     }
 
-    override suspend fun push(notification: Notification, tag: String): NotificationHandle {
-        if (!notificationCenter.hasPermissions()) return NotificationHandle.INVALID
-        val handle = AppleNotificationHandle(tag)
+    @Suppress("UNCHECKED_CAST")
+    private suspend fun notificationExists(tag: String): Boolean {
+        val notificationCenter = UNUserNotificationCenter.currentNotificationCenter()
+        return suspendCancellableCoroutine { continuation ->
+            notificationCenter.getPendingNotificationRequestsWithCompletionHandler { requests ->
+                for (request in requests as List<UNNotificationRequest>) {
+                    if (request.identifier != tag) continue
+                    continuation.resume(true)
+                    return@getPendingNotificationRequestsWithCompletionHandler
+                }
+                notificationCenter.getDeliveredNotificationsWithCompletionHandler { notifications ->
+                    val foundDelivered = (notifications as List<UNNotification>)
+                        .any { it.request.identifier == tag }
+                    continuation.resume(foundDelivered)
+                }
+            }
+        }
+    }
 
-        val content = UNMutableNotificationContent().apply {
+    private suspend fun createNotificationContent(
+        handle: AppleNotificationHandle,
+        notification: Notification
+    ): UNMutableNotificationContent {
+        return UNMutableNotificationContent().apply {
             setTitle(notification.title ?: handle.tag)
             setRelevanceScore(notification.priority.relevanceScore)
             notification.description?.let(::setBody)
             if (notification.playSound) {
-                setSound(notification.soundPath?.let {
-                    UNNotificationSound.soundNamed(it)
+                setSound(notification.soundPath?.let { soundPath ->
+                    UNNotificationSound.soundNamed(soundPath)
                 } ?: UNNotificationSound.defaultSound)
             }
-            notification.group?.let {
-                ensureCategoryExists(it)
-                setCategoryIdentifier(it)
+            (notification.group ?: "default").let { group ->
+                ensureCategoryExists(group)
+                setCategoryIdentifier(group)
+            }
+            setUserInfo(buildMap {
+                notification.callbackData?.let { data ->
+                    this[USERINFO_CALLBACK_DATA] = data
+                    this[USERINFO_SYSNOTIFY_MARKER] = true // Just store a boolean flag as the marker value
+                }
+            })
+        }
+    }
+
+    override suspend fun push(notification: Notification, tag: String): NotificationHandle {
+        val notificationCenter = UNUserNotificationCenter.currentNotificationCenter()
+        if (!notificationCenter.hasPermissions()) return NotificationHandle.INVALID
+        val handle = AppleNotificationHandle(tag)
+        if (notificationExists(tag)) return handle
+
+        notificationCenter.addNotificationRequest(
+            UNNotificationRequest.requestWithIdentifier(
+                identifier = tag,
+                content = createNotificationContent(handle, notification),
+                trigger = null
+            )
+        ) { error ->
+            error?.localizedDescription?.let {
+                throw IllegalStateException("Could not request notification: $it")
+            }
+            if (!contributesToCounter) return@addNotificationRequest
+            incrementGlobalCounter()
+        }
+
+        return handle
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    override suspend fun pop(handle: NotificationHandle) {
+        val notificationCenter = UNUserNotificationCenter.currentNotificationCenter()
+        if (!notificationCenter.hasPermissions() || handle !is AppleNotificationHandle) return
+        val identifier = handle.tag
+        // First try to remove it from the pending notifications
+        notificationCenter.getPendingNotificationRequestsWithCompletionHandler { requests ->
+            for (request in requests as List<UNNotificationRequest>) {
+                if (request.identifier != identifier) continue
+                notificationCenter.removePendingNotificationRequestsWithIdentifiers(listOf(identifier))
+                if (!contributesToCounter) return@getPendingNotificationRequestsWithCompletionHandler
+                decrementGlobalCounter()
+                return@getPendingNotificationRequestsWithCompletionHandler
+            }
+            // If the for loop doesn't return, we should enumerate the delivered notifications for deletion.
+            notificationCenter.getDeliveredNotificationsWithCompletionHandler { notifications ->
+                for (notification in notifications as List<UNNotification>) {
+                    if (notification.request.identifier != identifier) continue
+                    notificationCenter.removeDeliveredNotificationsWithIdentifiers(listOf(identifier))
+                    if (!contributesToCounter) return@getDeliveredNotificationsWithCompletionHandler
+                    decrementGlobalCounter()
+                    return@getDeliveredNotificationsWithCompletionHandler
+                }
             }
         }
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    override suspend fun update(handle: NotificationHandle, notification: Notification): NotificationHandle {
+        val notificationCenter = UNUserNotificationCenter.currentNotificationCenter()
+        if (handle !is AppleNotificationHandle || !notificationCenter.hasPermissions() || !handle.isValid) return NotificationHandle.INVALID
+        if (!notificationExists(handle.tag)) return NotificationHandle.INVALID
 
         notificationCenter.addNotificationRequest(
             UNNotificationRequest.requestWithIdentifier(
                 identifier = handle.tag,
-                content = content,
+                content = createNotificationContent(handle, notification),
                 trigger = null
             )
         ) { error ->
@@ -139,69 +259,18 @@ internal class AppleNotificationHandler(
         return handle
     }
 
-    @Suppress("UNCHECKED_CAST")
-    override suspend fun pop(handle: NotificationHandle) {
-        if (!notificationCenter.hasPermissions() || handle !is AppleNotificationHandle) return
-
-        val identifier = handle.tag
-
-        // First try to remove it from the pending notifications
-        notificationCenter.getPendingNotificationRequestsWithCompletionHandler { requests ->
-            for (request in requests as List<UNNotificationRequest>) {
-                if (request.identifier != identifier) continue
-                notificationCenter.removePendingNotificationRequestsWithIdentifiers(listOf(identifier))
-                return@getPendingNotificationRequestsWithCompletionHandler
-            }
-
-            // If the for loop doesn't return, we should enumerate the delivered notifications for deletion.
-            notificationCenter.getDeliveredNotificationsWithCompletionHandler { notifications ->
-                for (notification in notifications as List<UNNotification>) {
-                    if (notification.request.identifier != identifier) continue
-                    notificationCenter.removeDeliveredNotificationsWithIdentifiers(listOf(identifier))
-                    return@getDeliveredNotificationsWithCompletionHandler
-                }
-            }
-        }
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    override suspend fun update(handle: NotificationHandle, notification: Notification): NotificationHandle {
-        if (!notificationCenter.hasPermissions() || !handle.isValid) return NotificationHandle.INVALID
-
-        // This is done like this because, following to the Apple documentation, the API can choose the run the handler
-        // closure in a separate background thread.
-        val found = suspendCancellableCoroutine { continuation ->
-            notificationCenter.getPendingNotificationRequestsWithCompletionHandler { requests ->
-                for (request in requests as List<UNNotificationRequest>) {
-                    if (request.identifier != handle.tag) continue
-                    continuation.resume(true) { _, _, _ -> }
-                    return@getPendingNotificationRequestsWithCompletionHandler
-                }
-
-                notificationCenter.getDeliveredNotificationsWithCompletionHandler { notifications ->
-                    val foundDelivered = (notifications as List<UNNotification>)
-                        .any { it.request.identifier == handle.tag }
-                    continuation.resume(foundDelivered) { _, _, _ -> }
-                }
-            }
-
-
-        }
-
-        if (!found) {
-            return NotificationHandle.INVALID
-        }
-
-        return push(notification, tag = handle.tag)
-    }
-
     override suspend fun clearAll() {
+        val notificationCenter = UNUserNotificationCenter.currentNotificationCenter()
         if (!notificationCenter.hasPermissions()) return
         notificationCenter.removeAllPendingNotificationRequests()
         notificationCenter.removeAllDeliveredNotifications()
+
+        if (!contributesToCounter) return
+        setGlobalCounter(0)
     }
 
     override suspend fun unregister() {
+        val notificationCenter = UNUserNotificationCenter.currentNotificationCenter()
         if (!notificationCenter.hasPermissions()) return
         clearAll()
         notificationCategoriesLock.withLock { notificationCategories.clear() }
@@ -214,7 +283,13 @@ internal class AppleNotificationHandler(
 }
 
 actual fun NotificationHandler.withActivationHandler(handler: ActivationHandler): NotificationHandler {
-    // TODO: implement activation handlers for iOS/macOS
+    if (this !is AppleNotificationHandler) return this
+    val delegate = UNUserNotificationCenter.currentNotificationCenter().delegate as? DefaultNotificationDelegate
+        ?: error("The default SysNotify UNUserNotificationCenterDelegate has been overridden")
+    delegate.addActionHandler { _, action, _, notification ->
+        if (action != UNNotificationDefaultActionIdentifier) return@addActionHandler
+        handler(notification)
+    }
     return this
 }
 
@@ -223,7 +298,8 @@ actual fun NotificationHandler( // @formatter:off
     name: String,
     id: String,
     priority: NotificationPriority,
-    appId: String
+    appId: String,
+    contributesToCounter: Boolean
 ): NotificationHandler { // @formatter:on
     return createAppleOrNoopNotificationHandler(
         name = name,
@@ -231,6 +307,7 @@ actual fun NotificationHandler( // @formatter:off
         priority = priority,
         closeCallback = {},
         appId = appId,
+        contributesToCounter = contributesToCounter
     )
 }
 
@@ -239,13 +316,13 @@ internal fun createAppleOrNoopNotificationHandler(
     id: String,
     priority: NotificationPriority,
     closeCallback: () -> Unit,
-    appId: String
+    appId: String,
+    contributesToCounter: Boolean
 ): NotificationHandler {
-    if (NSBundle.mainBundle.infoDictionary?.get("CFBundlePackageType") != "APPL") {
+    if (!isBundledApplication) {
         println("WARNING: Not running as Application (CFBundlePackageType != APPL)")
         println("WARNING: For notification on apple platforms running as application is required")
         println("WARNING: Registering NoopNotificationHandler instead for development")
-
         return NoopNotificationHandler
     }
 
@@ -254,16 +331,10 @@ internal fun createAppleOrNoopNotificationHandler(
         name = name,
         id = id,
         priority = priority,
+        contributesToCounter = contributesToCounter,
         closeCallback = closeCallback
     )
 }
-
-private suspend fun UNUserNotificationCenter.requestDefaultAuthorization(): Pair<Boolean, NSError?> =
-    suspendCancellableCoroutine { continuation ->
-        requestAuthorizationWithOptions(
-            UNAuthorizationOptionSound or UNAuthorizationOptionBadge or UNAuthorizationOptionAlert
-        ) { granted, error -> continuation.resume(granted to error) }
-    }
 
 private suspend fun UNUserNotificationCenter.hasPermissions(): Boolean = suspendCancellableCoroutine { continuation ->
     getNotificationSettingsWithCompletionHandler { notificationSettings ->

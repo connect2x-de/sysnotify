@@ -34,6 +34,7 @@ internal class LinuxNotificationHandler(
     override val name: String,
     override val id: String,
     override val priority: NotificationPriority,
+    override val contributesToCounter: Boolean,
     private val closeCallback: () -> Unit = {}
 ) : NotificationHandler {
     init {
@@ -52,7 +53,8 @@ internal class LinuxNotificationHandler(
         isSoundSupported = true,
         isCustomSoundSupported = true,
         isGroupingSupported = false,
-        isStatusIconSupported = false
+        isStatusIconSupported = false,
+        isCounterSupported = false
     )
 
     private var lastNotification: AtomicReference<Notification?> = AtomicReference(null)
@@ -169,11 +171,18 @@ actual fun NotificationHandler(
     name: String,
     id: String,
     priority: NotificationPriority,
-    appId: String
+    appId: String,
+    contributesToCounter: Boolean
 ): NotificationHandler {
     return if (!NotificationDispatcher.isAvailable) NoopNotificationHandler
     else try {
-        LinuxNotificationHandler(appId = appId, name = name, id = id, priority = priority)
+        LinuxNotificationHandler(
+            appId = appId,
+            name = name,
+            id = id,
+            priority = priority,
+            contributesToCounter = contributesToCounter
+        )
     } catch (_: Throwable) {
         NoopNotificationHandler
     }

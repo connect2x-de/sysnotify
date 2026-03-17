@@ -51,7 +51,7 @@ kotlin {
     withMacos {
         binaries {
             executable {
-                entryPoint = "${rootProject.group}.${rootProject.name}.sample.main"
+                entryPoint = "${rootProject.group}.sample.main"
             }
         }
     }
@@ -136,7 +136,7 @@ val jdkLauncher: Provider<JavaLauncher> = javaToolchains.launcherFor {
 compose {
     desktop {
         application {
-            mainClass = "${rootProject.group}.${rootProject.name}.sample.MainKt"
+            mainClass = "${rootProject.group}.sample.MainKt"
             buildTypes.release.proguard { isEnabled = false }
             javaHome = jdkLauncher.get().metadata.installationPath.asFile.absolutePath
             jvmArgs("--enable-native-access=ALL-UNNAMED")
@@ -151,7 +151,7 @@ compose {
                     upgradeUuid = "3e1d7fa0-4c3f-4c3d-805f-d28bd21d6019"
                 }
                 macOS {
-                    bundleID = "${rootProject.group}.${rootProject.name}.sample"
+                    bundleID = "${rootProject.group}.sample"
                     dockName = "Sysnotify Sample"
                 }
             }

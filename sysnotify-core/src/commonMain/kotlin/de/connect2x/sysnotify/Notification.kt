@@ -44,5 +44,5 @@ data class Notification(
     val priority: NotificationPriority = NotificationPriority.DEFAULT,
     val playSound: Boolean = true,
     val soundPath: String? = null,
-    val group: String? = null,
+    val group: String? = null
 )

@@ -19,6 +19,7 @@ package de.connect2x.sysnotify
 import android.app.Notification
 import kotlin.uuid.Uuid
 
+@InternalNotificationApi
 internal class AndroidNotificationHandle(
     override val tag: String = Uuid.random().toHexString()
 ) : NotificationHandle {

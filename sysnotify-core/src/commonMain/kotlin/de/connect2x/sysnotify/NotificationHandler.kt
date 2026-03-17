@@ -53,6 +53,15 @@ typealias ActivationHandler = (notification: Notification) -> Unit
  * using this library and should not contain any whitespaces.
  */
 interface NotificationHandler : AutoCloseable {
+    companion object {
+        /**
+         * Registers the required platform hooks to properly handle notifications (and actions) internally.
+         * This includes things like delegates on macOS and iOS.
+         */
+        @Suppress("NOTHING_TO_INLINE")
+        inline fun installHooks() = NotificationHandlerStatics.installHooks()
+    }
+
     /**
      * The display name of the notification handler.
      */
@@ -98,6 +107,9 @@ interface NotificationHandler : AutoCloseable {
      * by this notification handler instance.
      */
     val priority: NotificationPriority
+
+    // TODO: document this
+    val contributesToCounter: Boolean
 
     /**
      * Retrieves a notification handle for a notification with the given tag.
@@ -197,7 +209,7 @@ interface NotificationHandler : AutoCloseable {
 }
 
 /**
- * Create a `NotificationHandler`.
+ * Create a new notification handler instance.
  *
  * **NOTE: In order to use this `NotificationHandler` instance on Android,
  * a `Context` or `Activity` needs to be attached in platform code using either
@@ -213,7 +225,8 @@ expect fun NotificationHandler(
     name: String,
     id: String = name,
     priority: NotificationPriority = NotificationPriority.DEFAULT,
-    appId: String = id
+    appId: String = id,
+    contributesToCounter: Boolean = false
 ): NotificationHandler
 
 /**
@@ -235,6 +248,7 @@ object NoopNotificationHandler : NotificationHandler {
     override val hasPermissions: Boolean = false
     override val capabilities: NotificationCapabilities = NotificationCapabilities(0U)
     override val priority: NotificationPriority = NotificationPriority.DEFAULT
+    override val contributesToCounter: Boolean = false
 
     override fun getHandle(tag: String): NotificationHandle = NotificationHandle.INVALID
 

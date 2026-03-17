@@ -16,10 +16,17 @@
 
 package de.connect2x.sysnotify.sample
 
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.toComposeImageBitmap
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.WindowPlacement
+import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.application
+import androidx.compose.ui.window.rememberWindowState
+import de.connect2x.sysnotify.NotificationHandler
 import de.connect2x.sysnotify.NotificationIcon
 import de.connect2x.sysnotify.fromBufferedImage
 import de.connect2x.sysnotify.withActivationHandler
@@ -27,14 +34,20 @@ import java.awt.Frame
 import javax.imageio.ImageIO
 
 fun main() {
+    NotificationHandler.installHooks()
     application {
         val icon = this::class.java.getResourceAsStream("/assets/icons/app_icon.png").use { ImageIO.read(it) }
+        val windowState = rememberWindowState()
+        windowState.size = DpSize(800.dp, 820.dp)
+        windowState.placement = WindowPlacement.Floating
+        windowState.position = WindowPosition(Alignment.Center)
         Window(
             title = "SysNotify Sample",
             icon = BitmapPainter(icon.toComposeImageBitmap()),
             onCloseRequest = {
                 exitApplication()
-            }) {
+            }, state = windowState
+        ) {
             // On Desktop platforms, we manually need to handle bringing up the application window
             App(getIcon = { NotificationIcon.fromBufferedImage(icon) }) {
                 withActivationHandler {

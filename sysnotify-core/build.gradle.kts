@@ -83,7 +83,7 @@ fun DefaultCInteropSettings.includePlatformBinaries(target: KotlinNativeTarget) 
 
 kotlin {
     defaultCompilerOptions()
-    enableAbiChecker("SysnotifyPrivateApi")
+    enableAbiChecker("InternalNotificationApi")
     withSourcesJar(true)
     withAndroidLibrary()
     withJvm()
@@ -147,12 +147,15 @@ kotlin {
     }
     applyDefaultHierarchyTemplate {
         common {
+            group("ios") { withIos() }
+            group("macos") { withMacos() }
             group("native") {
                 group("desktop") {
                     group("macos")
                     group("linux")
                     group("mingw")
                 }
+                group("ios")
             }
             group("shared") { // For tests
                 group("native")

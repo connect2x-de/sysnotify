@@ -16,6 +16,7 @@
 
 package de.connect2x.sysnotify
 
+@InternalNotificationApi
 interface NativePermissionCallback {
     companion object {
         inline fun create(crossinline block: (granted: Boolean) -> Unit): NativePermissionCallback =

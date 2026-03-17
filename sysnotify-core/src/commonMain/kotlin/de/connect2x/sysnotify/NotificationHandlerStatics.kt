@@ -16,6 +16,7 @@
 
 package de.connect2x.sysnotify
 
-@RequiresOptIn(message = "This API is effectively private and not subject to any stability guarantees! Use at your own risk.")
-@Retention(AnnotationRetention.BINARY)
-annotation class SysnotifyPrivateApi
+@PublishedApi
+internal expect object NotificationHandlerStatics {
+    fun installHooks()
+}
