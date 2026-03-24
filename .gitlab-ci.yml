@@ -15,6 +15,7 @@ stages:
 variables:
   GRADLE_OPTS: -Dorg.gradle.daemon=false
   BUILD_LINUX_IMAGE_NAME: registry.gitlab.com/connect2x/build-infrastructure/kmp-dockerfiles/kmp-dockerfiles-base:latest
+  TRIVY_IMAGE_NAME: registry.gitlab.com/connect2x/build-infrastructure/kmp-dockerfiles/kmp-dockerfiles-trivy:latest
   SYSNOTIFY_DEBUG: 1
 
 .artifact-reports: &artifact-reports
@@ -100,7 +101,7 @@ security:dependencies:
   needs: [ ]
   tags: [ "connect2x-linux" ]
   image:
-    name: "aquasec/trivy"
+    name: $TRIVY_IMAGE_NAME
     entrypoint: [ "" ]
   variables:
     TRIVY_CACHE_DIR: ".trivycache/"
@@ -120,7 +121,7 @@ security:dependencies:
       dependency_scanning: report.json
   script:
     - trivy repo ./ --exit-code 0
-    - trivy repo ./ --exit-code 0 --format template --template "@/contrib/gitlab.tpl" --output report.json
+    - trivy repo ./ --exit-code 0 --format template --template "@/usr/local/share/trivy/templates/gitlab.tpl" --output report.json
     - trivy repo ./ --exit-code 1 --severity CRITICAL
 
 publish:dev:
