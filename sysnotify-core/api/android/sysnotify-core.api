@@ -196,6 +196,7 @@ public final class de/connect2x/sysnotify/NotificationHandlerKt {
 	public static final fun update (Lde/connect2x/sysnotify/NotificationHandler;Lde/connect2x/sysnotify/NotificationHandle;Lde/connect2x/sysnotify/Notification;Lkotlin/jvm/functions/Function1;)Lde/connect2x/sysnotify/NotificationHandle;
 	public static final fun withActivationIntent (Lde/connect2x/sysnotify/NotificationHandler;Lkotlin/jvm/functions/Function2;)Lde/connect2x/sysnotify/NotificationHandler;
 	public static final fun withActivity (Lde/connect2x/sysnotify/NotificationHandler;Lkotlin/jvm/functions/Function0;)Lde/connect2x/sysnotify/NotificationHandler;
+	public static final fun withChannel (Lde/connect2x/sysnotify/NotificationHandler;)Lde/connect2x/sysnotify/NotificationHandler;
 	public static final fun withContext (Lde/connect2x/sysnotify/NotificationHandler;Lkotlin/jvm/functions/Function0;)Lde/connect2x/sysnotify/NotificationHandler;
 	public static final fun withDeletionIntent (Lde/connect2x/sysnotify/NotificationHandler;Lkotlin/jvm/functions/Function2;)Lde/connect2x/sysnotify/NotificationHandler;
 }

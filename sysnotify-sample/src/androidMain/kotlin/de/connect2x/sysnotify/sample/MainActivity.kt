@@ -22,6 +22,7 @@ import androidx.activity.compose.setContent
 import de.connect2x.sysnotify.getLaunchNotification
 import de.connect2x.sysnotify.getNotificationIcon
 import de.connect2x.sysnotify.withActivity
+import de.connect2x.sysnotify.withChannel
 import de.connect2x.sysnotify.withContext
 
 class MainActivity : ComponentActivity() {
@@ -34,6 +35,7 @@ class MainActivity : ComponentActivity() {
             ) {
                 withContext { this@MainActivity }
                 withActivity { this@MainActivity }
+                withChannel() // Must be called after withContext
             }
         }
     }

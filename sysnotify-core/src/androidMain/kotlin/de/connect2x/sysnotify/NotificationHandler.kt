@@ -314,7 +314,6 @@ val NotificationHandler.activity: ComponentActivity?
 fun NotificationHandler.withContext(getter: () -> Context): NotificationHandler {
     if (this !is AndroidNotificationHandler) return this
     contextGetter.store(getter)
-    channelDelegate.init(getter()) // Initialize channel delegate
     return this
 }
 
@@ -330,8 +329,18 @@ fun NotificationHandler.withContext(getter: () -> Context): NotificationHandler 
 fun NotificationHandler.withActivity(getter: () -> ComponentActivity): NotificationHandler {
     if (this !is AndroidNotificationHandler) return this
     activityGetter.store(getter)
-    val activity = getter()
-    channelDelegate.init(activity) // Initialize channel delegate
+    return this
+}
+
+/**
+ * Initializes the underlying notification channel using the [Context]
+ * previously provided using [withContext].
+ *
+ * @return This NotificationHandler for method chaining
+ */
+fun NotificationHandler.withChannel(): NotificationHandler {
+    if (this !is AndroidNotificationHandler) return this
+    channelDelegate.init(context)
     return this
 }
 
