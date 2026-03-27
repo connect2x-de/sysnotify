@@ -93,10 +93,8 @@ class MyApplication : ComponentActivity() {
         notificationHandler = NotificationHandler(
             name = "MyApp",
             id = "com.example.MyApp",
-            // Specifying an activity for the context will automatically provide an activityGetter for you
-            contextGetter = { this },
-            permissionCallback = { if (!it) finishAffinity() }
-        )
+        ).withContext { this@MyApplication }
+                .withChannel() // Must be called after withContext
         runBlocking { notificationHandler.requestPermissions() }
         // ...
     }
