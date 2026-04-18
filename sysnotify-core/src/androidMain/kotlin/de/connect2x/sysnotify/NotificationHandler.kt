@@ -150,9 +150,10 @@ internal class AndroidNotificationHandler( // @formatter:off
     context(builder: NotificationCompat.Builder)
     private fun setupIntents(notification: Notification) = with(builder) {
         createActivationIntent(notification)?.let { intent ->
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
             setContentIntent(
                 PendingIntent.getActivity(
-                    activity,
+                    context,
                     0,
                     intent,
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
