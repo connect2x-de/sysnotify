@@ -18,6 +18,7 @@ package de.connect2x.sysnotify
 
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.staticCFunction
+import platform.AppKit.NSApplication
 import platform.UserNotifications.UNNotification
 import platform.UserNotifications.UNUserNotificationCenter
 import platform.posix.atexit

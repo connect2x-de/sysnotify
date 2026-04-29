@@ -16,6 +16,7 @@
 
 package de.connect2x.sysnotify
 
+import de.connect2x.sysnotify.AppleNotificationHandler.Companion.decrementGlobalCounter
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -45,6 +46,12 @@ import kotlin.experimental.ExperimentalNativeApi
 
 internal const val USERINFO_CALLBACK_DATA: String = "sysnotify_callback_data"
 internal const val USERINFO_SYSNOTIFY_MARKER: String = "__sysnotify__"
+
+private val notificationDelegate: DefaultNotificationDelegate = DefaultNotificationDelegate().apply {
+    addActionHandler { _, _, _, _ ->
+        decrementGlobalCounter()
+    }
+}
 
 internal expect fun initializePlatform()
 
@@ -79,11 +86,7 @@ internal class AppleNotificationHandler(
 
         fun installDelegates() = isDelegateInstalledLock.withLock {
             if (isDelegateInstalled) return@withLock
-            UNUserNotificationCenter.currentNotificationCenter().setDelegate(DefaultNotificationDelegate().apply {
-                addActionHandler { _, _, _, _ ->
-                    decrementGlobalCounter()
-                }
-            })
+            UNUserNotificationCenter.currentNotificationCenter().setDelegate(notificationDelegate)
             initializePlatform()
             isDelegateInstalled = true
         }
@@ -283,10 +286,11 @@ internal class AppleNotificationHandler(
 }
 
 actual fun NotificationHandler.withActivationHandler(handler: ActivationHandler): NotificationHandler {
-    if (this !is AppleNotificationHandler) return this
-    val delegate = UNUserNotificationCenter.currentNotificationCenter().delegate as? DefaultNotificationDelegate
-        ?: error("The default SysNotify UNUserNotificationCenterDelegate has been overridden")
-    delegate.addActionHandler { _, action, _, notification ->
+    if (this !is AppleNotificationHandler) {
+        println("!!! withActivationHandler call ignored because NotificationHandler is not AppleNotificationHandler !!!")
+        return this
+    }
+    notificationDelegate.addActionHandler { _, action, _, notification ->
         if (action != UNNotificationDefaultActionIdentifier) return@addActionHandler
         handler(notification)
     }
