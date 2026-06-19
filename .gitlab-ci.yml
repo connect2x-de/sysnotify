@@ -8,14 +8,11 @@ workflow:
 
 stages:
   - build
+  - check
   - test
-  - security
   - publish
 
 variables:
-  GRADLE_OPTS: -Dorg.gradle.daemon=false
-  BUILD_LINUX_IMAGE_NAME: registry.gitlab.com/connect2x/build-infrastructure/kmp-dockerfiles/kmp-dockerfiles-base:latest
-  TRIVY_IMAGE_NAME: registry.gitlab.com/connect2x/build-infrastructure/kmp-dockerfiles/kmp-dockerfiles-trivy:latest
   SYSNOTIFY_DEBUG: 1
 
 .artifact-reports: &artifact-reports
@@ -46,10 +43,13 @@ variables:
 build:windows:
   stage: build
   interruptible: true
-  timeout: 2h
   tags: [ "saas-windows-medium-amd64" ]
   rules:
     - *if-merge-request
+  variables:
+    # Without this, GitLab autoscaler never completes the build after Gradle finishes,
+    # since the Gradle daemon is seen as a child process of the builds parent process.
+    GRADLE_OPTS: -Dorg.gradle.daemon=false
   script:
     - ./gradlew
       :sysnotify-core:clean
@@ -65,25 +65,33 @@ build:mac:
   script:
     - ./gradlew
       :sysnotify-core:clean
-      :sysnotify-core:link{MacosX64,MacosArm64,IosArm64,IosX64,IosSimulatorArm64}
-      :sysnotify-core:{macosX64,iosX64}Test
+      :sysnotify-core:link{MacosArm64,IosArm64,IosSimulatorArm64}
 
 build:linux:
   stage: build
   interruptible: true
-  tags: [ "connect2x-linux" ]
-  image: $BUILD_LINUX_IMAGE_NAME
+  tags: [ "connect2x-linux-shell" ]
   rules:
     - *if-merge-request
   script:
-    - gradle
+    - ./gradlew
       :sysnotify-core:compile{ReleaseKotlinAndroid,KotlinJvm}
       :sysnotify-core:linkLinux{X64,Arm64}
       :sysnotify-core:{linuxX64,jvm}Test
 
-# Only required on macOS since it can build all targets
-checkAbi:
+test:apple:
   stage: test
+  interruptible: true
+  tags: [ "saas-macos-medium-m1" ]
+  rules:
+    - *if-merge-request
+  script:
+    - ./gradlew
+      :sysnotify-core:{macosArm64,iosSimulatorArm64}Test
+
+# Only required on macOS since it can build all targets
+check:abi:
+  stage: check
   interruptible: true
   timeout: 1h
   needs: [ "build:mac" ]
@@ -94,20 +102,12 @@ checkAbi:
   script:
     - ./gradlew :sysnotify-core:clean :sysnotify-core:checkLegacyAbi
 
-security:dependencies:
-  stage: security
+check:vulnerable-dependencies:
+  stage: check
   interruptible: true
   timeout: 30m
   needs: [ ]
-  tags: [ "connect2x-linux" ]
-  image:
-    name: $TRIVY_IMAGE_NAME
-    entrypoint: [ "" ]
-  variables:
-    TRIVY_CACHE_DIR: ".trivycache/"
-  cache:
-    paths:
-      - .trivycache/
+  tags: [ "connect2x-linux-shell-small" ]
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       allow_failure: true
@@ -115,14 +115,17 @@ security:dependencies:
       allow_failure: false
     - if: $CI_PIPELINE_SOURCE == "schedule"
       allow_failure: false
+  variables:
+    WITH_LOCK: true
   artifacts:
     when: always
     reports:
       dependency_scanning: report.json
   script:
-    - trivy repo ./ --exit-code 0
-    - trivy repo ./ --exit-code 0 --format template --template "@/usr/local/share/trivy/templates/gitlab.tpl" --output report.json
-    - trivy repo ./ --exit-code 1 --severity CRITICAL
+    - ./gradlew dependenciesForAll --write-locks > dependencies.txt
+    - trivy repo ./ --exit-code 0 --ignorefile .trivyignore.yaml
+    - trivy repo ./ --exit-code 0 --ignorefile .trivyignore.yaml --format template --template "@/usr/local/share/trivy/templates/gitlab.tpl" --output report.json
+    - trivy repo ./ --exit-code 1 --ignorefile .trivyignore.yaml --severity CRITICAL
 
 publish:dev:
   stage: publish

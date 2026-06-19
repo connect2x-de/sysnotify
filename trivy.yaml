@@ -1,4 +1,6 @@
 scan:
   skip-dirs:
     - .gradle
-    - .idea
+    - lognity-sample
+  scanners:
+    - vuln

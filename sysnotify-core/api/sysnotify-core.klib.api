@@ -1,8 +1,7 @@
 // Klib ABI Dump
-// Targets: [iosArm64, iosSimulatorArm64, iosX64, js, linuxArm64, linuxX64, macosArm64, macosX64, mingwX64, wasmJs]
-// Alias: apple => [iosArm64, iosSimulatorArm64, iosX64, macosArm64, macosX64]
+// Targets: [iosArm64, iosSimulatorArm64, js, linuxArm64, linuxX64, macosArm64, mingwX64, wasmJs]
+// Alias: apple => [iosArm64, iosSimulatorArm64, macosArm64]
 // Alias: linux => [linuxArm64, linuxX64]
-// Alias: macos => [macosArm64, macosX64]
 // Rendering settings:
 // - Signature version: 2
 // - Show manifest properties: true
@@ -266,12 +265,12 @@ final inline fun de.connect2x.sysnotify/unpackBlue(de.connect2x.sysnotify/ColorF
 final inline fun de.connect2x.sysnotify/unpackGreen(de.connect2x.sysnotify/ColorFormat, kotlin/UInt): kotlin/UByte // de.connect2x.sysnotify/unpackGreen|unpackGreen(de.connect2x.sysnotify.ColorFormat;kotlin.UInt){}[0]
 final inline fun de.connect2x.sysnotify/unpackRed(de.connect2x.sysnotify/ColorFormat, kotlin/UInt): kotlin/UByte // de.connect2x.sysnotify/unpackRed|unpackRed(de.connect2x.sysnotify.ColorFormat;kotlin.UInt){}[0]
 
+// Targets: [linux, macosArm64, mingwX64]
+final fun de.connect2x.sysnotify/jniOnLoad(kotlinx.cinterop/CPointerVarOf<kotlinx.cinterop/CPointer<jni/JNIInvokeInterface_>>, kotlinx.cinterop/CPointer<out kotlinx.cinterop/CPointed>): kotlin/Int // de.connect2x.sysnotify/jniOnLoad|jniOnLoad(kotlinx.cinterop.CPointerVarOf<kotlinx.cinterop.CPointer<jni.JNIInvokeInterface_>>;kotlinx.cinterop.CPointer<out|kotlinx.cinterop.CPointed>){}[0]
+
 // Targets: [apple]
 final val de.connect2x.sysnotify/relevanceScore // de.connect2x.sysnotify/relevanceScore|@de.connect2x.sysnotify.NotificationPriority{}relevanceScore[0]
     final inline fun (de.connect2x.sysnotify/NotificationPriority).<get-relevanceScore>(): kotlin/Double // de.connect2x.sysnotify/relevanceScore.<get-relevanceScore>|<get-relevanceScore>@de.connect2x.sysnotify.NotificationPriority(){}[0]
-
-// Targets: [linux, macos, mingwX64]
-final fun de.connect2x.sysnotify/jniOnLoad(kotlinx.cinterop/CPointerVarOf<kotlinx.cinterop/CPointer<jni/JNIInvokeInterface_>>, kotlinx.cinterop/CPointer<out kotlinx.cinterop/CPointed>): kotlin/Int // de.connect2x.sysnotify/jniOnLoad|jniOnLoad(kotlinx.cinterop.CPointerVarOf<kotlinx.cinterop.CPointer<jni.JNIInvokeInterface_>>;kotlinx.cinterop.CPointer<out|kotlinx.cinterop.CPointed>){}[0]
 
 // Targets: [js, wasmJs]
 final val de.connect2x.sysnotify/notification // de.connect2x.sysnotify/notification|@de.connect2x.sysnotify.NotificationHandle{}notification[0]

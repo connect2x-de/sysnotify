@@ -15,6 +15,7 @@
  */
 
 import de.connect2x.conventions.CI
+import de.connect2x.conventions.defaultDependencyLocking
 import de.connect2x.conventions.withVersionSuffix
 import org.jetbrains.dokka.gradle.DokkaExtension
 import org.jetbrains.dokka.gradle.DokkaPlugin
@@ -40,6 +41,7 @@ allprojects {
 subprojects {
     if ("sample" in project.name) return@subprojects
     if (CI.isCI) {
+        defaultDependencyLocking()
         apply<DokkaPlugin>()
         configure<DokkaExtension> {
             moduleName = project.name
