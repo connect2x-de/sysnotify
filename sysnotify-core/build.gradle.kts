@@ -226,25 +226,29 @@ dokka {
 
 tasks {
     val linkReleaseSharedMacosArm64 by getting
-    val linkReleaseSharedMacosX64 by getting
     val linkReleaseSharedLinuxArm64 by getting
     val linkReleaseSharedLinuxX64 by getting
 
-    // Native - TODO: implement bundling for Kotlin/Native using kMBed once it's on Maven Central
     val `extractSysnotify-platform-binariesWindowsX64` by getting
     val copyDebugTestMingwX64SharedLibraries by registering(Copy::class) {
+        group = "jvmInterop"
+        description = "Copies all prebuilt Windows x64 natives into the JVM test resource root"
         dependsOn(`extractSysnotify-platform-binariesWindowsX64`)
         from("build/sysnotify-platform/windowsX64/lib/sysnotify-com.dll")
         into("build/bin/mingwX64/debugTest")
     }
-    val linkDebugTestMingwX64 by getting { dependsOn(copyDebugTestMingwX64SharedLibraries) }
+    named("linkDebugTestMingwX64") { dependsOn(copyDebugTestMingwX64SharedLibraries) }
     val copyDebugSharedMingwX64SharedLibraries by registering(Copy::class) {
+        group = "jvmInterop"
+        description = "Copies all prebuilt Windows x64 Debug natives into the JVM resource root"
         dependsOn(`extractSysnotify-platform-binariesWindowsX64`)
         from("build/sysnotify-platform/windowsX64/lib/sysnotify-com.dll")
         into("build/bin/mingwX64/debugShared")
     }
-    val linkDebugSharedMingwX64 by getting { dependsOn(copyDebugSharedMingwX64SharedLibraries) }
+    named("linkDebugSharedMingwX64") { dependsOn(copyDebugSharedMingwX64SharedLibraries) }
     val copyReleaseSharedMingwX64SharedLibraries by registering(Copy::class) {
+        group = "jvmInterop"
+        description = "Copies all prebuilt Windows x64 Release atives into the JVM resource root"
         dependsOn(`extractSysnotify-platform-binariesWindowsX64`)
         from("build/sysnotify-platform/windowsX64/lib/sysnotify-com.dll")
         into("build/bin/mingwX64/releaseShared")
@@ -253,22 +257,22 @@ tasks {
 
     // JVM
     val copyNativesForJvm by registering(Copy::class) {
+        group = "jvmInterop"
+        description = "Copies all prebuilt natives into the JVM resource root"
         dependsOn(
             linkReleaseSharedMacosArm64,
-            linkReleaseSharedMacosX64,
             linkReleaseSharedLinuxArm64,
             linkReleaseSharedLinuxX64,
             linkReleaseSharedMingwX64
         )
         from("build/bin/linuxX64/releaseShared/libsysnotify_core.so") { into("linux-x64/") }
         from("build/bin/linuxArm64/releaseShared/libsysnotify_core.so") { into("linux-arm64/") }
-        from("build/bin/macosX64/releaseShared/libsysnotify_core.dylib") { into("macos-x64/") }
         from("build/bin/macosArm64/releaseShared/libsysnotify_core.dylib") { into("macos-arm64/") }
         from("build/bin/mingwX64/releaseShared/sysnotify_core.dll") { into("windows-x64/") }
         from("build/sysnotify-platform/windowsX64/lib/sysnotify-com.dll") { into("windows-x64/") }
         destinationDir = (Path("build") / "generatedResources" / "natives").toFile()
     }
-    val jvmProcessResources by getting {
+    named("jvmProcessResources") {
         dependsOn(copyNativesForJvm)
     }
 }

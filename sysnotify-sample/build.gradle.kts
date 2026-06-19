@@ -16,13 +16,13 @@
 
 import de.connect2x.conventions.configureJava
 import de.connect2x.conventions.defaultCompilerOptions
+import de.connect2x.conventions.defaultComposeDesktopApplication
 import de.connect2x.conventions.withAndroid
 import de.connect2x.conventions.withBrowser
 import de.connect2x.conventions.withIos
 import de.connect2x.conventions.withJvm
 import de.connect2x.conventions.withMacos
 import de.connect2x.conventions.withWeb
-import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 
 plugins {
     alias(sharedLibs.plugins.kotlin.multiplatform)
@@ -133,28 +133,20 @@ val jdkLauncher: Provider<JavaLauncher> = javaToolchains.launcherFor {
     vendor = JvmVendorSpec.ADOPTIUM
 }
 
-compose {
-    desktop {
-        application {
-            mainClass = "${rootProject.group}.sample.MainKt"
-            buildTypes.release.proguard { isEnabled = false }
-            javaHome = jdkLauncher.get().metadata.installationPath.asFile.absolutePath
-            jvmArgs("--enable-native-access=ALL-UNNAMED")
-            nativeDistributions {
-                modules("java.net.http", "java.sql", "java.naming")
-                targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-                appResourcesRootDir.set(layout.buildDirectory)
-                packageName = "Sysnotify Sample"
-                packageVersion = libs.versions.sysnotify.get()
-                windows {
-                    menu = true
-                    upgradeUuid = "3e1d7fa0-4c3f-4c3d-805f-d28bd21d6019"
-                }
-                macOS {
-                    bundleID = "${rootProject.group}.sample"
-                    dockName = "Sysnotify Sample"
-                }
-            }
+defaultComposeDesktopApplication(
+    appName = "Sysnotify Sample",
+    appId = "${rootProject.group}.sample",
+    appVersion = libs.versions.sysnotify.get(),
+    mainClassName = "${rootProject.group}.sample.Main"
+) {
+    buildTypes.release.proguard { isEnabled = false }
+    javaHome = jdkLauncher.get().metadata.installationPath.asFile.absolutePath
+    jvmArgs("--enable-native-access=ALL-UNNAMED")
+    nativeDistributions {
+        modules("java.net.http", "java.sql", "java.naming", "jdk.unsupported")
+        appResourcesRootDir.set(layout.buildDirectory)
+        windows {
+            upgradeUuid = "3e1d7fa0-4c3f-4c3d-805f-d28bd21d6019"
         }
     }
 }
