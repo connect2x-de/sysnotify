@@ -265,7 +265,7 @@ internal class AndroidNotificationHandler( // @formatter:off
 
     override suspend fun clearAll() {
         if (!hasPermissions) return
-        manager.cancelAll()
+        getActiveNotifications().forEach { manager.cancel(it, 0) }
     }
 
     override suspend fun unregister() {
