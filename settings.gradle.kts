@@ -21,22 +21,11 @@ pluginManagement {
         mavenLocal()
         gradlePluginPortal()
         maven("https://gitlab.com/api/v4/projects/68438621/packages/maven") // c2x Conventions
-        maven("https://gitlab.com/api/v4/projects/75787729/packages/maven") // compose multiplatform a11y
-    }
-}
-
-@Suppress("UnstableApiUsage")
-dependencyResolutionManagement {
-    repositories {
-        mavenLocal()
-        maven("https://gitlab.com/api/v4/projects/68438621/packages/maven") // c2x Conventions
-        maven("https://gitlab.com/api/v4/projects/75787860/packages/maven") // compose multiplatform core a11y
-        maven("https://gitlab.com/api/v4/projects/75787729/packages/maven") // compose multiplatform a11y
     }
 }
 
 plugins {
-    id("de.connect2x.conventions.c2x-settings-plugin") version "20260618.161104"
+    id("de.connect2x.conventions.c2x-settings-plugin") version "20260706.081921"
 }
 
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
