@@ -16,23 +16,25 @@
 
 package de.connect2x.sysnotify.sample
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.Button
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
-import androidx.compose.material.TextField
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -41,12 +43,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import de.connect2x.sysnotify.Notification
 import de.connect2x.sysnotify.NotificationHandler
 import de.connect2x.sysnotify.NotificationIcon
+import de.connect2x.sysnotify.NotificationPriority
+import de.connect2x.sysnotify.sysnotify_sample.generated.resources.Res
+import de.connect2x.sysnotify.sysnotify_sample.generated.resources.refresh
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.painterResource
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -65,7 +70,8 @@ fun App(
         NotificationHandler(
             name = "Sysnotify Sample",
             id = "de.connect2x.sysnotify",
-            contributesToCounter = true
+            contributesToCounter = true,
+            priority = NotificationPriority.HIGH,
         ).apply(configureNotificationHandler)
 
     LaunchedEffect(Unit) {
@@ -81,12 +87,26 @@ fun App(
     var tag by remember { mutableStateOf(Uuid.random().toString()) }
     var callbackData by remember { mutableStateOf("This is some user data to attach to the notification") }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color.White)) {
-        Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-            Column {
+    Scaffold(
+        modifier = Modifier
+            .fillMaxSize(),
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .consumeWindowInsets(paddingValues),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .imePadding()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+            ) {
                 Text(
                     text = "Sysnotify Sample",
-                    style = MaterialTheme.typography.h4,
+                    style = MaterialTheme.typography.headlineLarge,
                     modifier = Modifier.padding(vertical = 10.dp)
                 )
                 Text(
@@ -134,7 +154,7 @@ fun App(
                 Text(
                     text = "Title",
                     modifier = Modifier.padding(vertical = 5.dp),
-                    style = MaterialTheme.typography.h6,
+                    style = MaterialTheme.typography.headlineSmall,
                 )
                 Row {
                     TextField(
@@ -147,7 +167,7 @@ fun App(
                 Text(
                     text = "Description",
                     modifier = Modifier.padding(vertical = 5.dp),
-                    style = MaterialTheme.typography.h6,
+                    style = MaterialTheme.typography.headlineSmall,
                 )
                 Row {
                     TextField(
@@ -160,7 +180,7 @@ fun App(
                 Text(
                     text = "Tag",
                     modifier = Modifier.padding(vertical = 5.dp),
-                    style = MaterialTheme.typography.h6,
+                    style = MaterialTheme.typography.headlineSmall,
                 )
                 Row {
                     TextField(
@@ -170,7 +190,7 @@ fun App(
                         trailingIcon = {
                             IconButton(onClick = { tag = Uuid.random().toString() }) {
                                 Icon(
-                                    Icons.Default.Refresh,
+                                    painter = painterResource(Res.drawable.refresh),
                                     contentDescription = "refresh",
                                 )
                             }
@@ -181,7 +201,7 @@ fun App(
                 Text(
                     text = "User Data",
                     modifier = Modifier.padding(vertical = 5.dp),
-                    style = MaterialTheme.typography.h6,
+                    style = MaterialTheme.typography.headlineSmall,
                 )
                 Row {
                     TextField(
@@ -196,7 +216,7 @@ fun App(
                     Text(
                         text = "Launch Notification",
                         modifier = Modifier.padding(vertical = 5.dp),
-                        style = MaterialTheme.typography.h6,
+                        style = MaterialTheme.typography.headlineSmall,
                     )
                     Text(
                         modifier = Modifier.padding(vertical = 5.dp),
