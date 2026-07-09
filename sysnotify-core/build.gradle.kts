@@ -183,7 +183,7 @@ kotlin {
         androidMain {
             dependencies {
                 implementation(sharedLibs.androidx.core)
-                implementation(sharedLibs.androidx.activity.ktx)
+                implementation(sharedLibs.androidx.activity)
             }
         }
         jvmMain {

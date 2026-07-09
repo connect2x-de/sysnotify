@@ -67,31 +67,23 @@ kotlin {
     sourceSets {
         androidMain {
             dependencies {
-                implementation(sharedLibs.androidx.activity.compose)
+                implementation(sharedLibs.androidx.activityCompose)
             }
         }
         commonMain {
             dependencies {
                 implementation(sharedLibs.compose.runtime)
                 implementation(sharedLibs.compose.foundation)
-                implementation(sharedLibs.compose.material)
                 implementation(sharedLibs.compose.ui)
-                implementation(sharedLibs.compose.materialIconsExtended)
+                implementation(sharedLibs.compose.material3)
                 implementation(sharedLibs.compose.resources)
-                implementation(sharedLibs.compose.uiToolingPreview)
                 implementation(projects.sysnotifyCore)
             }
         }
         jvmMain {
             dependencies {
-                // this is needed to create lock files working on all machines
-                if (System.getProperty("bundleAll") == "true") {
-                    implementation(sharedLibs.compose.desktop.linuxX64)
-                    implementation(sharedLibs.compose.desktop.linuxArm64)
-                    implementation(sharedLibs.compose.desktop.windowsX64)
-                    implementation(sharedLibs.compose.desktop.macosX64)
-                    implementation(sharedLibs.compose.desktop.macosArm64)
-                } else implementation(compose.desktop.currentOs)
+                runtimeOnly(compose.desktop.currentOs)
+                runtimeOnly(sharedLibs.kotlinx.coroutines.swing)
             }
         }
     }
