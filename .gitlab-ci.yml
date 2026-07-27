@@ -43,7 +43,7 @@ variables:
 build:windows:
   stage: build
   interruptible: true
-  tags: [ "saas-windows-medium-amd64" ]
+  tags: [ "connect2x-win" ]
   rules:
     - *if-merge-request
   variables:
@@ -82,7 +82,7 @@ build:linux:
 test:apple:
   stage: test
   interruptible: true
-  tags: [ "saas-macos-medium-m1" ]
+  tags: [ "connect2x-mac-arm" ]
   rules:
     - *if-merge-request
   script:
