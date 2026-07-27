@@ -1,6 +1,6 @@
 [versions]
 
-sysnotify = "2.7.1"
+sysnotify = "2.7.2"
 kmpJni = "1.1.2" # https://gitlab.com/connect2x/kmp-jni/-/packages
 sysnotifyBinaries = "v1.3.1" # https://gitlab.com/connect2x/sysnotify-platform-binaries/-/packages/
 
