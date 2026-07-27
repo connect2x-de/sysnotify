@@ -1,4 +1,4 @@
-# Sysnotify
+# Sysnotify 
 
 Cross-platform system notifications for Kotlin Multiplatform.
 
