@@ -131,7 +131,7 @@ internal class AppleNotificationHandler(
 
     override fun getHandle(tag: String): NotificationHandle {
         require(tag.isNotEmpty()) { "Handle tag may not be empty" }
-        return AppleNotificationHandle(tag)
+        return AppleNotificationHandle(scopedTag(tag))
     }
 
     override suspend fun requestPermissions(callback: PermissionCallback) {
@@ -192,14 +192,15 @@ internal class AppleNotificationHandler(
     }
 
     override suspend fun push(notification: Notification, tag: String): NotificationHandle {
+        val notificationTag = scopedTag(tag)
         val notificationCenter = UNUserNotificationCenter.currentNotificationCenter()
         if (!notificationCenter.hasPermissions()) return NotificationHandle.INVALID
-        val handle = AppleNotificationHandle(tag)
-        if (notificationExists(tag)) return handle
+        val handle = AppleNotificationHandle(notificationTag)
+        if (notificationExists(notificationTag)) return handle
 
         notificationCenter.addNotificationRequest(
             UNNotificationRequest.requestWithIdentifier(
-                identifier = tag,
+                identifier = notificationTag,
                 content = createNotificationContent(handle, notification),
                 trigger = null
             )

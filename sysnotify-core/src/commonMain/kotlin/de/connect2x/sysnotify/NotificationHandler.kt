@@ -132,7 +132,7 @@ interface NotificationHandler : AutoCloseable {
      * be displayed by the underlying platform.
      *
      * @param notification The notification contents to create the new notification from.
-     * @param tag A unique string identifying this particular notification. Must be application-unique.
+     * @param tag A unique string identifying this particular notification. Must be unique within this handler ID.
      * @return A new notification with the given content which has been shown by the system
      *  when successful, null otherwise.
      */
@@ -268,3 +268,5 @@ object NoopNotificationHandler : NotificationHandler {
     override suspend fun unregister() {}
     override fun close() {}
 }
+
+internal fun NotificationHandler.scopedTag(tag: String): String = "$id:$tag"
