@@ -64,7 +64,7 @@ build:windows:
 build:mac:
   stage: build
   interruptible: true
-  tags: [ "connect2x-mac" ]
+  tags: [ "c2x","mac","arm64","shell","small" ]
   rules:
     - *if-merge-request
   script:
@@ -75,7 +75,7 @@ build:mac:
 build:linux:
   stage: build
   interruptible: true
-  tags: [ "connect2x-linux-shell" ]
+  tags: [ "c2x","shell","small" ]
   rules:
     - *if-merge-request
   script:
@@ -87,7 +87,7 @@ build:linux:
 test:apple:
   stage: test
   interruptible: true
-  tags: [ "connect2x-mac-arm" ]
+  tags: [ "c2x","mac","arm64","shell","small" ]
   rules:
     - *if-merge-request
   script:
@@ -100,7 +100,7 @@ check:abi:
   interruptible: true
   timeout: 1h
   needs: [ "build:mac" ]
-  tags: [ "connect2x-mac" ]
+  tags: [ "c2x","mac","shell","small" ]
   artifacts: *artifact-reports
   rules:
     - *if-merge-request
@@ -112,7 +112,7 @@ check:vulnerable-dependencies:
   interruptible: true
   timeout: 30m
   needs: [ ]
-  tags: [ "connect2x-linux-shell-small" ]
+  tags: [ "c2x","linux","shell","small" ]
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       allow_failure: true
@@ -135,7 +135,7 @@ check:vulnerable-dependencies:
 publish:dev:
   resource_group: publish:dev-$CI_COMMIT_REF_SLUG
   stage: publish
-  tags: [ "connect2x-mac" ]
+  tags: [ "c2x","mac","shell","medium" ]
   timeout: 2h
   rules:
     - *if-dev-release
@@ -147,7 +147,7 @@ publish:dev:
 publish:release:
   resource_group: publish:release-$CI_COMMIT_TAG
   stage: publish
-  tags: [ "connect2x-mac" ]
+  tags: [ "c2x","mac","shell","medium" ]
   timeout: 2h
   rules:
     - *if-release

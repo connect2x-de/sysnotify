@@ -62,17 +62,18 @@ internal class LinuxNotificationHandler(
 
     override fun getHandle(tag: String): NotificationHandle {
         require(tag.isNotEmpty()) { "Handle tag may not be empty" }
-        return LinuxNotificationHandle(tag, this)
+        return LinuxNotificationHandle(scopedTag(tag), this)
     }
 
     override suspend fun push(notification: Notification, tag: String): NotificationHandle {
+        val notificationTag = scopedTag(tag)
         // If this notification is already pending or active, return early
-        if (NotificationDispatcher.hasTag(tag)
-            || NotificationDispatcher.hasPendingTag(tag)
+        if (NotificationDispatcher.hasTag(notificationTag)
+            || NotificationDispatcher.hasPendingTag(notificationTag)
         ) return NotificationHandle.INVALID
-        NotificationDispatcher.enqueue(PendingNotification(tag, lastNotification == notification, notification, this))
+        NotificationDispatcher.enqueue(PendingNotification(notificationTag, lastNotification == notification, notification, this))
         lastNotification.store(notification)
-        return LinuxNotificationHandle(tag, this) // Early return so we don't block
+        return LinuxNotificationHandle(notificationTag, this) // Early return so we don't block
     }
 
     override suspend fun update(handle: NotificationHandle, notification: Notification): NotificationHandle {

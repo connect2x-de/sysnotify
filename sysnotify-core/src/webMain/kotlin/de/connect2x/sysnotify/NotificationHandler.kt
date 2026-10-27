@@ -109,7 +109,7 @@ private class WebNotificationHandler(
                     body = notification.description ?: ""
                     icon = iconUrl
                     silent = !notification.playSound
-                    this.tag = tag
+                    this.tag = scopedTag(tag)
                     badge = badgeUrl
                 }
             ).apply {

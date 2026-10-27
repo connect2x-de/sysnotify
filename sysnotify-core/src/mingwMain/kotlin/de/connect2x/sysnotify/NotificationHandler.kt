@@ -78,14 +78,15 @@ internal class WindowsNotificationHandler(
 
     override fun getHandle(tag: String): NotificationHandle {
         require(tag.isNotEmpty()) { "Handle tag may not be empty" }
-        return WindowsNotificationHandle(tag)
+        return WindowsNotificationHandle(scopedTag(tag))
     }
 
     override suspend fun push(notification: Notification, tag: String): NotificationHandle {
+        val notificationTag = scopedTag(tag)
         return memScoped {
             val content = allocNotification(notification)
-            sysnotify_handler_push(address, content.ptr, tag).check()
-            WindowsNotificationHandle(tag)
+            sysnotify_handler_push(address, content.ptr, notificationTag).check()
+            WindowsNotificationHandle(notificationTag)
         }
     }
 
