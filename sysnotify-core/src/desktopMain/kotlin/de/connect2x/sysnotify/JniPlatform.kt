@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-@file:OptIn(ExperimentalForeignApi::class, ExperimentalNativeApi::class, ExperimentalAtomicApi::class)
+@file:OptIn(ExperimentalForeignApi::class, ExperimentalNativeApi::class)
 
 package de.connect2x.sysnotify
 
@@ -31,6 +31,8 @@ import jni.jclass
 import jni.jint
 import jni.jobject
 import jni.jstring
+import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlinx.atomicfu.locks.withLock
 import kotlinx.cinterop.COpaquePointer
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
@@ -45,11 +47,15 @@ import kotlinx.cinterop.reinterpret
 import kotlinx.cinterop.toKStringFromUtf16
 import kotlinx.cinterop.usePinned
 import platform.posix.memcpy
-import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.experimental.ExperimentalNativeApi
 
 private const val JNI_VERSION: Int = JNI_VERSION_1_6
-private lateinit var virtualMachine: JavaVMVar
+private val virtualMachineLock: SynchronizedObject = SynchronizedObject()
+private lateinit var _virtualMachine: JavaVMVar
+
+private var virtualMachine: JavaVMVar
+    get() = virtualMachineLock.withLock { _virtualMachine }
+    set(value) = virtualMachineLock.withLock { _virtualMachine = value }
 
 @Suppress("UNUSED_PARAMETER", "UNUSED")
 @CName("JNI_OnLoad")
