@@ -20,6 +20,7 @@ package de.connect2x.sysnotify
 
 import jni.JNIEnvVar
 import jni.JNINativeMethod
+import jni.JNI_ABORT
 import jni.JNI_EDETACHED
 import jni.JNI_EVERSION
 import jni.JNI_OK
@@ -44,7 +45,6 @@ import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.pointed
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.reinterpret
-import kotlinx.cinterop.toKStringFromUtf16
 import kotlinx.cinterop.usePinned
 import platform.posix.memcpy
 import kotlin.experimental.ExperimentalNativeApi
@@ -115,19 +115,38 @@ internal inline fun Boolean.toJBoolean(): jboolean = if (this) 1U else 0U
 internal inline fun jboolean.toKBoolean(): Boolean = this == 1U.toUByte()
 
 @Suppress("NOTHING_TO_INLINE")
-internal inline fun jstring.toKString(env: JNIEnvVar): String {
-    val acquireString = requireNotNull(env.pointed?.GetStringCritical) {
-        "Could not access JNI:GetStringUTFChars function"
+internal inline fun jstring.toKString(env: JNIEnvVar): String = memScoped {
+    val stringsClass = JvmRefType("kotlin.text.StringsKt").getJClass(env)
+    val deleteLocalRef = requireNotNull(env.pointed?.DeleteLocalRef) {
+        "Could not access JNI:DeleteLocalRef function"
     }
-    val data = requireNotNull(acquireString(env.ptr, this@toKString, null)) {
-        "Could not retrieve string base address"
+    try {
+        val encodeToByteArray = stringsClass.getMethod("encodeToByteArray", isStatic = true) {
+            JvmRefType("java.lang.String") named "string"
+            returns(JvmBuiltinType.BYTE.array())
+        }
+        val callStaticObjectMethod = requireNotNull(env.pointed?.CallStaticObjectMethodA) {
+            "Could not access JNI:CallStaticObjectMethodA function"
+        }
+        val arguments = JvmArgumentBuffer().apply {
+            put("string", this@toKString)
+        }
+        val bytes = requireNotNull(
+            callStaticObjectMethod(
+                env.ptr,
+                stringsClass,
+                encodeToByteArray.handle,
+                with(arguments) { associate(encodeToByteArray.signature) }
+            )
+        ) { "Could not encode string to byte array" }
+        try {
+            bytes.toByteArray(env).decodeToString()
+        } finally {
+            deleteLocalRef(env.ptr, bytes)
+        }
+    } finally {
+        deleteLocalRef(env.ptr, stringsClass)
     }
-    val result = data.toKStringFromUtf16()
-    val releaseString = requireNotNull(env.pointed?.ReleaseStringCritical) {
-        "Could not access JNI:ReleaseStringUTFChars function"
-    }
-    releaseString(env.ptr, this@toKString, data)
-    return result
 }
 
 @Suppress("NOTHING_TO_INLINE")
@@ -136,18 +155,25 @@ internal inline fun jbyteArray.toByteArray(env: JNIEnvVar): ByteArray {
         env.ptr,
         this@toByteArray
     )
-    return ByteArray(size).apply {
-        usePinned { pinnedArray ->
-            val acquireElements = requireNotNull(env.pointed?.GetByteArrayElements) {
-                "Could not access JNI:GetPrimitiveArrayCritical function"
+    if (size == 0) return ByteArray(0)
+
+    val acquireElements = requireNotNull(env.pointed?.GetByteArrayElements) {
+        "Could not access JNI:GetByteArrayElements function"
+    }
+    val releaseElements = requireNotNull(env.pointed?.ReleaseByteArrayElements) {
+        "Could not access JNI:ReleaseByteArrayElements function"
+    }
+    val data = requireNotNull(acquireElements(env.ptr, this@toByteArray, null)) {
+        "Could not retrieve byte array base address"
+    }
+    try {
+        return ByteArray(size).apply {
+            usePinned { pinnedArray ->
+                memcpy(pinnedArray.addressOf(0), data, size.toULong())
             }
-            val data = acquireElements(env.ptr, this@toByteArray.reinterpret(), null)
-            memcpy(pinnedArray.addressOf(0), data, size.toULong())
-            val releaseElements = requireNotNull(env.pointed?.ReleaseByteArrayElements) {
-                "Could not access JNI:ReleasePrimitiveArrayCritical function"
-            }
-            releaseElements(env.ptr, this@toByteArray.reinterpret(), data, 0)
         }
+    } finally {
+        releaseElements(env.ptr, this@toByteArray, data, JNI_ABORT)
     }
 }
 
